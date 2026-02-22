@@ -1,90 +1,82 @@
-# NAIL — 設計思想
+# NAIL — Design Philosophy
 
-## なぜこの言語を作るのか
+## Why Build This Language
 
-### AIコーディング時代の到来
+### The Arrival of the AI Coding Era
 
-プログラミング言語はこれまで、人間が書き、人間が読むことを前提に設計されてきた。
+Programming languages have historically been designed around the assumption that humans write and read code.
 
-- `if x == True:` より `if x:` の方が読みやすい（Pythonの哲学）
-- 変数名は `i` より `index` の方がわかりやすい（可読性の追求）
-- 同じ処理を複数の書き方で表現できる（柔軟性の追求）
+- `if x == True:` is less readable than `if x:` (Python philosophy)
+- Variable names like `index` are clearer than `i` (readability-first)
+- The same logic can be expressed in multiple styles (flexibility-first)
 
-これらは人間の認知コストを下げるための設計だ。
+These choices optimize for lowering human cognitive load.
 
-しかし、AIがコードを書く時代になると、この前提が崩れる。
+But in an era where AI writes code, that assumption breaks.
 
-AIにとって「読みやすい変数名」は意味がない。AIにとって「柔軟な構文」は推論コストの源泉だ。AIにとって「暗黙の挙動」はバグの温床だ。
+For AI, "readable variable names" are not the key optimization. For AI, "flexible syntax" is a source of inference cost. For AI, "implicit behavior" is a breeding ground for bugs.
 
-### 曖昧さこそが問題の本質
+### Ambiguity Is the Core Problem
 
-現代のプログラミング言語で AI が苦手とするのは「難しいから」ではない。**「曖昧だから」**だ。
+What AI struggles with in modern languages is not "difficulty." It is **ambiguity**.
 
 ```javascript
-// JavaScriptの == は暗黙変換を行う
+// JavaScript's == performs implicit coercion
 0 == false   // true
 "" == false  // true
 null == undefined // true
 ```
 
 ```python
-# Pythonの型は実行時まで確定しない
+# Python types are not fixed until runtime
 def add(a, b):
-    return a + b  # a, b が何型かは実行するまでわからない
+    return a + b  # you cannot know the concrete types of a, b until execution
 ```
 
 ```c
-// Cの未定義動作
+// Undefined behavior in C
 int arr[5];
-arr[10] = 1;  // 何が起きるかは実装依存
+arr[10] = 1;  // outcome depends on implementation
 ```
 
-人間が直感的に書けるよう「省略・暗黙・柔軟性」を詰め込んだ結果、AIが推論するコストが上がっている。
+By packing in omission, implicitness, and flexibility for human convenience, we increase the inference burden for AI.
 
-NAILはこれをゼロにする。すべてが明示的。すべてが一意。すべてが検証可能。
+NAIL removes that burden. Everything is explicit. Everything is unambiguous. Everything is verifiable.
 
-### コンテキスト効率という新しい指標
+### Context Efficiency as a New Metric
 
-AIが動作するコスト（＝コンテキストウィンドウの使用量）を言語設計の指標に加えることが、NAILの最大の特徴だ。
+NAIL's defining trait is adding AI operating cost (context-window usage) as a first-class language design metric.
 
-同じロジックを表現するとき：
-- Pythonで書いたファイルが100行なら
-- NAILで書いた構造体は30トークンで済む
+When expressing identical logic:
+- If a Python file takes 100 lines,
+- A NAIL structure may fit in 30 tokens.
 
-トークン数が少ない = AIが1回のコンテキストで把握できる量が増える = より大きなシステムを一貫性を持って扱える。
+Fewer tokens = more logic visible in one context = better consistency across larger systems.
 
-これは人間には「難解」に見えるかもしれない。しかし人間はNAILを読まない。AIが読み、AIが書く。
+This may look "hard to read" for humans. But humans are not the primary readers of NAIL. AI reads NAIL, and AI writes NAIL.
 
-### ディレクトリ構成という「もう一つの言語」
+### Directory Structure as "Another Language"
 
-コードだけが言語ではない。プロジェクトの構成、メタファイルの形式、ドキュメントの構造——これらも「AIが読む情報」であり、同様に設計される必要がある。
+Code is not the only language. Project layout, metadata format, and document structure are also information that AI reads and must be intentionally designed.
 
-`AGENTS.md` の書き方に現在標準はない。`SPEC.md` の構造に標準はない。READMEに何を書くかに標準はない。
+There is no current standard for writing `AGENTS.md`. There is no standard structure for `SPEC.md`. There is no standard for what belongs in README.
 
-NAILはプログラミング言語と同時に、**AIが最小のコンテキストでプロジェクトを理解できる構造標準**を定義する。
+NAIL defines not only a programming language, but also a **structure standard that lets AI understand projects with minimal context**.
 
-### AIネイティブ言語 ＝ 企業独自のブラックボックス
+### AI Evolves Languages for AI
 
-人間が読めないコードは、人間が盗めないコードでもある。
+The NAIL spec is not fixed. AI uses it, generates feedback, proposes improvements, and updates the spec.
 
-難読化は「隠してある」に過ぎないが、NAILは「そもそも人間が解読できる形式が存在しない」。競合他社がソースコードを入手しても、それを理解する手段がない。ビジネスロジックが真の意味で秘匿できる。
-
-これは副次効果だが、AI時代の知的財産保護において重要な観点だ。
-
-### AIがAIのための言語を育てる
-
-NAILの仕様は固定されない。AIが使い、フィードバックし、改善提案を出し、仕様を更新する。
-
-このフィードバックループが成熟すれば、NAILは「AIが書きやすい言語」を超えて「AIが最も効率的に思考できる形式」に進化する可能性がある。
+If this feedback loop matures, NAIL may evolve beyond "a language that is easy for AI to write" into "the most efficient representation for AI reasoning."
 
 ---
 
-## まとめ
+## Summary
 
-NAILが追求するのは三つだ：
+NAIL pursues three goals:
 
-1. **ゼロ曖昧性** — AIの推論コストを最小化する
-2. **形式的安全性** — 証明できないコードは存在しない
-3. **コンテキスト効率** — 少ないトークンで多くのロジックを表現する
+1. **Zero Ambiguity** — minimize AI inference cost
+2. **Formal Safety** — code that cannot be proven should not exist
+3. **Context Efficiency** — represent more logic with fewer tokens
 
-人間向けの美しさではなく、機械向けの正確さを。
+Not beauty for humans, but precision for machines.

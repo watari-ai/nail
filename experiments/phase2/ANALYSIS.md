@@ -1,105 +1,105 @@
-# Phase 2 実験結果分析
+# Phase 2 Experiment Result Analysis
 
-実施日: 2026-02-22
+Execution date: 2026-02-22
 
 ---
 
-## 結果サマリー
+## Result Summary
 
-| 指標 | NAIL | Python |
+| Metric | NAIL | Python |
 |---|---|---|
-| L0-L2 検証通過 | **5/5 (100%)** | N/A |
-| テスト通過 | 18/21 (86%) | 21/21 (100%) |
-| 平均トークン数/関数 | **173** | 571（ファイル全体） |
-| 型アノテーション | 全関数で完全 | なし（Pythonは任意） |
+| L0-L2 validation pass | **5/5 (100%)** | N/A |
+| Test pass | 18/21 (86%) | 21/21 (100%) |
+| Average tokens/function | **173** | 571 (entire file) |
+| Type annotations | Complete in all functions | None (optional in Python) |
 
 ---
 
-## 問題別詳細
+## Per-Problem Details
 
-### P1-P4: 全テスト通過 ✅
+### P1-P4: All tests passed ✅
 
-`is_even`, `abs_val`, `max_of_two`, `clamp` の4問は NAIL・Python とも全ケースで正解。
+All four tasks, `is_even`, `abs_val`, `max_of_two`, and `clamp`, were correct in both NAIL and Python.
 
-NAILの特徴として現れたこと：
-- 型を宣言しなければコンパイル（L1）を通過できない
-- `int64 overflow: panic` という明示により、どのビット幅でどう失敗するかが仕様に含まれる
-- Pythonでは `n % 2 == 0` の `==` が暗黙的に bool を返すが、NAILでは型が一致しない比較はコンパイルエラー
+Observed NAIL characteristics:
+- Without type declarations, programs cannot pass compilation (L1).
+- Explicit `int64 overflow: panic` includes failure behavior and bit width in the spec.
+- In Python, `n % 2 == 0` relies on implicit bool-returning comparison, but in NAIL, comparisons with mismatched types are compile errors.
 
-### P5: factorial — 部分的な失敗 ⚠️
+### P5: factorial — Partial failure ⚠️
 
 ```
-n=0: ✓（偶然 acc=1 で正解）
-n=1: ✗（ループ内の acc が outer scope に伝播しない）
+n=0: ✓ (accidentally correct because acc=1)
+n=1: ✗ (loop-local acc does not propagate to outer scope)
 n=5: ✗
 n=10: ✗
 ```
 
-**原因**: NAIL v0.1 に可変変数の意味論が未定義。
-ループ内で `let acc = ...` を書いても、それはループスコープのローカル変数として扱われ、外の `acc` は更新されない。
+**Cause**: Mutable variable semantics are undefined in NAIL v0.1.
+Even if `let acc = ...` appears inside a loop, it is treated as a loop-scope local variable, so outer `acc` is not updated.
 
-**これはバグか？** → **いいえ。仕様の不足。**
+**Is this a bug?** → **No. It is a spec gap.**
 
-L0-L2 チェックはすべて通過した。つまり「型的に正しいが意味的に不完全な」プログラムが書けてしまう。
-これはNAIL v0.1 の重要な設計課題だ。
+All L0-L2 checks passed. That means a program can be "type-correct but semantically incomplete."
+This is an important language-design issue for NAIL v0.1.
 
-**→ Proposal: v0.2 で `mut` セマンティクスを明確化する**
+**→ Proposal: Clarify `mut` semantics in v0.2**
 
 ---
 
-## 発見: NAILの構造的優位性
+## Discovery: Structural Advantages of NAIL
 
-### 1. 型エラーを「書く前に」宣言で防ぐ
+### 1. Prevent Type Errors Through Declarations Before Writing Logic
 
-Pythonでは以下のようなバグが実行時まで検出されない：
+In Python, bugs like this are only detected at runtime:
 ```python
 def add(a, b):
-    return a + b  # "1" + 2 は TypeError
+    return a + b  # "1" + 2 raises TypeError
 ```
 
-NAILでは `params` で型を宣言するため、型ミスマッチはL1チェックで即座に検出される。
+In NAIL, `params` declares types, so mismatches are detected immediately at L1 check time.
 
-### 2. エフェクト汚染が不可能
+### 2. Effect Pollution Is Impossible
 
 ```
 bad_effect.nail: 'print' uses IO effect, but function does not declare it
 ```
 
-NAILでは「副作用を持つ関数が pure として宣言される」というクラスのバグが構造的に存在できない。
+In NAIL, a class of bugs where a side-effecting function is declared pure cannot structurally exist.
 
-Pythonでは以下が合法：
+In Python, this is legal:
 ```python
 def add(a, b):
-    print(f"debug: {a} + {b}")  # 副作用あり、でも型シグネチャに現れない
+    print(f"debug: {a} + {b}")  # has side effects but not represented in signature
     return a + b
 ```
 
-### 3. トークン効率
+### 3. Token Efficiency
 
-- NAIL 1関数あたり平均 **173トークン**
-- Python 5関数ファイル全体で **571トークン**（1関数 = 約114トークン）
-- 単純比較ではPythonの方が少ないが、NAILには**型・オーバーフロー挙動・エフェクト**が含まれる
-- 同等の情報をPythonで表現するには追加コメントやアノテーションが必要
+- NAIL average per function: **173 tokens**
+- Python entire 5-function file: **571 tokens** (about 114/function)
+- In raw count, Python seems smaller, but NAIL includes **type info, overflow behavior, and effects**
+- Encoding equivalent information in Python requires extra annotations or comments
 
 ---
 
-## v0.2 への提案（AIによる仕様改善提案 #001）
+## Proposals for v0.2 (AI Spec Improvement Proposal #001)
 
-### Proposal #001: 可変変数の明確な意味論
+### Proposal #001: Explicit Mutable Variable Semantics
 
 ```json
-// 可変変数宣言
+// Mutable variable declaration
 { "op": "let", "id": "acc", "mut": true, "val": { "lit": 1 } }
 
-// 再代入（letとは別のop）
+// Reassignment (separate op from let)
 { "op": "assign", "id": "acc", "val": { "op": "*", "l": { "ref": "acc" }, "r": { "ref": "i" } } }
 ```
 
-- `let` は変数の宣言（immutableがデフォルト）
-- `assign` は可変変数への再代入（`mut: true` が宣言されていない変数への `assign` はコンパイルエラー）
-- スコープルール: 内側のスコープの `assign` は外側のスコープの変数を変更できる
+- `let` declares a variable (immutable by default)
+- `assign` reassigns a mutable variable (`assign` to variables without `mut: true` is a compile error)
+- Scope rule: `assign` inside inner scope can mutate variables in outer scope
 
-### Proposal #002: if を式として使えるようにする
+### Proposal #002: Allow `if` as an Expression
 
 ```json
 {
@@ -113,17 +113,17 @@ def add(a, b):
 }
 ```
 
-現在の `if` はステートメントのみ。式として使えると、多くのパターンが簡潔に書けるようになる。
+Current `if` is statement-only. Expression form would make many patterns more concise.
 
 ---
 
-## 結論
+## Conclusion
 
-**「NAILはAIが書きやすいか？」への現時点での答え: 条件付きでYes**
+**Current answer to "Is NAIL easy for AI to write?": Yes, with conditions**
 
-- ゼロ曖昧性の構造は、LLMが型ミスマッチやエフェクト汚染を犯すことを**物理的に不可能**にする
-- 一方で v0.1 の可変変数の不備は、ループを使うアルゴリズムで意味的な誤りを生む
-- この「意味的なバグ」は v0.2 の `assign` op と `if_expr` で解決可能
+- The zero-ambiguity structure makes type mismatch and effect pollution **physically impossible** for LLMs to produce in accepted code.
+- On the other hand, mutable-variable limitations in v0.1 create semantic errors in loop-based algorithms.
+- This semantic issue can be solved with v0.2 `assign` and `if_expr`.
 
-**重要な観察**: NAILでのバグは「仕様の不足によるもの」であり「AIの推論ミスによるもの」ではない。
-これはNAILの設計思想が正しいことを示している——言語が正確であれば、エラーの原因が明確になる。
+**Key observation**: Bugs in NAIL are caused by spec incompleteness, not by AI inference mistakes.
+This supports NAIL's design philosophy: when language rules are precise, error causes become precise.
