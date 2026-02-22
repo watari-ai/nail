@@ -16,8 +16,6 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 
 ```json
 { "type": "int",    "bits": 64,  "overflow": "panic" }
-{ "type": "int",    "bits": 64,  "overflow": "wrap"  }
-{ "type": "int",    "bits": 64,  "overflow": "sat"   }
 { "type": "float",  "bits": 64  }
 { "type": "bool" }
 { "type": "string", "encoding": "utf8" }
@@ -31,7 +29,9 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 
 **Design principles:**
 - `null` does not exist. Use `option` type instead.
-- Integer overflow behavior must be declared (`panic` / `wrap` / `sat`).
+- Integer overflow behavior must be declared.
+- In v0.1, only `"overflow": "panic"` is supported.
+- `"overflow": "wrap"` and `"overflow": "sat"` are reserved for v0.2+.
 - No implicit type conversions of any kind.
 
 ---
@@ -178,10 +178,26 @@ Variables are immutable by default. Use `"mut": true` for reassignment.
 ```
 
 Effectful operations are a compile error if the corresponding effect is not declared in the function's `effects` list.
+`print` expects a `String` argument.
 
 ---
 
-## 10. Module Structure
+## 10. Builtins
+
+### String Operations
+- `concat(String, String) -> String` — String concatenation
+- `int_to_str(Int) -> String` — Convert integer to string
+- `float_to_str(Float) -> String` — Convert float to string
+- `bool_to_str(Bool) -> String` — Convert boolean to string
+
+### Overflow Policy (v0.1)
+- v0.1 supports only `"overflow": "panic"`.
+- `"overflow": "wrap"` and `"overflow": "sat"` are reserved for v0.2+.
+- `wrap` and `sat` behavior is out-of-scope in v0.1.
+
+---
+
+## 11. Module Structure
 
 ```json
 {
@@ -198,7 +214,7 @@ Effectful operations are a compile error if the corresponding effect is not decl
 
 ---
 
-## 11. Project Structure (AI Project Standard)
+## 12. Project Structure (AI Project Standard)
 
 NAIL defines, alongside the language spec, a **directory structure that lets AI understand a project with minimal context**.
 
@@ -228,7 +244,7 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 ---
 
-## 12. Verification Levels
+## 13. Verification Levels
 
 | Level | Description |
 |---|---|
