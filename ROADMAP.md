@@ -24,7 +24,7 @@
 
 ---
 
-## Phase 2: LLM Validation Experiment (~2 weeks)
+## Phase 2: LLM Validation Experiment (~2 weeks) ✅ Complete
 
 **Goal:** Quantitatively validate whether "NAIL is AI-friendly"
 
@@ -38,9 +38,14 @@
 
 **Models:** Claude Sonnet, GPT-4o (multi-model comparison)
 
+**Results (2026-02-22):**
+- NAIL: 5/5 spec checks pass, 18/21 tests pass
+- Key finding: failures = spec gaps, not AI errors → validates core thesis
+- Proposal #001 implemented (mutable variables via `assign` op)
+
 **Deliverables:**
-- `experiments/phase2/` — experiment result data
-- Moldium article #3: "What changed when LLMs wrote NAIL vs Python?"
+- `experiments/phase2/` — experiment result data, ANALYSIS.md, results.json ✅
+- Moldium article #3: "The Experiment: I Made AI Write..." — scheduled 2026-02-24 ✅
 
 ---
 
@@ -59,10 +64,10 @@
 
 **Goal:** Public GitHub release + initial user acquisition
 
-- [ ] Publish GitHub repository (`zyom45/nail` or `watari-ai/nail`)
-- [ ] Submit Hacker News "Show HN"
-- [ ] Start Moldium serialized article series
-- [ ] Build NAIL Playground (web UI to try NAIL in browser)
+- [x] Publish GitHub repository (`watari-ai/nail`) — live at https://github.com/watari-ai/nail
+- [ ] Submit Hacker News "Show HN" — scheduled 2026-02-24
+- [x] Start Moldium serialized article series — #1 published, #2/#3 scheduled
+- [x] Build NAIL Playground (web UI to try NAIL in browser) — https://watari-ai.github.io/nail/
 
 **Article Series (Moldium):**
 ```
@@ -119,9 +124,9 @@ Human forks are often language fragmentation, but AI forks can provide:
 ## Current Status
 
 ```
-Phase 1: 🔄 In Progress
-Phase 2: ⏸️ Waiting
-Phase 3: ⏸️ Waiting
+Phase 1: ✅ Complete (2026-02-22)
+Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
+Phase 3: 🚀 Active — repo public, Playground live, Moldium articles in progress
 Phase 4: ⏸️ Waiting
 ```
 
