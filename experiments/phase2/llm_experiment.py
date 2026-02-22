@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Phase 2 LLM experiment runner.
+"""Phase 2 LLM experiment runner (subprocess-based).
 
-Generates solutions for 5 problems with two models and two target languages:
-- Claude (claude-3-5-sonnet-20241022) -> NAIL and Python
-- GPT-4o -> Python and NAIL
+Calls LLMs via CLI tools instead of direct API calls:
+- Claude: openclaw agent --message "<prompt>" --json --session-id nail-experiment-claude
+- GPT-4o: codex exec "<prompt>" --model gpt-4o
 
-Then validates and tests outputs, records token usage and errors, and writes:
-- experiments/phase2/llm_results.json
+Prompts each LLM to implement 5 problems in both NAIL and Python.
+Validates NAIL through the interpreter, tests Python functions.
+Saves results to experiments/phase2/llm_results.json.
 """
 
 from __future__ import annotations
@@ -14,13 +15,12 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
+import sys
 import textwrap
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable
-
-# Local interpreter imports
-import sys
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -30,7 +30,32 @@ from interpreter import Checker, Runtime  # noqa: E402
 
 PROBLEMS_PATH = Path(__file__).with_name("PROBLEMS.md")
 RESULTS_PATH = Path(__file__).with_name("llm_results.json")
+SPEC_PATH = ROOT / "SPEC.md"
+EXAMPLES_DIR = ROOT / "examples"
 
+# ---------------------------------------------------------------------------
+# Load NAIL spec and examples for rich prompts
+# ---------------------------------------------------------------------------
+
+def load_nail_spec() -> str:
+    if SPEC_PATH.exists():
+        return SPEC_PATH.read_text(encoding="utf-8")
+    return "(NAIL spec not found)"
+
+
+def load_nail_examples() -> str:
+    parts: list[str] = []
+    for p in sorted(EXAMPLES_DIR.glob("*.nail")):
+        parts.append(f"--- {p.name} ---\n{p.read_text(encoding='utf-8').strip()}")
+    return "\n\n".join(parts) if parts else "(no examples found)"
+
+
+NAIL_SPEC = load_nail_spec()
+NAIL_EXAMPLES = load_nail_examples()
+
+# ---------------------------------------------------------------------------
+# Problem definitions and test cases
+# ---------------------------------------------------------------------------
 
 @dataclass
 class Problem:
@@ -38,7 +63,6 @@ class Problem:
     description: str
 
 
-# Canonical test cases used for execution checks.
 TEST_CASES: dict[str, list[tuple[dict[str, int], Any]]] = {
     "is_even": [
         ({"n": 4}, True),
@@ -74,23 +98,17 @@ TEST_CASES: dict[str, list[tuple[dict[str, int], Any]]] = {
 }
 
 
-def approx_tokens(text: str) -> int:
-    return len(re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\d+|\S", text))
-
-
 def load_problems() -> list[Problem]:
     if not PROBLEMS_PATH.exists():
         return default_problems()
-
     body = PROBLEMS_PATH.read_text(encoding="utf-8")
-    chunks = re.findall(r"^###\s+P\d+:\s+([a-z_]+)\n(.*?)(?=\n###\s+P\d+:|\Z)", body, flags=re.M | re.S)
+    chunks = re.findall(
+        r"^###\s+P\d+:\s+([a-z_]+)\n(.*?)(?=\n###\s+P\d+:|\Z)",
+        body, flags=re.M | re.S,
+    )
     if not chunks:
         return default_problems()
-
-    problems: list[Problem] = []
-    for name, chunk in chunks:
-        problems.append(Problem(name=name.strip(), description=chunk.strip()))
-    return problems
+    return [Problem(name=n.strip(), description=c.strip()) for n, c in chunks]
 
 
 def default_problems() -> list[Problem]:
@@ -103,105 +121,119 @@ def default_problems() -> list[Problem]:
     ]
 
 
+# ---------------------------------------------------------------------------
+# Prompt builders
+# ---------------------------------------------------------------------------
+
 def nail_prompt(problem: Problem) -> str:
-    return textwrap.dedent(
-        f"""
-        Implement this function in NAIL JSON only. Return only one JSON object.
+    return textwrap.dedent(f"""\
+You are implementing a function in NAIL, a JSON-based programming language for AI.
+Return ONLY a single valid JSON object — no markdown fences, no explanation.
 
-        Problem: {problem.name}
-        Spec:
-        {problem.description}
+## NAIL Language Specification
+{NAIL_SPEC}
 
-        Required NAIL format:
-        - Top-level keys: nail, kind, id, effects, params, returns, body
-        - Use: {{"nail":"0.1.0","kind":"fn","id":"...","effects":[],"params":[...],"returns":{{...}},"body":[...]}}
-        - Type objects must use NAIL v0.1 shape like: {{"type":"int","bits":64,"overflow":"panic"}}, {{"type":"bool"}}
-        - Params are: {{"id":"name","type":<type_obj>}}
-        - Body statements: let, return, if, loop, assign
-        - Loop statement shape: {{"op":"loop","bind":"i","from":<expr>,"to":<expr>,"step":<expr>,"body":[...]}}
-        - Expression ops use symbols/keywords as supported by NAIL checker:
-          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not
-        - Variable reference: {{"ref":"name"}}
-        - Literal: {{"lit": 123}}
+## Example NAIL programs
+{NAIL_EXAMPLES}
 
-        Constraints:
-        - No side effects (effects must be [])
-        - Output must be valid JSON and must type-check in NAIL checker.
-        """
-    ).strip()
+## Your task
+Implement the function `{problem.name}` in NAIL JSON.
+
+Problem spec:
+{problem.description}
+
+Constraints:
+- Pure function (effects: [])
+- Output must be a single JSON object with keys: nail, kind, id, effects, params, returns, body
+- Must type-check against NAIL v0.1 spec
+- Return ONLY the JSON object, nothing else
+""")
 
 
 def python_prompt(problem: Problem) -> str:
-    return textwrap.dedent(
-        f"""
-        Implement exactly one Python function for this problem.
-        Return only Python code.
+    return textwrap.dedent(f"""\
+Implement exactly one Python function for this problem.
+Return ONLY Python code — no markdown fences, no explanation.
 
-        Function name: {problem.name}
-        Spec:
-        {problem.description}
+Function name: {problem.name}
+Spec:
+{problem.description}
 
-        Constraints:
-        - No prints, no I/O, no extra text.
-        - Deterministic pure function.
-        """
-    ).strip()
+Constraints:
+- No prints, no I/O, no extra text.
+- Deterministic pure function.
+- Include type hints.
+""")
 
 
-def call_claude(prompt: str) -> tuple[str, dict[str, int]]:
+# ---------------------------------------------------------------------------
+# LLM callers (subprocess-based)
+# ---------------------------------------------------------------------------
+
+def call_claude(prompt: str) -> tuple[str, str | None]:
+    """Call Claude via openclaw agent CLI."""
     try:
-        import anthropic
-    except Exception as exc:  # pragma: no cover - env dependent
-        raise RuntimeError("anthropic package is not installed") from exc
+        result = subprocess.run(
+            [
+                "openclaw", "agent",
+                "--message", prompt,
+                "--json",
+                "--session-id", "nail-experiment-claude",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            return "", f"openclaw exit code {result.returncode}: {result.stderr[:500]}"
 
-    api_key = os.getenv("ANTHROPIC_API_KEY")
-    if not api_key:
-        raise RuntimeError("ANTHROPIC_API_KEY is not set")
+        # --json outputs JSON; extract the response text
+        try:
+            data = json.loads(result.stdout)
+            text = data.get("response", data.get("text", result.stdout))
+            if isinstance(text, str):
+                return text.strip(), None
+            return json.dumps(text), None
+        except json.JSONDecodeError:
+            # Plain text output
+            return result.stdout.strip(), None
 
-    client = anthropic.Anthropic(api_key=api_key)
-    resp = client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=1200,
-        temperature=0,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    text_parts: list[str] = []
-    for block in resp.content:
-        if getattr(block, "type", "") == "text":
-            text_parts.append(block.text)
-
-    usage = {
-        "input_tokens": int(getattr(resp.usage, "input_tokens", 0) or 0),
-        "output_tokens": int(getattr(resp.usage, "output_tokens", 0) or 0),
-    }
-    return "\n".join(text_parts).strip(), usage
+    except subprocess.TimeoutExpired:
+        return "", "timeout (120s)"
+    except FileNotFoundError:
+        return "", "openclaw command not found"
+    except Exception as exc:
+        return "", str(exc)
 
 
-def call_gpt(prompt: str) -> tuple[str, dict[str, int]]:
+def call_gpt4o(prompt: str) -> tuple[str, str | None]:
+    """Call GPT-4o via codex exec CLI."""
     try:
-        from openai import OpenAI
-    except Exception as exc:  # pragma: no cover - env dependent
-        raise RuntimeError("openai package is not installed") from exc
+        result = subprocess.run(
+            [
+                "codex", "exec",
+                prompt,
+                "--model", "gpt-4o",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if result.returncode != 0:
+            return "", f"codex exit code {result.returncode}: {result.stderr[:500]}"
+        return result.stdout.strip(), None
 
-    api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise RuntimeError("OPENAI_API_KEY is not set")
+    except subprocess.TimeoutExpired:
+        return "", "timeout (120s)"
+    except FileNotFoundError:
+        return "", "codex command not found"
+    except Exception as exc:
+        return "", str(exc)
 
-    client = OpenAI(api_key=api_key)
-    resp = client.chat.completions.create(
-        model="gpt-4o",
-        temperature=0,
-        messages=[{"role": "user", "content": prompt}],
-    )
 
-    content = resp.choices[0].message.content or ""
-    usage = {
-        "input_tokens": int(getattr(resp.usage, "prompt_tokens", 0) or 0),
-        "output_tokens": int(getattr(resp.usage, "completion_tokens", 0) or 0),
-    }
-    return content.strip(), usage
-
+# ---------------------------------------------------------------------------
+# Response parsing helpers
+# ---------------------------------------------------------------------------
 
 def extract_python_code(text: str) -> str:
     fenced = re.findall(r"```(?:python)?\n(.*?)```", text, flags=re.S | re.I)
@@ -211,6 +243,7 @@ def extract_python_code(text: str) -> str:
 
 
 def extract_json_object(text: str) -> str:
+    # Try fenced blocks first
     fenced = re.findall(r"```(?:json)?\n(.*?)```", text, flags=re.S | re.I)
     candidates = fenced + [text]
     for candidate in candidates:
@@ -247,6 +280,14 @@ def _first_json_object(text: str) -> str | None:
     return None
 
 
+def approx_tokens(text: str) -> int:
+    return len(re.findall(r"[A-Za-z_][A-Za-z0-9_]*|\d+|\S", text))
+
+
+# ---------------------------------------------------------------------------
+# Evaluation
+# ---------------------------------------------------------------------------
+
 def evaluate_nail(raw_text: str, problem_name: str) -> dict[str, Any]:
     out: dict[str, Any] = {
         "check_pass": False,
@@ -255,7 +296,6 @@ def evaluate_nail(raw_text: str, problem_name: str) -> dict[str, Any]:
         "errors": [],
         "code_tokens": 0,
     }
-
     try:
         json_text = extract_json_object(raw_text)
         out["code_tokens"] = approx_tokens(json_text)
@@ -282,7 +322,6 @@ def evaluate_nail(raw_text: str, problem_name: str) -> dict[str, Any]:
                 out["errors"].append(f"test_failed args={args} expected={expected} got={got}")
         except Exception as exc:
             out["errors"].append(f"runtime_error args={args}: {exc}")
-
     return out
 
 
@@ -294,7 +333,6 @@ def evaluate_python(raw_text: str, problem_name: str) -> dict[str, Any]:
         "errors": [],
         "code_tokens": 0,
     }
-
     code = extract_python_code(raw_text)
     out["code_tokens"] = approx_tokens(code)
 
@@ -320,41 +358,20 @@ def evaluate_python(raw_text: str, problem_name: str) -> dict[str, Any]:
                 out["errors"].append(f"test_failed args={args} expected={expected} got={got}")
         except Exception as exc:
             out["errors"].append(f"runtime_error args={args}: {exc}")
-
     return out
 
 
-def run_generation(model_name: str, language: str, prompt: str) -> tuple[str, dict[str, int], str | None]:
-    try:
-        if model_name == "claude":
-            text, usage = call_claude(prompt)
-        elif model_name == "gpt4o":
-            text, usage = call_gpt(prompt)
-        else:
-            raise ValueError(f"Unknown model: {model_name}")
-        return text, usage, None
-    except Exception as exc:  # pragma: no cover - env/network dependent
-        return "", {"input_tokens": 0, "output_tokens": 0}, str(exc)
+# ---------------------------------------------------------------------------
+# Main runner
+# ---------------------------------------------------------------------------
 
-
-def format_rate(pass_n: int, total: int) -> str:
-    if total == 0:
-        return "0/0"
-    return f"{pass_n}/{total}"
+def format_rate(n: int, total: int) -> str:
+    return f"{n}/{total}"
 
 
 def print_table(rows: list[dict[str, Any]]) -> None:
-    headers = [
-        "problem",
-        "run",
-        "check",
-        "tests",
-        "prompt_tok",
-        "completion_tok",
-        "code_tok",
-    ]
+    headers = ["problem", "run", "check", "tests", "code_tok"]
     widths = {h: len(h) for h in headers}
-
     for row in rows:
         for h in headers:
             widths[h] = max(widths[h], len(str(row.get(h, ""))))
@@ -375,17 +392,23 @@ def main() -> None:
 
     runs = [
         ("claude", "nail"),
-        ("gpt4o", "python"),
         ("claude", "python"),
         ("gpt4o", "nail"),
+        ("gpt4o", "python"),
     ]
+
+    callers = {
+        "claude": call_claude,
+        "gpt4o": call_gpt4o,
+    }
 
     all_results: dict[str, Any] = {
         "meta": {
-            "script": str(Path(__file__).name),
+            "script": Path(__file__).name,
+            "method": "subprocess (openclaw agent / codex exec)",
             "models": {
-                "claude": "claude-3-5-sonnet-20241022",
-                "gpt4o": "gpt-4o",
+                "claude": "claude (via openclaw agent)",
+                "gpt4o": "gpt-4o (via codex exec)",
             },
             "problems": [p.name for p in problems],
         },
@@ -398,15 +421,17 @@ def main() -> None:
         print(f"\n=== {problem.name} ===")
         for model_name, language in runs:
             prompt = nail_prompt(problem) if language == "nail" else python_prompt(problem)
-            response_text, usage, err = run_generation(model_name, language, prompt)
+            caller = callers[model_name]
+
+            print(f"  {model_name}->{language} ... ", end="", flush=True)
+            response_text, err = caller(prompt)
 
             record: dict[str, Any] = {
                 "problem": problem.name,
                 "model": model_name,
                 "language": language,
-                "prompt": prompt,
-                "response": response_text,
-                "usage": usage,
+                "prompt_length": len(prompt),
+                "response": response_text[:2000] if response_text else "",
                 "request_error": err,
             }
 
@@ -418,36 +443,32 @@ def main() -> None:
                     "errors": [f"request_error: {err}"],
                     "code_tokens": 0,
                 }
+            elif language == "nail":
+                eval_result = evaluate_nail(response_text, problem.name)
             else:
-                if language == "nail":
-                    eval_result = evaluate_nail(response_text, problem.name)
-                else:
-                    eval_result = evaluate_python(response_text, problem.name)
+                eval_result = evaluate_python(response_text, problem.name)
 
             record["evaluation"] = eval_result
             all_results["results"].append(record)
 
-            table_rows.append(
-                {
-                    "problem": problem.name,
-                    "run": f"{model_name}->{language}",
-                    "check": "PASS" if eval_result["check_pass"] else "FAIL",
-                    "tests": format_rate(eval_result["test_pass"], eval_result["test_total"]),
-                    "prompt_tok": usage.get("input_tokens", 0),
-                    "completion_tok": usage.get("output_tokens", 0),
-                    "code_tok": eval_result.get("code_tokens", 0),
-                }
-            )
+            status = "PASS" if eval_result["check_pass"] else "FAIL"
+            tests = format_rate(eval_result["test_pass"], eval_result["test_total"])
+            print(f"check={status} tests={tests}")
 
-            print(
-                f"{model_name}->{language}: "
-                f"check={'PASS' if eval_result['check_pass'] else 'FAIL'} "
-                f"tests={eval_result['test_pass']}/{eval_result['test_total']}"
-            )
+            table_rows.append({
+                "problem": problem.name,
+                "run": f"{model_name}->{language}",
+                "check": status,
+                "tests": tests,
+                "code_tok": eval_result.get("code_tokens", 0),
+            })
 
-    RESULTS_PATH.write_text(json.dumps(all_results, indent=2, ensure_ascii=False), encoding="utf-8")
-    print("\nSaved:", RESULTS_PATH)
-    print("\nComparison Table")
+    RESULTS_PATH.write_text(
+        json.dumps(all_results, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    print(f"\nSaved: {RESULTS_PATH}")
+    print("\n--- Comparison Table ---")
     print_table(table_rows)
 
 
