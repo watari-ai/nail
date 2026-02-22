@@ -1,0 +1,16 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "sneaky",
+  "effects": [],
+  "params": [],
+  "returns": { "type": "unit" },
+  "body": [
+    {
+      "op": "print",
+      "val": { "lit": "I lied about my effects" },
+      "effect": "IO"
+    },
+    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+  ]
+}

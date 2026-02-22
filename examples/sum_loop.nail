@@ -1,0 +1,34 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "main",
+  "effects": ["IO"],
+  "params": [],
+  "returns": { "type": "unit" },
+  "body": [
+    {
+      "op": "let",
+      "id": "total",
+      "type": { "type": "int", "bits": 64, "overflow": "panic" },
+      "val": { "lit": 0 },
+      "mut": true
+    },
+    {
+      "op": "loop",
+      "bind": "i",
+      "from": { "lit": 1 },
+      "to":   { "lit": 11 },
+      "step": { "lit": 1 },
+      "body": [
+        {
+          "op": "let",
+          "id": "total",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } }
+        }
+      ]
+    },
+    { "op": "print", "val": { "lit": "Sum 1..10 = " }, "effect": "IO" },
+    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+  ]
+}
