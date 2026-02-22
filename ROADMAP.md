@@ -44,6 +44,17 @@
 
 ---
 
+## Phase 3 / v0.2 Goals
+
+**Goal:** Extend v0.1 core with language/runtime consistency features.
+
+- [ ] overflow: implement `wrap` / `sat`
+- [ ] Result type / error model
+- [ ] import / module linking
+- [ ] cross-module function call
+
+---
+
 ## Phase 3: OSS Launch (~1 month)
 
 **Goal:** Public GitHub release + initial user acquisition

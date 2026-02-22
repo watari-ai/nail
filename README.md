@@ -17,7 +17,7 @@ NAIL removes that weight entirely.
 1. **AI-first, human-second** — Written and maintained by AI. Human developers interact at the specification layer, not the code layer.
 2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior.
 3. **Effects as types** — All side effects (IO, network, filesystem) are declared in function signatures and enforced by the type system.
-4. **Formal verification by default** — Code that cannot be proven correct does not compile.
+4. **Formal verification (v0.2+)** — v0.1 focuses on correct L0–L2 implementation. Full formal verification (termination proof, etc.) is a v0.2+ milestone.
 5. **Minimal context** — The same logic expressed in fewer tokens than equivalent Python or JavaScript. AI inference is cheaper.
 6. **Self-evolving** — The language specification itself is developed and improved by AI, with humans providing intent and constraints.
 

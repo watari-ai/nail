@@ -1,0 +1,30 @@
+name: CI
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install pytest
+      - name: Run tests
+        run: python -m pytest tests/ -v
+      - name: Check examples
+        run: |
+          for f in examples/*.nail; do
+            echo "Checking $f..."
+            if [ "$(basename "$f")" = "bad_effect.nail" ]; then
+              # Negative fixture: must fail effect checking.
+              python nail check "$f" && exit 1 || true
+            else
+              python nail check "$f" || exit 1
+            fi
+          done
