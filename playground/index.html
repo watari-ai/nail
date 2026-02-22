@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NAIL Playground</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ── Header ───────────────────────────────────────────────────── -->
+    <header class="header">
+      <div class="logo">NAIL <span>playground</span></div>
+
+      <div class="toolbar">
+        <div class="example-group">
+          <label for="example-select">Example:</label>
+          <select id="example-select"></select>
+        </div>
+
+        <div class="args-group">
+          <label for="args-input">Args:</label>
+          <input
+            id="args-input"
+            class="args-input"
+            type="text"
+            placeholder="n=10, x=42"
+            title="Comma-separated name=value pairs passed as function arguments"
+          />
+        </div>
+      </div>
+
+      <button id="run-btn" class="btn btn-run" title="Run (⌘Enter)">▶ Run</button>
+    </header>
+
+    <!-- ── Desc bar ─────────────────────────────────────────────────── -->
+    <div class="desc-bar" id="example-desc">Select an example or write your own NAIL program.</div>
+
+    <!-- ── Editor + Output ──────────────────────────────────────────── -->
+    <div class="panels">
+
+      <!-- Left: JSON Editor -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Program (JSON)</span>
+          <div class="panel-actions">
+            <button id="format-btn" class="btn btn-ghost" title="Format JSON">{ }</button>
+          </div>
+        </div>
+        <textarea
+          id="editor"
+          class="editor"
+          spellcheck="false"
+          autocorrect="off"
+          autocapitalize="off"
+          placeholder='Paste a NAIL program here, or select an example above…'
+        ></textarea>
+      </div>
+
+      <div class="panel-divider" id="divider"></div>
+
+      <!-- Right: Output -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">Output</span>
+          <div class="panel-actions">
+            <button id="copy-btn" class="btn btn-ghost" title="Copy output">Copy</button>
+            <button id="clear-btn" class="btn btn-ghost" title="Clear output">Clear</button>
+          </div>
+        </div>
+        <pre id="output" class="output-panel"><span class="output-placeholder">Run a program to see output here…</span></pre>
+      </div>
+
+    </div><!-- /.panels -->
+
+    <!-- ── Status bar ────────────────────────────────────────────────── -->
+    <div id="status-bar" class="status-bar info">Ready · ⌘Enter to run</div>
+
+  </div><!-- /.app -->
+
+  <script src="app.js"></script>
+</body>
+</html>
