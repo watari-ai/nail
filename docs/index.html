@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NAIL Playground — AI-Native Programming Language</title>
+  <meta name="description" content="Try NAIL in your browser. NAIL is an AI-native programming language with JSON syntax and zero ambiguity." />
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:         #0d0d1a;
+      --bg-panel:   #12121f;
+      --bg-panel2:  #0f0f1c;
+      --bg-hover:   #1a1a2e;
+      --border:     #1e1e38;
+      --accent:     #e94560;
+      --accent-dim: #b03347;
+      --text:       #e0e0f0;
+      --text-dim:   #8888aa;
+      --text-muted: #555577;
+      --green:      #39d353;
+      --red:        #e94560;
+      --yellow:     #f9c74f;
+      --font-mono:  'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ───────────────────────────────────────────────────── */
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    /* ── Header ───────────────────────────────────────────────────── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 16px;
+      height: 52px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .logo {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--accent);
+      white-space: nowrap;
+      font-family: var(--font-mono);
+    }
+    .logo span {
+      color: var(--text-dim);
+      font-weight: 400;
+    }
+
+    .header-github {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 12px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid var(--border);
+      transition: color .15s, border-color .15s;
+    }
+    .header-github:hover { color: var(--text); border-color: var(--accent); }
+
+    .header-spacer { flex: 1; }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .example-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .example-group label {
+      color: var(--text-dim);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      transition: border-color .15s;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .args-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .args-group label {
+      color: var(--text-dim);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .args-input {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      font-family: var(--font-mono);
+      width: 140px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .args-input:focus { border-color: var(--accent); }
+    .args-input::placeholder { color: var(--text-muted); }
+
+    /* ── Buttons ──────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 14px;
+      border-radius: 5px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: background .15s, opacity .15s;
+      outline: none;
+      white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .btn-run {
+      background: var(--accent);
+      color: #fff;
+      padding: 6px 18px;
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .btn-run:hover:not(:disabled) { background: var(--accent-dim); }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
+
+    /* ── Loading Overlay ──────────────────────────────────────────── */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 1000;
+    }
+    #loading-overlay.hidden { display: none; }
+
+    .loading-logo {
+      font-family: var(--font-mono);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.08em;
+    }
+
+    .loading-msg {
+      color: var(--text-dim);
+      font-size: 14px;
+    }
+
+    .loading-bar-wrap {
+      width: 240px;
+      height: 3px;
+      background: var(--border);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .loading-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      animation: loading-anim 1.8s ease-in-out infinite;
+    }
+    @keyframes loading-anim {
+      0%   { width: 0%;   margin-left: 0; }
+      50%  { width: 60%;  margin-left: 20%; }
+      100% { width: 0%;   margin-left: 100%; }
+    }
+
+    /* ── Panels ───────────────────────────────────────────────────── */
+    .panels {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 14px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .panel-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .panel-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    .panel-divider {
+      width: 4px;
+      background: var(--border);
+      cursor: col-resize;
+      flex-shrink: 0;
+      transition: background .15s;
+    }
+    .panel-divider:hover, .panel-divider.dragging { background: var(--accent); }
+
+    /* ── Editor ───────────────────────────────────────────────────── */
+    #editor {
+      flex: 1;
+      width: 100%;
+      padding: 16px;
+      background: var(--bg-panel2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.6;
+      border: none;
+      resize: none;
+      outline: none;
+      tab-size: 2;
+    }
+    #editor::placeholder { color: var(--text-muted); }
+
+    /* ── Output ───────────────────────────────────────────────────── */
+    .output-panel {
+      flex: 1;
+      padding: 16px;
+      background: var(--bg-panel2);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.7;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: var(--text-dim);
+    }
+    .output-panel.success { color: var(--green); }
+    .output-panel.error   { color: var(--red); }
+
+    .output-placeholder { color: var(--text-muted); font-style: italic; }
+
+    /* ── Status bar ───────────────────────────────────────────────── */
+    .status-bar {
+      padding: 4px 14px;
+      font-size: 11px;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-bar.ok     { color: var(--green); }
+    .status-bar.error  { color: var(--red); }
+    .status-bar.warn   { color: var(--yellow); }
+
+    /* ── About bar ────────────────────────────────────────────────── */
+    .about-bar {
+      padding: 5px 16px;
+      background: var(--bg-panel);
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+    .about-bar a { color: var(--text-dim); text-decoration: none; }
+    .about-bar a:hover { color: var(--accent); }
+
+    /* ── Tag badge ────────────────────────────────────────────────── */
+    .tag {
+      display: inline-block;
+      background: rgba(233, 69, 96, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(233, 69, 96, 0.3);
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      letter-spacing: 0.05em;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+  <div class="loading-logo">NAIL</div>
+  <div class="loading-msg" id="loading-msg">Loading NAIL interpreter…</div>
+  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
+</div>
+
+<div class="app" id="app" style="display:none">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="logo">NAIL <span>playground</span></div>
+    <span class="tag">v0.1.0</span>
+
+    <div class="header-spacer"></div>
+
+    <div class="toolbar">
+      <div class="example-group">
+        <label for="example-select">Example:</label>
+        <select id="example-select"></select>
+      </div>
+      <div class="args-group">
+        <label for="args-input">Args:</label>
+        <input
+          id="args-input"
+          class="args-input"
+          type="text"
+          placeholder="n=10, x=42"
+          title="Comma-separated name=value pairs"
+        />
+      </div>
+    </div>
+
+    <button id="run-btn" class="btn btn-run" title="Run (⌘Enter / Ctrl+Enter)">▶ Run</button>
+
+    <a class="header-github" href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+      </svg>
+      GitHub
+    </a>
+  </header>
+
+  <!-- About -->
+  <div class="about-bar">
+    NAIL is an AI-native programming language — JSON syntax, zero ambiguity, designed for LLMs to generate correct code first time.
+    &nbsp;·&nbsp;
+    <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">watari-ai/nail</a>
+    &nbsp;·&nbsp;
+    Runs entirely in your browser via <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>
+  </div>
+
+  <!-- Main panels -->
+  <div class="panels" id="panels">
+
+    <!-- Left: Editor -->
+    <div class="panel" id="left-panel">
+      <div class="panel-header">
+        <span class="panel-title">Program (JSON)</span>
+        <div class="panel-actions">
+          <button id="format-btn" class="btn btn-ghost" title="Format JSON">{ }</button>
+        </div>
+      </div>
+      <textarea
+        id="editor"
+        class="editor"
+        spellcheck="false"
+        autocorrect="off"
+        autocapitalize="off"
+        autocomplete="off"
+        placeholder='Paste a NAIL program here, or select an example above…'
+      ></textarea>
+    </div>
+
+    <div class="panel-divider" id="divider"></div>
+
+    <!-- Right: Output -->
+    <div class="panel" id="right-panel">
+      <div class="panel-header">
+        <span class="panel-title">Output</span>
+        <div class="panel-actions">
+          <button id="copy-btn" class="btn btn-ghost" title="Copy output">Copy</button>
+          <button id="clear-btn" class="btn btn-ghost" title="Clear output">Clear</button>
+        </div>
+      </div>
+      <pre id="output" class="output-panel"><span class="output-placeholder">Run a program to see output here…</span></pre>
+    </div>
+
+  </div>
+
+  <!-- Status bar -->
+  <div id="status-bar" class="status-bar">
+    <span id="status-text">Ready · ⌘Enter or Ctrl+Enter to run</span>
+  </div>
+
+</div><!-- /.app -->
+
+
+<!-- Pyodide CDN -->
+<script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════════
+// NAIL Playground — Pyodide (static GitHub Pages edition)
+// ════════════════════════════════════════════════════════════════════════════
+
+// ── Example Programs ─────────────────────────────────────────────────────────
+
+const EXAMPLES = {
+  hello: {
+    label: "Hello, NAIL",
+    description: "Prints a greeting. No arguments needed.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "print", "val": { "lit": "Hello, NAIL" }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  fibonacci: {
+    label: "Fibonacci(n)",
+    description: "Computes the Nth Fibonacci number. Set Args: n=10",
+    args: { n: 10 },
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "fibonacci",
+      "effects": [],
+      "params": [
+        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        { "op": "let", "id": "a", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
+        { "op": "let", "id": "b", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 1 }, "mut": true },
+        { "op": "let", "id": "tmp", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 0 },
+          "to": { "ref": "n" },
+          "step": { "lit": 1 },
+          "body": [
+            { "op": "assign", "id": "tmp", "val": { "op": "+", "l": { "ref": "a" }, "r": { "ref": "b" } } },
+            { "op": "assign", "id": "a", "val": { "ref": "b" } },
+            { "op": "assign", "id": "b", "val": { "ref": "tmp" } }
+          ]
+        },
+        { "op": "return", "val": { "ref": "a" } }
+      ]
+    }
+  },
+
+  factorial: {
+    label: "Factorial(n)",
+    description: "Computes n! iteratively. Set Args: n=10",
+    args: { n: 10 },
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "factorial",
+      "effects": [],
+      "params": [
+        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        { "op": "let", "id": "result", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 1 }, "mut": true },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 1 },
+          "to": { "op": "+", "l": { "ref": "n" }, "r": { "lit": 1 } },
+          "step": { "lit": 1 },
+          "body": [
+            { "op": "assign", "id": "result", "val": { "op": "*", "l": { "ref": "result" }, "r": { "ref": "i" } } }
+          ]
+        },
+        { "op": "return", "val": { "ref": "result" } }
+      ]
+    }
+  },
+
+  countdown: {
+    label: "Countdown",
+    description: "Counts down 5→1, then prints Liftoff!",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "let", "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 5 } },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 0 },
+          "to": { "lit": 5 },
+          "step": { "lit": 1 },
+          "body": [
+            {
+              "op": "print",
+              "val": { "op": "int_to_str", "v": { "op": "-", "l": { "ref": "n" }, "r": { "ref": "i" } } },
+              "effect": "IO"
+            }
+          ]
+        },
+        { "op": "print", "val": { "lit": "Liftoff!" }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  sum_loop: {
+    label: "Sum 1..10",
+    description: "Sums integers from 1 to 10 using a loop.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "let", "id": "total", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 1 },
+          "to": { "lit": 11 },
+          "step": { "lit": 1 },
+          "body": [
+            { "op": "assign", "id": "total", "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } } }
+          ]
+        },
+        {
+          "op": "print",
+          "val": { "op": "concat", "l": { "lit": "Sum 1..10 = " }, "r": { "op": "int_to_str", "v": { "ref": "total" } } },
+          "effect": "IO"
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  is_even: {
+    label: "Is Even?",
+    description: "Returns true if n is even. Set Args: n=42",
+    args: { n: 42 },
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "is_even",
+      "effects": [],
+      "params": [
+        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "bool" },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "eq",
+            "l": { "op": "%", "l": { "ref": "n" }, "r": { "lit": 2 } },
+            "r": { "lit": 0 }
+          }
+        }
+      ]
+    }
+  }
+};
+
+// ── DOM Refs ─────────────────────────────────────────────────────────────────
+
+const editorEl    = document.getElementById("editor");
+const argsEl      = document.getElementById("args-input");
+const outputEl    = document.getElementById("output");
+const runBtn      = document.getElementById("run-btn");
+const exampleSel  = document.getElementById("example-select");
+const statusText  = document.getElementById("status-text");
+const statusBar   = document.getElementById("status-bar");
+const formatBtn   = document.getElementById("format-btn");
+const copyBtn     = document.getElementById("copy-btn");
+const clearBtn    = document.getElementById("clear-btn");
+const loadingEl   = document.getElementById("loading-overlay");
+const loadingMsg  = document.getElementById("loading-msg");
+const appEl       = document.getElementById("app");
+
+// ── State ─────────────────────────────────────────────────────────────────────
+
+let pyodide = null;
+let pyodideReady = false;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function setStatus(msg, kind = "info") {
+  statusText.textContent = msg;
+  statusBar.className = "status-bar " + kind;
+}
+
+function showOutput(text, mode = "neutral") {
+  outputEl.textContent = text;
+  outputEl.className = "output-panel " + mode;
+}
+
+function showOutputHTML(html) {
+  outputEl.innerHTML = html;
+  outputEl.className = "output-panel";
+}
+
+function parseArgs(raw) {
+  const args = {};
+  if (!raw || !raw.trim()) return args;
+  for (const part of raw.split(",")) {
+    const eq = part.indexOf("=");
+    if (eq < 1) continue;
+    const key = part.slice(0, eq).trim();
+    const val = part.slice(eq + 1).trim();
+    if (!key) continue;
+    if (val === "true")  { args[key] = true;  continue; }
+    if (val === "false") { args[key] = false; continue; }
+    const asInt = parseInt(val, 10);
+    if (!isNaN(asInt) && String(asInt) === val) { args[key] = asInt; continue; }
+    const asFloat = parseFloat(val);
+    if (!isNaN(asFloat)) { args[key] = asFloat; continue; }
+    args[key] = val;
+  }
+  return args;
+}
+
+function argsToString(args) {
+  if (!args || Object.keys(args).length === 0) return "";
+  return Object.entries(args).map(([k, v]) => `${k}=${v}`).join(", ");
+}
+
+function formatErrorMsg(raw) {
+  // Make interpreter error messages user-friendly
+  if (!raw) return "Unknown error";
+  let msg = String(raw);
+  // Strip Python traceback boilerplate, keep the actual message
+  const lines = msg.split("\n");
+  // Find the last non-empty line for single-line errors
+  const lastMeaningful = lines.filter(l => l.trim()).pop() || msg;
+  // Unwrap common Python exception prefixes
+  const unwrap = lastMeaningful
+    .replace(/^(nail\.interpreter\.\w+Error|CheckError|NailTypeError|NailEffectError|NailRuntimeError):\s*/i, "")
+    .replace(/^Exception:\s*/i, "");
+  return unwrap;
+}
+
+// ── Pyodide Bootstrap ─────────────────────────────────────────────────────────
+
+async function initPyodide() {
+  try {
+    loadingMsg.textContent = "Loading Pyodide runtime… (first load ~5–10s)";
+    pyodide = await loadPyodide();
+
+    loadingMsg.textContent = "Loading NAIL interpreter…";
+
+    // Fetch all interpreter files and write to Pyodide FS
+    const files = [
+      "interpreter/__init__.py",
+      "interpreter/types.py",
+      "interpreter/checker.py",
+      "interpreter/runtime.py",
+    ];
+
+    // Create the interpreter directory in Pyodide's virtual FS
+    pyodide.FS.mkdir("/interpreter");
+
+    for (const filePath of files) {
+      const fileName = filePath.split("/").pop();
+      const res = await fetch(filePath);
+      if (!res.ok) throw new Error(`Failed to fetch ${filePath}: ${res.status} ${res.statusText}`);
+      const text = await res.text();
+      pyodide.FS.writeFile(`/interpreter/${fileName}`, text);
+    }
+
+    // Verify the interpreter loads correctly
+    await pyodide.runPythonAsync(`
+import sys
+sys.path.insert(0, '/')
+from interpreter import Checker, Runtime
+from interpreter.runtime import UNIT
+`);
+
+    pyodideReady = true;
+    loadingEl.classList.add("hidden");
+    appEl.style.display = "flex";
+    setStatus("Ready · ⌘Enter or Ctrl+Enter to run");
+
+  } catch (err) {
+    loadingMsg.textContent = `❌ Failed to initialize: ${err.message}`;
+    loadingMsg.style.color = "#e94560";
+    console.error("Pyodide init error:", err);
+  }
+}
+
+// ── Run ───────────────────────────────────────────────────────────────────────
+
+async function runProgram() {
+  if (!pyodideReady) {
+    setStatus("⚠ Interpreter not ready yet — please wait", "warn");
+    return;
+  }
+
+  // Parse JSON
+  let program;
+  try {
+    program = JSON.parse(editorEl.value);
+  } catch (e) {
+    showOutput(`❌ JSON parse error: ${e.message}`, "error");
+    setStatus("Invalid JSON", "error");
+    return;
+  }
+
+  const args = parseArgs(argsEl.value);
+  const programJson = JSON.stringify(program);
+  const argsJson    = JSON.stringify(args);
+
+  runBtn.disabled = true;
+  runBtn.textContent = "Running…";
+  setStatus("Running…", "info");
+
+  const startMs = Date.now();
+
+  try {
+    const result = await pyodide.runPythonAsync(`
+import sys, io, json
+from contextlib import redirect_stdout
+
+# Ensure interpreter is on path
+if '/' not in sys.path:
+    sys.path.insert(0, '/')
+
+from interpreter import Checker, Runtime
+from interpreter.runtime import UNIT
+
+_spec = json.loads(${JSON.stringify(programJson)})
+_args = json.loads(${JSON.stringify(argsJson)})
+
+_output = ""
+_return_val = None
+_error = None
+
+try:
+    _checker = Checker(_spec)
+    _checker.check()
+
+    _captured = io.StringIO()
+    _runtime = Runtime(_spec)
+    with redirect_stdout(_captured):
+        _result = _runtime.run(_args if _args else None)
+
+    _output = _captured.getvalue()
+
+    # Format return value for display
+    if _result is UNIT or _result is None:
+        _return_val = None
+    else:
+        _return_val = repr(_result)
+
+except Exception as _e:
+    _error = str(_e)
+
+# Return a JSON-serialisable dict
+import json as _json
+_json.dumps({"output": _output, "return_val": _return_val, "error": _error})
+`);
+
+    const elapsed = Date.now() - startMs;
+    const data = JSON.parse(result);
+
+    if (data.error) {
+      const friendly = formatErrorMsg(data.error);
+      const partial = data.output ? data.output.trimEnd() + "\n\n" : "";
+      showOutput(`${partial}❌ ${friendly}`, "error");
+      setStatus(`Error · ${elapsed}ms`, "error");
+    } else {
+      let out = "";
+      if (data.output && data.output.trim()) {
+        out = data.output.trimEnd();
+      }
+      if (data.return_val !== null && data.return_val !== undefined) {
+        out += (out ? "\n\n" : "") + `→ ${data.return_val}`;
+      }
+      if (!out) out = "(no output)";
+      showOutput(out, "success");
+      setStatus(`Done · ${elapsed}ms`, "ok");
+    }
+
+  } catch (err) {
+    const elapsed = Date.now() - startMs;
+    showOutput(`❌ Runtime error: ${err.message}`, "error");
+    setStatus(`Error · ${elapsed}ms`, "error");
+    console.error("Run error:", err);
+  } finally {
+    runBtn.disabled = false;
+    runBtn.textContent = "▶ Run";
+  }
+}
+
+// ── Format JSON ───────────────────────────────────────────────────────────────
+
+function formatJSON() {
+  try {
+    const parsed = JSON.parse(editorEl.value);
+    editorEl.value = JSON.stringify(parsed, null, 2);
+    setStatus("Formatted", "ok");
+  } catch (e) {
+    setStatus(`Cannot format: ${e.message}`, "error");
+  }
+}
+
+// ── Example Load ──────────────────────────────────────────────────────────────
+
+function loadExample(key) {
+  const ex = EXAMPLES[key];
+  if (!ex) return;
+  editorEl.value = JSON.stringify(ex.program, null, 2);
+  argsEl.value   = argsToString(ex.args);
+  showOutputHTML(`<span class="output-placeholder">${ex.description}</span>`);
+  setStatus(`Loaded: ${ex.label}`, "info");
+}
+
+// ── Copy / Clear ──────────────────────────────────────────────────────────────
+
+function copyOutput() {
+  const text = outputEl.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => setStatus("Copied to clipboard", "ok"));
+}
+
+function clearOutput() {
+  showOutputHTML(`<span class="output-placeholder">Run a program to see output here…</span>`);
+  setStatus("Cleared", "info");
+}
+
+// ── Resizable Divider ─────────────────────────────────────────────────────────
+
+(function initDivider() {
+  const divider    = document.getElementById("divider");
+  const leftPanel  = document.getElementById("left-panel");
+  const rightPanel = document.getElementById("right-panel");
+  const panels     = document.getElementById("panels");
+  let dragging = false;
+
+  divider.addEventListener("mousedown", (e) => {
+    dragging = true;
+    divider.classList.add("dragging");
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const rect = panels.getBoundingClientRect();
+    const offset = e.clientX - rect.left;
+    const total  = rect.width - divider.offsetWidth;
+    const pct    = Math.max(20, Math.min(80, (offset / total) * 100));
+    leftPanel.style.flex  = `0 0 ${pct}%`;
+    rightPanel.style.flex = `0 0 ${100 - pct}%`;
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    divider.classList.remove("dragging");
+    document.body.style.userSelect = "";
+    document.body.style.cursor = "";
+  });
+})();
+
+// ── Keyboard Shortcut ─────────────────────────────────────────────────────────
+
+document.addEventListener("keydown", (e) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    runProgram();
+  }
+});
+
+// ── Wire Up Events ────────────────────────────────────────────────────────────
+
+runBtn.addEventListener("click",    runProgram);
+formatBtn.addEventListener("click", formatJSON);
+copyBtn.addEventListener("click",   copyOutput);
+clearBtn.addEventListener("click",  clearOutput);
+exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
+
+// ── Populate Dropdown & Load Default ─────────────────────────────────────────
+
+(function init() {
+  for (const [key, ex] of Object.entries(EXAMPLES)) {
+    const opt = document.createElement("option");
+    opt.value       = key;
+    opt.textContent = ex.label;
+    exampleSel.appendChild(opt);
+  }
+  exampleSel.value = "hello";
+  loadExample("hello");
+
+  // Start Pyodide boot
+  initPyodide();
+})();
+</script>
+</body>
+</html>

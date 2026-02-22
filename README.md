@@ -35,8 +35,39 @@ nail/
 ├── PHILOSOPHY.md    — Design rationale and background
 ├── ROADMAP.md       — Development phases
 ├── examples/        — Sample NAIL programs
+├── interpreter/     — Python interpreter (Checker + Runtime)
+├── playground/      — Local FastAPI playground (server-based)
+├── docs/            — GitHub Pages static playground (Pyodide/WASM)
 └── AGENTS.md        — AI agent instructions for this repo
 ```
+
+## Playground
+
+### 🌐 Online (GitHub Pages)
+
+Try NAIL instantly in your browser — no installation required:
+
+**[https://watari-ai.github.io/nail/](https://watari-ai.github.io/nail/)**
+
+Powered by [Pyodide](https://pyodide.org) — the Python interpreter compiled to WebAssembly. The NAIL interpreter runs entirely client-side.
+
+#### Enable GitHub Pages (repo admins)
+
+1. Go to **Settings → Pages** in the `watari-ai/nail` repository
+2. Under **Source**, select **Deploy from a branch**
+3. Set **Branch** to `main` and **Folder** to `/docs`
+4. Click **Save** — the site will be live at `https://watari-ai.github.io/nail/` within a minute
+
+### 💻 Local (FastAPI)
+
+```bash
+cd playground
+python server.py
+# → open http://127.0.0.1:7429
+```
+
+Features: live JSON editor, 6 built-in examples, argument passing, dark theme.
+See [`playground/README.md`](./playground/README.md) for details.
 
 ## Why NAIL?
 
