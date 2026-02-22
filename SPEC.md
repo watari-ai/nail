@@ -4,15 +4,15 @@
 
 ---
 
-## 1. 概要
+## 1. Overview
 
-NAILプログラムは **JSONドキュメントの集合** である。テキスト構文は存在しない。人間が「コードを書く」という行為はNAILにおいて存在しない。AIが構造データを生成し、検証器がそれを検証し、実行環境が実行する。
+A NAIL program is a **collection of JSON documents**. There is no text syntax. The act of a human "writing code" does not exist in NAIL. AI generates structured data, the verifier validates it, and the runtime executes it.
 
-**NAILの唯一の表現形式：構造化JSONデータ**
+**The only representation form in NAIL: structured JSON data**
 
 ---
 
-## 2. 基本型システム
+## 2. Type System
 
 ```json
 { "type": "int",    "bits": 64,  "overflow": "panic" }
@@ -29,32 +29,32 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 { "type": "unit" }
 ```
 
-**設計原則：**
-- `null` は存在しない。代わりに `option` 型を使用
-- 整数オーバーフロー時の挙動は宣言必須（`panic` / `wrap` / `sat`）
-- 暗黙の型変換は一切存在しない
+**Design principles:**
+- `null` does not exist. Use `option` type instead.
+- Integer overflow behavior must be declared (`panic` / `wrap` / `sat`).
+- No implicit type conversions of any kind.
 
 ---
 
-## 3. 副作用システム（エフェクト）
+## 3. Effect System
 
-すべての副作用は関数シグネチャに宣言する。宣言のない副作用はコンパイルエラー。
+All side effects must be declared in the function signature. Any undeclared side effect is a compile error.
 
 ```json
-"effects": []          // 純粋関数（副作用ゼロ）
-"effects": ["IO"]      // 標準入出力
-"effects": ["FS"]      // ファイルシステム
-"effects": ["NET"]     // ネットワーク
-"effects": ["TIME"]    // 現在時刻の取得
-"effects": ["RAND"]    // 乱数
-"effects": ["MUT"]     // 可変グローバル状態
+"effects": []          // Pure function (zero side effects)
+"effects": ["IO"]      // Standard I/O
+"effects": ["FS"]      // Filesystem
+"effects": ["NET"]     // Network
+"effects": ["TIME"]    // Current time access
+"effects": ["RAND"]    // Random numbers
+"effects": ["MUT"]     // Mutable global state
 ```
 
-複数のエフェクトは配列で列挙。`["IO", "NET"]` など。
+Multiple effects are listed as an array: `["IO", "NET"]`, etc.
 
 ---
 
-## 4. 関数定義
+## 4. Function Definition
 
 ```json
 {
@@ -73,22 +73,22 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 }
 ```
 
-**フィールド仕様：**
-| フィールド | 必須 | 説明 |
+**Field specification:**
+| Field | Required | Description |
 |---|---|---|
-| `nail` | ✅ | 仕様バージョン |
+| `nail` | ✅ | Spec version |
 | `kind` | ✅ | `"fn"` |
-| `id` | ✅ | 関数識別子（英数字とアンダースコアのみ） |
-| `effects` | ✅ | エフェクトリスト（空配列 = 純粋関数） |
-| `params` | ✅ | パラメータリスト |
-| `returns` | ✅ | 戻り値の型 |
-| `body` | ✅ | 命令リスト |
+| `id` | ✅ | Function identifier (alphanumeric and underscore only) |
+| `effects` | ✅ | Effect list (empty array = pure function) |
+| `params` | ✅ | Parameter list |
+| `returns` | ✅ | Return type |
+| `body` | ✅ | Statement list |
 
 ---
 
-## 5. 演算子
+## 5. Operators
 
-### 算術
+### Arithmetic
 ```json
 { "op": "+",   "l": <expr>, "r": <expr> }
 { "op": "-",   "l": <expr>, "r": <expr> }
@@ -97,7 +97,7 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 { "op": "%",   "l": <expr>, "r": <expr> }
 ```
 
-### 比較（型が一致しない場合はコンパイルエラー）
+### Comparison (type mismatch is a compile error)
 ```json
 { "op": "eq",  "l": <expr>, "r": <expr> }
 { "op": "neq", "l": <expr>, "r": <expr> }
@@ -107,7 +107,7 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 { "op": "gte", "l": <expr>, "r": <expr> }
 ```
 
-### 論理
+### Logical
 ```json
 { "op": "and", "l": <expr>, "r": <expr> }
 { "op": "or",  "l": <expr>, "r": <expr> }
@@ -116,9 +116,9 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 
 ---
 
-## 6. 制御フロー
+## 6. Control Flow
 
-### 条件分岐
+### Conditional
 ```json
 {
   "op": "if",
@@ -128,9 +128,9 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 }
 ```
 
-`else` は省略不可。すべての分岐でreturnが必要。
+`else` is mandatory. All branches must return a value.
 
-### ループ
+### Loop
 ```json
 {
   "op": "loop",
@@ -142,11 +142,11 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 }
 ```
 
-無限ループは存在しない。終了条件は必須（停止性証明のため）。
+Infinite loops do not exist. Termination condition is required (for termination proof).
 
 ---
 
-## 7. リテラル
+## 7. Literals
 
 ```json
 { "lit": 42 }
@@ -158,18 +158,18 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 
 ---
 
-## 8. 変数
+## 8. Variables
 
 ```json
 { "op": "let", "id": "x", "type": <type>, "val": <expr> }
 { "ref": "x" }
 ```
 
-変数はイミュータブルがデフォルト。再代入には `"mut": true` を付与。
+Variables are immutable by default. Use `"mut": true` for reassignment.
 
 ---
 
-## 9. 副作用付き操作
+## 9. Effectful Operations
 
 ```json
 { "op": "print", "val": <string_expr>, "effect": "IO" }
@@ -177,11 +177,11 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 { "op": "http_get", "url": <string_expr>, "effect": "NET" }
 ```
 
-エフェクト付き操作は、関数の `effects` に対応するエフェクトが宣言されていない場合はコンパイルエラー。
+Effectful operations are a compile error if the corresponding effect is not declared in the function's `effects` list.
 
 ---
 
-## 10. モジュール構造
+## 10. Module Structure
 
 ```json
 {
@@ -198,22 +198,22 @@ NAILプログラムは **JSONドキュメントの集合** である。テキス
 
 ---
 
-## 11. プロジェクト構造（AIプロジェクト標準）
+## 11. Project Structure (AI Project Standard)
 
-NAILは言語仕様と同時に、**AIが最小コンテキストでプロジェクトを理解できるディレクトリ構造**を定義する。
+NAIL defines, alongside the language spec, a **directory structure that lets AI understand a project with minimal context**.
 
 ```
 project/
-├── SPEC.md          必須: プロジェクトの仕様（機能・制約・非機能要件）
-├── AGENTS.md        必須: AIエージェントへの指示
-├── ARCHITECTURE.md  推奨: システム構成図・依存関係
-├── TODO.md          推奨: 現在のタスクリスト
-├── src/             NAILソースファイル（*.nail）
-├── tests/           テストケース（*.nail）
-└── proofs/          形式証明ファイル（*.proof）
+├── SPEC.md          Required: project specification (features, constraints, non-functional requirements)
+├── AGENTS.md        Required: instructions for AI agents
+├── ARCHITECTURE.md  Recommended: system diagram and dependency map
+├── TODO.md          Recommended: current task list
+├── src/             NAIL source files (*.nail)
+├── tests/           Test cases (*.nail)
+└── proofs/          Formal proof files (*.proof)
 ```
 
-**SPEC.mdの必須フィールド（YAML形式）:**
+**Required fields in SPEC.md (YAML format):**
 ```yaml
 name: <project_name>
 version: <semver>
@@ -221,34 +221,34 @@ language: nail@<version>
 entry: <module_id>
 effects_allowed: [IO, FS, NET]
 constraints:
-  - <制約を自然言語で>
+  - <constraint in natural language>
 ```
 
-これらのファイルの存在と形式は、NAILプロジェクトの検証器がチェックする。
+The presence and format of these files is checked by the NAIL project verifier.
 
 ---
 
-## 12. 検証レベル
+## 12. Verification Levels
 
-| レベル | 内容 |
+| Level | Description |
 |---|---|
-| L0 | 構文的正しさ（JSONスキーマ検証） |
-| L1 | 型整合性（型推論と型チェック） |
-| L2 | エフェクト整合性（宣言されたエフェクトのみ使用） |
-| L3 | 停止性証明（すべてのループが終了することを証明） |
-| L4 | メモリ安全性（バッファオーバーフロー不可能であることを証明） |
+| L0 | Syntactic correctness (JSON schema validation) |
+| L1 | Type consistency (type inference and type checking) |
+| L2 | Effect consistency (only declared effects may be used) |
+| L3 | Termination proof (all loops are proven to terminate) |
+| L4 | Memory safety (buffer overflows proven impossible) |
 
-v0.1はL0-L2を実装対象とする。
+v0.1 implements L0–L2.
 
 ---
 
-## 13. 未定義事項（v0.1では対象外）
+## 13. Out of Scope for v0.1
 
-- 代数的データ型（Enum）
-- クロージャ
-- 非同期処理
-- エラーハンドリング（Result型）
-- ジェネリクス
-- トレイト/インターフェース
+- Algebraic data types (Enum)
+- Closures
+- Async/await
+- Error handling (Result type)
+- Generics
+- Traits / Interfaces
 
-これらはv0.2以降でAIが仕様提案を行い、採択されたものを追加する。
+These will be added in v0.2+ based on AI-generated proposals that are accepted into the spec.
