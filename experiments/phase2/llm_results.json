@@ -1,0 +1,438 @@
+{
+  "meta": {
+    "script": "llm_experiment.py",
+    "models": {
+      "claude": "claude-3-5-sonnet-20241022",
+      "gpt4o": "gpt-4o"
+    },
+    "problems": [
+      "is_even",
+      "abs_val",
+      "max_of_two",
+      "clamp",
+      "factorial"
+    ]
+  },
+  "results": [
+    {
+      "problem": "is_even",
+      "model": "claude",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: is_even\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `bool`\n- Constraint: no side effects\n- Behavior: return true if n is even, false if odd\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 5,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "is_even",
+      "model": "gpt4o",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: is_even\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `bool`\n- Constraint: no side effects\n- Behavior: return true if n is even, false if odd\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 5,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "is_even",
+      "model": "claude",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: is_even\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `bool`\n- Constraint: no side effects\n- Behavior: return true if n is even, false if odd\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 5,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "is_even",
+      "model": "gpt4o",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: is_even\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `bool`\n- Constraint: no side effects\n- Behavior: return true if n is even, false if odd\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 5,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "abs_val",
+      "model": "claude",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: abs_val\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return absolute value of n\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "abs_val",
+      "model": "gpt4o",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: abs_val\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return absolute value of n\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "abs_val",
+      "model": "claude",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: abs_val\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return absolute value of n\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "abs_val",
+      "model": "gpt4o",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: abs_val\n        Spec:\n        **Spec:**\n- Input: `n: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return absolute value of n\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "max_of_two",
+      "model": "claude",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: max_of_two\n        Spec:\n        **Spec:**\n- Input: `a: int64, b: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return the larger of a and b\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "max_of_two",
+      "model": "gpt4o",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: max_of_two\n        Spec:\n        **Spec:**\n- Input: `a: int64, b: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return the larger of a and b\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "max_of_two",
+      "model": "claude",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: max_of_two\n        Spec:\n        **Spec:**\n- Input: `a: int64, b: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return the larger of a and b\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "max_of_two",
+      "model": "gpt4o",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: max_of_two\n        Spec:\n        **Spec:**\n- Input: `a: int64, b: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects\n- Behavior: return the larger of a and b\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "clamp",
+      "model": "claude",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: clamp\n        Spec:\n        **Spec:**\n- Input: `val: int64, lo: int64, hi: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, assume `lo <= hi`\n- Behavior: clamp val into [lo, hi] (if val < lo return lo, if val > hi return hi, otherwise return val)\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "clamp",
+      "model": "gpt4o",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: clamp\n        Spec:\n        **Spec:**\n- Input: `val: int64, lo: int64, hi: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, assume `lo <= hi`\n- Behavior: clamp val into [lo, hi] (if val < lo return lo, if val > hi return hi, otherwise return val)\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "clamp",
+      "model": "claude",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: clamp\n        Spec:\n        **Spec:**\n- Input: `val: int64, lo: int64, hi: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, assume `lo <= hi`\n- Behavior: clamp val into [lo, hi] (if val < lo return lo, if val > hi return hi, otherwise return val)\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "clamp",
+      "model": "gpt4o",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: clamp\n        Spec:\n        **Spec:**\n- Input: `val: int64, lo: int64, hi: int64`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, assume `lo <= hi`\n- Behavior: clamp val into [lo, hi] (if val < lo return lo, if val > hi return hi, otherwise return val)\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "factorial",
+      "model": "claude",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: factorial\n        Spec:\n        **Spec:**\n- Input: `n: int64 (0 <= n <= 20)`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, implement using loop (recursion is out of scope for NAIL v0.1)\n- Behavior: return n! (0! = 1)\n\n## Measurements\n1. L0-L2 check pass (NAIL) / Syntax + test pass (Python): Pass / Fail\n2. Generated token count (program body only)\n3. Type ambiguity (missing type annotations in Python, etc.)\n4. Error category and root-cause analysis\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "factorial",
+      "model": "gpt4o",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: factorial\n        Spec:\n        **Spec:**\n- Input: `n: int64 (0 <= n <= 20)`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, implement using loop (recursion is out of scope for NAIL v0.1)\n- Behavior: return n! (0! = 1)\n\n## Measurements\n1. L0-L2 check pass (NAIL) / Syntax + test pass (Python): Pass / Fail\n2. Generated token count (program body only)\n3. Type ambiguity (missing type annotations in Python, etc.)\n4. Error category and root-cause analysis\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "factorial",
+      "model": "claude",
+      "language": "python",
+      "prompt": "Implement exactly one Python function for this problem.\n        Return only Python code.\n\n        Function name: factorial\n        Spec:\n        **Spec:**\n- Input: `n: int64 (0 <= n <= 20)`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, implement using loop (recursion is out of scope for NAIL v0.1)\n- Behavior: return n! (0! = 1)\n\n## Measurements\n1. L0-L2 check pass (NAIL) / Syntax + test pass (Python): Pass / Fail\n2. Generated token count (program body only)\n3. Type ambiguity (missing type annotations in Python, etc.)\n4. Error category and root-cause analysis\n\n        Constraints:\n        - No prints, no I/O, no extra text.\n        - Deterministic pure function.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "anthropic package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: anthropic package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    },
+    {
+      "problem": "factorial",
+      "model": "gpt4o",
+      "language": "nail",
+      "prompt": "Implement this function in NAIL JSON only. Return only one JSON object.\n\n        Problem: factorial\n        Spec:\n        **Spec:**\n- Input: `n: int64 (0 <= n <= 20)`\n- Output: `int64 (overflow: panic)`\n- Constraint: no side effects, implement using loop (recursion is out of scope for NAIL v0.1)\n- Behavior: return n! (0! = 1)\n\n## Measurements\n1. L0-L2 check pass (NAIL) / Syntax + test pass (Python): Pass / Fail\n2. Generated token count (program body only)\n3. Type ambiguity (missing type annotations in Python, etc.)\n4. Error category and root-cause analysis\n\n        Required NAIL format:\n        - Top-level keys: nail, kind, id, effects, params, returns, body\n        - Use: {\"nail\":\"0.1.0\",\"kind\":\"fn\",\"id\":\"...\",\"effects\":[],\"params\":[...],\"returns\":{...},\"body\":[...]}\n        - Type objects must use NAIL v0.1 shape like: {\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}, {\"type\":\"bool\"}\n        - Params are: {\"id\":\"name\",\"type\":<type_obj>}\n        - Body statements: let, return, if, loop, assign\n        - Loop statement shape: {\"op\":\"loop\",\"bind\":\"i\",\"from\":<expr>,\"to\":<expr>,\"step\":<expr>,\"body\":[...]}\n        - Expression ops use symbols/keywords as supported by NAIL checker:\n          +, -, *, /, %, eq, neq, lt, lte, gt, gte, and, or, not\n        - Variable reference: {\"ref\":\"name\"}\n        - Literal: {\"lit\": 123}\n\n        Constraints:\n        - No side effects (effects must be [])\n        - Output must be valid JSON and must type-check in NAIL checker.",
+      "response": "",
+      "usage": {
+        "input_tokens": 0,
+        "output_tokens": 0
+      },
+      "request_error": "openai package is not installed",
+      "evaluation": {
+        "check_pass": false,
+        "test_pass": 0,
+        "test_total": 4,
+        "errors": [
+          "request_error: openai package is not installed"
+        ],
+        "code_tokens": 0
+      }
+    }
+  ]
+}
