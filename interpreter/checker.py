@@ -42,6 +42,9 @@ class Checker:
             raise CheckError("Missing 'id' field")
         if kind == "fn":
             self._check_fn_schema(self.spec)
+        elif kind == "module":
+            if "defs" not in self.spec:
+                raise CheckError("Module missing 'defs' field")
 
     def _check_fn_schema(self, fn: dict):
         for field in ("effects", "params", "returns", "body"):
@@ -67,6 +70,25 @@ class Checker:
         kind = self.spec["kind"]
         if kind == "fn":
             self._check_fn(self.spec)
+        elif kind == "module":
+            self._check_module(self.spec)
+
+    def _check_module(self, mod: dict):
+        """Check all function definitions in a module."""
+        defs = mod.get("defs", [])
+        if not isinstance(defs, list):
+            raise CheckError("Module 'defs' must be a list")
+        for fn in defs:
+            if not isinstance(fn, dict):
+                raise CheckError(f"Module def must be a dict, got {type(fn)}")
+            self._check_fn_schema(fn)
+            self._check_fn(fn)
+        # Validate exports
+        exports = mod.get("exports", [])
+        defined_ids = {fn["id"] for fn in defs if "id" in fn}
+        for exp in exports:
+            if exp not in defined_ids:
+                raise CheckError(f"Exported function '{exp}' not defined in module")
 
     def _check_fn(self, fn: dict):
         fn_id = fn["id"]
@@ -147,6 +169,19 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'if' missing 'else' (required by NAIL spec)")
                 self._check_body(fn_id, stmt["then"], local_env, expected_return)
                 self._check_body(fn_id, stmt["else"], local_env, expected_return)
+
+            elif op == "assign":
+                if "id" not in stmt or "val" not in stmt:
+                    raise CheckError(f"[{fn_id}] 'assign' requires 'id' and 'val'")
+                # Verify variable exists in scope
+                if stmt["id"] not in local_env:
+                    raise CheckError(f"[{fn_id}] 'assign' to undeclared variable: '{stmt['id']}'")
+                val_type = self._check_expr(fn_id, stmt["val"], local_env)
+                declared = local_env[stmt["id"]]
+                if not types_equal(val_type, declared):
+                    raise CheckError(
+                        f"[{fn_id}] 'assign' type mismatch for '{stmt['id']}': expected {declared}, got {val_type}"
+                    )
 
             elif op == "loop":
                 for field in ("bind", "from", "to", "step", "body"):
@@ -247,6 +282,33 @@ class Checker:
             if not isinstance(v_type, BoolType):
                 raise CheckError(f"[{fn_id}] 'not' requires bool, got {v_type}")
             return BoolType()
+
+        # Type conversion ops (explicit — no implicit coercions in NAIL)
+        elif op == "int_to_str":
+            v_type = self._check_expr(fn_id, expr.get("v"), env)
+            if not isinstance(v_type, IntType):
+                raise CheckError(f"[{fn_id}] 'int_to_str' requires int, got {v_type}")
+            return StringType()
+
+        elif op == "float_to_str":
+            v_type = self._check_expr(fn_id, expr.get("v"), env)
+            if not isinstance(v_type, FloatType):
+                raise CheckError(f"[{fn_id}] 'float_to_str' requires float, got {v_type}")
+            return StringType()
+
+        elif op == "bool_to_str":
+            v_type = self._check_expr(fn_id, expr.get("v"), env)
+            if not isinstance(v_type, BoolType):
+                raise CheckError(f"[{fn_id}] 'bool_to_str' requires bool, got {v_type}")
+            return StringType()
+
+        # String ops
+        elif op == "concat":
+            l_type = self._check_expr(fn_id, expr.get("l"), env)
+            r_type = self._check_expr(fn_id, expr.get("r"), env)
+            if not isinstance(l_type, StringType) or not isinstance(r_type, StringType):
+                raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
+            return StringType()
 
         else:
             raise CheckError(f"[{fn_id}] Unknown op in expression: '{op}'")

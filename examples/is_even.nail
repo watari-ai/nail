@@ -1,0 +1,20 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "is_even",
+  "effects": [],
+  "params": [
+    { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "bool" },
+  "body": [
+    {
+      "op": "return",
+      "val": {
+        "op": "eq",
+        "l": { "op": "%", "l": { "ref": "n" }, "r": { "lit": 2 } },
+        "r": { "lit": 0 }
+      }
+    }
+  ]
+}

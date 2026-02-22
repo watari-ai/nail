@@ -1,0 +1,61 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "fibonacci",
+  "effects": [],
+  "params": [
+    { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+  "body": [
+    {
+      "op": "let",
+      "id": "a",
+      "type": { "type": "int", "bits": 64, "overflow": "panic" },
+      "val": { "lit": 0 },
+      "mut": true
+    },
+    {
+      "op": "let",
+      "id": "b",
+      "type": { "type": "int", "bits": 64, "overflow": "panic" },
+      "val": { "lit": 1 },
+      "mut": true
+    },
+    {
+      "op": "let",
+      "id": "tmp",
+      "type": { "type": "int", "bits": 64, "overflow": "panic" },
+      "val": { "lit": 0 },
+      "mut": true
+    },
+    {
+      "op": "loop",
+      "bind": "i",
+      "from": { "lit": 0 },
+      "to":   { "ref": "n" },
+      "step": { "lit": 1 },
+      "body": [
+        {
+          "op": "assign",
+          "id": "tmp",
+          "val": { "op": "+", "l": { "ref": "a" }, "r": { "ref": "b" } }
+        },
+        {
+          "op": "assign",
+          "id": "a",
+          "val": { "ref": "b" }
+        },
+        {
+          "op": "assign",
+          "id": "b",
+          "val": { "ref": "tmp" }
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "val": { "ref": "a" }
+    }
+  ]
+}
