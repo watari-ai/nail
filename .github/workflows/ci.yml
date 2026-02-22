@@ -1,0 +1,56 @@
+name: CI
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run tests
+        run: python -m pytest tests/ -v
+      - name: Validate examples against JSON Schema
+        run: |
+          python - <<'EOF'
+          import json, glob, sys
+          from jsonschema import validate, ValidationError
+
+          with open("schema/nail-l0.json") as f:
+              schema = json.load(f)
+
+          failed = []
+          for path in sorted(glob.glob("examples/*.nail")):
+              with open(path) as f:
+                  doc = json.load(f)
+              try:
+                  validate(instance=doc, schema=schema)
+                  print(f"  OK  {path}")
+              except ValidationError as e:
+                  print(f"  FAIL {path}: {e.message}")
+                  failed.append(path)
+
+          if failed:
+              print(f"\n{len(failed)} schema validation failure(s).")
+              sys.exit(1)
+          else:
+              print(f"\nAll examples passed schema validation.")
+          EOF
+      - name: Check examples (type + effect check)
+        run: |
+          for f in examples/*.nail; do
+            echo "Checking $f..."
+            if [ "$(basename "$f")" = "bad_effect.nail" ]; then
+              # Negative fixture: must fail effect checking.
+              python nail check "$f" && exit 1 || true
+            else
+              python nail check "$f" || exit 1
+            fi
+          done
