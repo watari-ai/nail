@@ -1,0 +1,33 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "clamp",
+  "effects": [],
+  "params": [
+    { "id": "val", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+    { "id": "lo",  "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+    { "id": "hi",  "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+  "body": [
+    {
+      "op": "if",
+      "cond": { "op": "lt", "l": { "ref": "val" }, "r": { "ref": "lo" } },
+      "then": [
+        { "op": "return", "val": { "ref": "lo" } }
+      ],
+      "else": [
+        {
+          "op": "if",
+          "cond": { "op": "gt", "l": { "ref": "val" }, "r": { "ref": "hi" } },
+          "then": [
+            { "op": "return", "val": { "ref": "hi" } }
+          ],
+          "else": [
+            { "op": "return", "val": { "ref": "val" } }
+          ]
+        }
+      ]
+    }
+  ]
+}
