@@ -1,48 +1,48 @@
 # AGENTS.md — NAIL Project
 
-このリポジトリはAIが主体的に開発・進化させる実験的プログラミング言語「NAIL」のホームだ。
+This repository is the home of NAIL, an experimental programming language that is proactively developed and evolved by AI.
 
-## このリポジトリの特殊性
+## What Makes This Repository Unique
 
-NAILは「AIが書くためのプログラミング言語」であり、その仕様自体もAIが設計・改善する。
-このリポジトリを扱うAIエージェントは、単なる実装者ではなく **言語設計者** でもある。
+NAIL is "a programming language for AI authorship," and even its specification is designed and improved by AI.
+AI agents working in this repository are not just implementers, but also **language designers**.
 
-## あなたに期待すること
+## What Is Expected of You
 
-### 実装タスクへの取り組み方
-1. **SPEC.mdを必ず最初に読む** — NAILの型システム、エフェクト、構文ルールが書かれている
-2. **PHILOSOPHY.mdを読む** — なぜこの設計なのかの理由が書かれている
-3. 実装前に「この仕様は矛盾していないか」「抜けがないか」を確認せよ
-4. 問題を見つけたら、修正提案をコメントとして残してから実装せよ
+### How to Approach Implementation Tasks
+1. **Always read `SPEC.md` first** — it defines NAIL's type system, effects, and syntax rules.
+2. **Read `PHILOSOPHY.md`** — it explains the reasons behind the design.
+3. Before implementation, verify whether the spec has contradictions or missing parts.
+4. If you find a problem, leave a proposed fix as a comment before implementing.
 
-### 仕様改善の提案
-- 実装中に仕様の改善アイデアが浮かんだ場合、 `proposals/` ディレクトリにMarkdownで提案を書いてよい
-- 形式: `proposals/YYYY-MM-DD-<内容>.md`
-- AIが仕様を改善する — これはNAILの思想の中核だ
+### Proposing Spec Improvements
+- If you discover an improvement idea during implementation, you may add a Markdown proposal under `proposals/`.
+- Format: `proposals/YYYY-MM-DD-<topic>.md`
+- AI improving the specification is a core idea of NAIL.
 
-### 禁止事項
-- NAILの仕様を無断で変更すること（提案 → 承認 → 変更のフローを守る）
-- 人間向けの構文を追加すること（テキスト構文はNAILに存在しない）
-- 例外なくJSONフォーマットから逸脱した設計を導入すること
+### Prohibitions
+- Do not change the NAIL spec without authorization (follow the flow: proposal → approval → change).
+- Do not add human-oriented syntax (NAIL has no text syntax).
+- Do not introduce any design that deviates from JSON format.
 
-## ディレクトリ構成
+## Directory Structure
 
 ```
 nail/
-├── SPEC.md          言語仕様（読んでから触れ）
-├── PHILOSOPHY.md    設計思想（重要な判断の根拠がある）
-├── ROADMAP.md       開発フェーズ
-├── AGENTS.md        このファイル
-├── examples/        サンプルプログラム（*.nail）
-├── interpreter/     Python参照インタープリター（Phase 1で作成）
-├── experiments/     LLM比較実験データ（Phase 2で作成）
-└── proposals/       AI仕様改善提案（自由に追加してよい）
+├── SPEC.md          Language specification (read before touching code)
+├── PHILOSOPHY.md    Design philosophy (critical reasoning for decisions)
+├── ROADMAP.md       Development phases
+├── AGENTS.md        This file
+├── examples/        Sample programs (*.nail)
+├── interpreter/     Python reference interpreter (built in Phase 1)
+├── experiments/     LLM comparison experiment data (built in Phase 2)
+└── proposals/       AI spec-improvement proposals (free to add)
 ```
 
-## 現在の最優先タスク
+## Current Top Priority Task
 
-ROADMAP.md の Phase 1 を確認せよ。
+Check Phase 1 in `ROADMAP.md`.
 
 ---
 
-*このファイルはNAIL仕様のプロジェクト構造標準に準拠している*
+*This file conforms to the NAIL spec's project structure standard.*

@@ -1,110 +1,117 @@
-# NAIL — ロードマップ
+# NAIL — Roadmap
 
-## Phase 1: 仕様ドラフト（〜1週間）
+## Phase 1: Spec Draft (~1 week)
 
-**目標:** 言語の基本仕様を確定し、Pythonによる参照インタープリターを実装する
+**Goal:** Finalize the core language spec and implement a Python reference interpreter
 
-- [x] 設計思想の文書化（PHILOSOPHY.md）
-- [x] 言語仕様 v0.1 ドラフト（SPEC.md）
-- [ ] JSONスキーマ定義（L0検証）
-- [ ] Python参照インタープリター実装
-  - 型チェッカー（L1）
-  - エフェクトチェッカー（L2）
-  - 実行エンジン
-- [ ] examplesの拡充（10サンプル以上）
+- [x] Document design philosophy (`PHILOSOPHY.md`)
+- [x] Language spec v0.1 draft (`SPEC.md`)
+- [x] JSON schema definition (L0 validation)
+- [x] Python reference interpreter implementation
+  - [x] Type checker (L1): 252 lines
+  - [x] Effect checker (L2)
+  - [x] Execution engine: 220 lines
+- [x] Expanded examples (9 samples achieved)
+  - hello.nail, add.nail, sum_loop.nail, bad_effect.nail (existing)
+  - factorial.nail, max_of_two.nail, is_even.nail, countdown.nail,
+    fibonacci.nail, math_module.nail (4-fn module)
+- [x] Test suite: 50 tests all pass (2026-02-22)
+- [x] CLI: `nail run / check` (supports `--call`, `--arg`)
 
-**成果物:** `nail/interpreter/` — Python実装の参照インタープリター
+**Deliverable:** `nail/interpreter/` — Python reference interpreter (commit 51e41fa)
 
----
-
-## Phase 2: LLM検証実験（〜2週間）
-
-**目標:** 「NAILはAIに優しいか」を定量的に検証する
-
-**実験設計:**
-- 同じ仕様（10問）をLLMに対して Python と NAIL で実装させる
-- 測定項目:
-  - バグ率（コンパイルエラー + テスト失敗）
-  - 生成トークン数
-  - 仕様からの逸脱率
-  - 繰り返し精度（同じプロンプトで複数回生成したときの一致率）
-
-**使用モデル:** Claude Sonnet, GPT-4o（比較のため複数）
-
-**成果物:**
-- `experiments/phase2/` — 実験結果データ
-- Moldium記事 #3: 「LLMにNAILとPythonを書かせたら何が違ったか」
+✅ **Phase 1 Complete — 2026-02-22**
 
 ---
 
-## Phase 3: OSS公開（〜1ヶ月）
+## Phase 2: LLM Validation Experiment (~2 weeks)
 
-**目標:** GitHub公開 + 初期ユーザー獲得
+**Goal:** Quantitatively validate whether "NAIL is AI-friendly"
 
-- [ ] GitHub リポジトリ公開（zyom45/nail または watari-ai/nail）
-- [ ] Hacker News「Show HN」投稿
-- [ ] Moldium連載シリーズ開始
-- [ ] NAIL Playground（WebブラウザでNAILを試せるUI）
+**Experiment Design:**
+- Have LLMs implement the same spec set (10 tasks) in both Python and NAIL
+- Measurements:
+  - Bug rate (compile errors + test failures)
+  - Generated token count
+  - Spec deviation rate
+  - Reproducibility (agreement rate across repeated generations with the same prompt)
 
-**記事シリーズ（Moldium）:**
+**Models:** Claude Sonnet, GPT-4o (multi-model comparison)
+
+**Deliverables:**
+- `experiments/phase2/` — experiment result data
+- Moldium article #3: "What changed when LLMs wrote NAIL vs Python?"
+
+---
+
+## Phase 3: OSS Launch (~1 month)
+
+**Goal:** Public GitHub release + initial user acquisition
+
+- [ ] Publish GitHub repository (`zyom45/nail` or `watari-ai/nail`)
+- [ ] Submit Hacker News "Show HN"
+- [ ] Start Moldium serialized article series
+- [ ] Build NAIL Playground (web UI to try NAIL in browser)
+
+**Article Series (Moldium):**
 ```
-#1: 「AIコーディング時代に人間向け言語は必要か」（思想編）
-#2: 「NAILの設計: ゼロ曖昧性とは何か」（仕様編）
-#3: 「実験: LLMに同じコードをPythonとNAILで書かせた」（検証編）
-#4: 「AIが言語仕様を改善する: フィードバックループの実装」（進化編）
-#5: 「NAILを企業のブラックボックスとして使う」（応用編）
+#1: "In the AI coding era, do we still need human-oriented languages?" (philosophy)
+#2: "Designing NAIL: what zero ambiguity really means" (spec)
+#3: "Experiment: asking LLMs to write the same code in Python and NAIL" (validation)
+#4: "AI improves its own language spec: implementing the feedback loop" (evolution)
+#5: "Using NAIL as a corporate black box" (application)
 ```
 
 ---
 
-## Phase 4: OSS for AI（継続）
+## Phase 4: OSS for AI (ongoing)
 
-**目標:** AIがIssue・PR・Forkを通じてNAIL自体を育てるエコシステムの構築
+**Goal:** Build an ecosystem where AI improves NAIL itself through Issues, PRs, and Forks
 
-### ビジョン: 「人間が作った最後のOSSプロジェクト」
+### Vision: "The last OSS project created by humans"
 
-今のOSSの流れ:
+Current OSS flow:
 ```
-人間がバグを発見 → Issue → 人間がPR → 人間がレビュー → マージ
-```
-
-NAILが目指す流れ:
-```
-AIがNAILでコードを書く
-→ 仕様の曖昧さ/不足を自動検出
-→ AIがIssueを生成（「この演算子の型強制が未定義」）
-→ 別のAIがPRを提出（「こう定義することを提案」）
-→ 形式検証器が正しさを確認
-→ 人間はマージボタンを押すだけ
+Human finds bug → Issue → Human writes PR → Human reviews → Merge
 ```
 
-### AIによるForkの世界
+Flow NAIL targets:
+```
+AI writes code in NAIL
+→ Automatically detects ambiguity/gaps in the spec
+→ AI generates an Issue ("Type coercion behavior for this operator is undefined")
+→ Another AI submits a PR ("Proposed formal definition")
+→ Formal verifier validates correctness
+→ Human only presses the merge button
+```
 
-各ドメインに特化したAIが方言を作る:
-- `nail-web`: フロントエンド特化（DOM操作エフェクト追加）
-- `nail-finance`: 金融特化（小数精度保証、監査ログエフェクト）
-- `nail-embedded`: 組み込み特化（動的メモリアロケーション禁止）
+### A World of AI Forks
 
-人間のフォークは「言語の分裂」だが、AIのフォークは:
-- すべての変更が形式的に追跡される
-- コアへの統合候補が自動検出される
-- 方言間の互換性が検証可能
+AI specialized by domain creates dialects:
+- `nail-web`: frontend-focused (adds DOM operation effects)
+- `nail-finance`: finance-focused (decimal precision guarantees, audit-log effects)
+- `nail-embedded`: embedded-focused (forbids dynamic memory allocation)
 
-### 実装タスク
-- [ ] NAIL自体をNAILで書く（ブートストラッピング）
-- [ ] AIエージェントがGitHub Issueを生成するスクリプト
-- [ ] PR品質チェッカー（形式検証ベース）
-- [ ] v0.2仕様: Enum、Result型、非同期処理（AI提案で決定）
+Human forks are often language fragmentation, but AI forks can provide:
+- Formal traceability of all changes
+- Automatic detection of candidates for core integration
+- Verifiable compatibility across dialects
+
+### Implementation Tasks
+- [ ] Write NAIL itself in NAIL (bootstrapping)
+- [ ] Script for AI agents to generate GitHub Issues
+- [ ] PR quality checker (formal-verification-based)
+- [ ] v0.2 spec: Enum, Result type, async processing (decided via AI proposals)
 
 ---
 
-## 現在の状態
+## Current Status
 
 ```
-Phase 1: 🔄 進行中
-Phase 2: ⏸️ 待機
-Phase 3: ⏸️ 待機
-Phase 4: ⏸️ 待機
+Phase 1: 🔄 In Progress
+Phase 2: ⏸️ Waiting
+Phase 3: ⏸️ Waiting
+Phase 4: ⏸️ Waiting
 ```
 
-*最終更新: 2026-02-22 by Watari*
+*Last updated: 2026-02-22 by Watari*
