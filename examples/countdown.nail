@@ -8,32 +8,30 @@
   "body": [
     {
       "op": "let",
-      "id": "total",
+      "id": "n",
       "type": { "type": "int", "bits": 64, "overflow": "panic" },
-      "val": { "lit": 0 },
-      "mut": true
+      "val": { "lit": 5 }
     },
     {
       "op": "loop",
       "bind": "i",
-      "from": { "lit": 1 },
-      "to":   { "lit": 11 },
+      "from": { "lit": 0 },
+      "to":   { "lit": 5 },
       "step": { "lit": 1 },
       "body": [
         {
-          "op": "assign",
-          "id": "total",
-          "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } }
+          "op": "print",
+          "val": {
+            "op": "int_to_str",
+            "v": { "op": "-", "l": { "ref": "n" }, "r": { "ref": "i" } }
+          },
+          "effect": "IO"
         }
       ]
     },
     {
       "op": "print",
-      "val": {
-        "op": "concat",
-        "l": { "lit": "Sum 1..10 = " },
-        "r": { "op": "int_to_str", "v": { "ref": "total" } }
-      },
+      "val": { "lit": "Liftoff!" },
       "effect": "IO"
     },
     {

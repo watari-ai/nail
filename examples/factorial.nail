@@ -1,0 +1,37 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "factorial",
+  "effects": [],
+  "params": [
+    { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+  "body": [
+    {
+      "op": "let",
+      "id": "result",
+      "type": { "type": "int", "bits": 64, "overflow": "panic" },
+      "val": { "lit": 1 },
+      "mut": true
+    },
+    {
+      "op": "loop",
+      "bind": "i",
+      "from": { "lit": 1 },
+      "to":   { "op": "+", "l": { "ref": "n" }, "r": { "lit": 1 } },
+      "step": { "lit": 1 },
+      "body": [
+        {
+          "op": "assign",
+          "id": "result",
+          "val": { "op": "*", "l": { "ref": "result" }, "r": { "ref": "i" } }
+        }
+      ]
+    },
+    {
+      "op": "return",
+      "val": { "ref": "result" }
+    }
+  ]
+}

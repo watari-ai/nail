@@ -1,0 +1,91 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "math",
+  "exports": ["add", "multiply", "abs_val", "clamp"],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "add",
+      "effects": [],
+      "params": [
+        { "id": "a", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+        { "id": "b", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        { "op": "return", "val": { "op": "+", "l": { "ref": "a" }, "r": { "ref": "b" } } }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "multiply",
+      "effects": [],
+      "params": [
+        { "id": "a", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+        { "id": "b", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        { "op": "return", "val": { "op": "*", "l": { "ref": "a" }, "r": { "ref": "b" } } }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "abs_val",
+      "effects": [],
+      "params": [
+        { "id": "x", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        {
+          "op": "if",
+          "cond": { "op": "lt", "l": { "ref": "x" }, "r": { "lit": 0 } },
+          "then": [
+            { "op": "return", "val": { "op": "-", "l": { "lit": 0 }, "r": { "ref": "x" } } }
+          ],
+          "else": [
+            { "op": "return", "val": { "ref": "x" } }
+          ]
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "clamp",
+      "effects": [],
+      "params": [
+        { "id": "val", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+        { "id": "lo",  "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+        { "id": "hi",  "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+      ],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        {
+          "op": "if",
+          "cond": { "op": "lt", "l": { "ref": "val" }, "r": { "ref": "lo" } },
+          "then": [
+            { "op": "return", "val": { "ref": "lo" } }
+          ],
+          "else": [
+            {
+              "op": "if",
+              "cond": { "op": "gt", "l": { "ref": "val" }, "r": { "ref": "hi" } },
+              "then": [
+                { "op": "return", "val": { "ref": "hi" } }
+              ],
+              "else": [
+                { "op": "return", "val": { "ref": "val" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
