@@ -1,0 +1,25 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "abs_val",
+  "effects": [],
+  "params": [
+    { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+  "body": [
+    {
+      "op": "if",
+      "cond": { "op": "lt", "l": { "ref": "n" }, "r": { "lit": 0 } },
+      "then": [
+        {
+          "op": "return",
+          "val": { "op": "-", "l": { "lit": 0 }, "r": { "ref": "n" } }
+        }
+      ],
+      "else": [
+        { "op": "return", "val": { "ref": "n" } }
+      ]
+    }
+  ]
+}

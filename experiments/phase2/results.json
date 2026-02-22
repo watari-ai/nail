@@ -1,0 +1,57 @@
+[
+  {
+    "problem": "is_even",
+    "nail": {
+      "check": true,
+      "tests": "5/5",
+      "tokens": 105
+    },
+    "python": {
+      "tests": "5/5"
+    }
+  },
+  {
+    "problem": "abs_val",
+    "nail": {
+      "check": true,
+      "tests": "4/4",
+      "tokens": 149
+    },
+    "python": {
+      "tests": "4/4"
+    }
+  },
+  {
+    "problem": "max_of_two",
+    "nail": {
+      "check": true,
+      "tests": "4/4",
+      "tokens": 154
+    },
+    "python": {
+      "tests": "4/4"
+    }
+  },
+  {
+    "problem": "clamp",
+    "nail": {
+      "check": true,
+      "tests": "4/4",
+      "tokens": 228
+    },
+    "python": {
+      "tests": "4/4"
+    }
+  },
+  {
+    "problem": "factorial",
+    "nail": {
+      "check": true,
+      "tests": "1/4",
+      "tokens": 228
+    },
+    "python": {
+      "tests": "4/4"
+    }
+  }
+]

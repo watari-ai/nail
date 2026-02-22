@@ -1,0 +1,23 @@
+{
+  "nail": "0.1.0",
+  "kind": "fn",
+  "id": "max_of_two",
+  "effects": [],
+  "params": [
+    { "id": "a", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+    { "id": "b", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+  ],
+  "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+  "body": [
+    {
+      "op": "if",
+      "cond": { "op": "gte", "l": { "ref": "a" }, "r": { "ref": "b" } },
+      "then": [
+        { "op": "return", "val": { "ref": "a" } }
+      ],
+      "else": [
+        { "op": "return", "val": { "ref": "b" } }
+      ]
+    }
+  ]
+}
