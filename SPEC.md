@@ -30,8 +30,8 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 **Design principles:**
 - `null` does not exist. Use `option` type instead.
 - Integer overflow behavior must be declared.
-- In v0.1, only `"overflow": "panic"` is supported.
-- `"overflow": "wrap"` and `"overflow": "sat"` are reserved for v0.2+.
+- In v0.1 and v0.2, only `"overflow": "panic"` is supported at the type level.
+- `"overflow": "wrap"` and `"overflow": "sat"` at the expression level are planned for v0.3 (see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)).
 - No implicit type conversions of any kind.
 
 ---
@@ -210,10 +210,10 @@ Effectful operations are a compile error if the corresponding effect is not decl
 - `float_to_str(Float) -> String` — Convert float to string
 - `bool_to_str(Bool) -> String` — Convert boolean to string
 
-### Overflow Policy (v0.1)
-- v0.1 supports only `"overflow": "panic"`.
-- `"overflow": "wrap"` and `"overflow": "sat"` are reserved for v0.2+.
-- `wrap` and `sat` behavior is out-of-scope in v0.1.
+### Overflow Policy (v0.1 / v0.2)
+- v0.1 and v0.2 support only `"overflow": "panic"` at the **type declaration** level.
+- `"overflow": "wrap"` and `"overflow": "sat"` at the **expression** level are planned for v0.3.
+- `wrap` and `sat` behavior: see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md).
 
 ---
 
@@ -289,9 +289,10 @@ v0.2 implements L0–L2.
 - Algebraic data types (Enum)
 - Closures
 - Async/await
-- Error handling (Result type)
+- Error handling (Result type) → **planned v0.3** ([design](designs/v0.3/result-type.md))
 - Generics
 - Traits / Interfaces
-- Cross-module imports (module linking)
+- Cross-module imports (module linking) → **planned v0.3** ([design](designs/v0.3/cross-module.md))
+- Expression-level `overflow: wrap/sat` → **planned v0.3** ([design](designs/v0.3/overflow-ops.md))
 
 These will be added in v0.3+ based on AI-generated proposals that are accepted into the spec.
