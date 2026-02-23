@@ -7,7 +7,9 @@ Provides the `main()` entry point for the `nail` command installed via pip.
 Usage:
   nail run <file.nail>                                    # Run a fn-kind NAIL program
   nail run <file.nail> --call <fn_id> [--arg name=value] # Run a function in a module
-  nail check <file.nail>                                  # Check without running (L0-L2)
+  nail check <file.nail> [--strict]                       # Check without running (L0-L2)
+  nail canonicalize <file.nail>                           # Output canonical form JSON
+  nail canonicalize -                                     # Read from stdin
   nail --version                                          # Show interpreter version
   nail version                                            # Show interpreter version (alias)
 """
@@ -65,16 +67,35 @@ def parse_arg(s: str) -> tuple[str, object]:
     return name, raw
 
 
-def cmd_check(path: str):
+def cmd_canonicalize(path: str | None):
+    """Output the canonical JSON form of a .nail file (or stdin)."""
+    if path is None or path == "-":
+        try:
+            spec = json.load(sys.stdin)
+        except json.JSONDecodeError as e:
+            print(f"✗ Invalid JSON from stdin: {e}", file=sys.stderr)
+            sys.exit(1)
+    else:
+        spec = load(path)
+    # JCS-subset canonical form: sorted keys, no spaces, ensure_ascii=False
+    print(json.dumps(spec, sort_keys=True, ensure_ascii=False, separators=(',', ':')))
+
+
+def cmd_check(path: str, strict: bool = False):
     spec = load(path)
+    raw_text = None
+    if strict:
+        with open(path) as f:
+            raw_text = f.read()
     try:
-        checker = Checker(spec)
+        checker = Checker(spec, raw_text=raw_text, strict=strict)
         checker.check()
         kind = spec.get("kind", "?")
         prog_id = spec.get("id", "?")
         fn_count = len(spec.get("defs", [])) if kind == "module" else 1
-        print(f"✓ {path}  [{kind}:{prog_id}]  {fn_count} fn(s)")
-        print(f"  L0: JSON schema  — OK")
+        strict_label = " [strict]" if strict else ""
+        print(f"✓ {path}  [{kind}:{prog_id}]  {fn_count} fn(s){strict_label}")
+        print(f"  L0: JSON schema  — OK" + (" (canonical form verified)" if strict else ""))
         print(f"  L1: Type check   — OK")
         print(f"  L2: Effect check — OK")
     except CheckError as e:
@@ -140,9 +161,15 @@ def main():
 
     elif cmd == "check":
         if len(args) < 2:
-            print("Usage: nail check <file.nail>", file=sys.stderr)
+            print("Usage: nail check <file.nail> [--strict]", file=sys.stderr)
             sys.exit(1)
-        cmd_check(args[1])
+        file_path = args[1]
+        strict = "--strict" in args[2:]
+        cmd_check(file_path, strict=strict)
+
+    elif cmd == "canonicalize":
+        file_path = args[1] if len(args) > 1 else None
+        cmd_canonicalize(file_path)
 
     elif cmd == "run":
         if len(args) < 2:

@@ -20,10 +20,12 @@ class CheckError(Exception):
 
 
 class Checker:
-    def __init__(self, spec: dict):
+    def __init__(self, spec: dict, raw_text: str | None = None, strict: bool = False):
         self.spec = spec
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
+        self.raw_text = raw_text
+        self.strict = strict
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -31,6 +33,12 @@ class Checker:
 
     def check_l0(self):
         """Validate basic required fields."""
+        # Strict mode: verify canonical form (JCS / RFC 8785 subset)
+        if self.strict and self.raw_text is not None:
+            canonical = json.dumps(self.spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+            if self.raw_text.strip() != canonical:
+                raise CheckError("Input is not in canonical form. Run 'nail canonicalize' to fix.")
+
         if "nail" not in self.spec:
             raise CheckError("Missing 'nail' version field")
         if "kind" not in self.spec:
@@ -114,10 +122,11 @@ class Checker:
             env[param["id"]] = t
 
         # Check body
-        actual_return = self._check_body(fn_id, fn["body"], env, return_type)
+        actual_return = self._check_body(fn_id, fn["body"], env, set(), return_type)
 
-    def _check_body(self, fn_id: str, body: list, env: dict, expected_return: NailType) -> NailType:
+    def _check_body(self, fn_id: str, body: list, env: dict, mut_set: set, expected_return: NailType) -> NailType:
         local_env = dict(env)
+        local_mut = set(mut_set)
         has_return = False
 
         for stmt in body:
@@ -144,6 +153,9 @@ class Checker:
                             f"[{fn_id}] Let '{stmt['id']}' type mismatch: declared {declared}, got {val_type}"
                         )
                 local_env[stmt["id"]] = val_type
+                # Track mutability: variables are immutable by default
+                if stmt.get("mut", False):
+                    local_mut.add(stmt["id"])
 
             elif op == "print":
                 # L2: requires IO
@@ -167,8 +179,8 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'if' missing 'then'")
                 if "else" not in stmt:
                     raise CheckError(f"[{fn_id}] 'if' missing 'else' (required by NAIL spec)")
-                self._check_body(fn_id, stmt["then"], local_env, expected_return)
-                self._check_body(fn_id, stmt["else"], local_env, expected_return)
+                self._check_body(fn_id, stmt["then"], local_env, local_mut, expected_return)
+                self._check_body(fn_id, stmt["else"], local_env, local_mut, expected_return)
 
             elif op == "assign":
                 if "id" not in stmt or "val" not in stmt:
@@ -176,6 +188,12 @@ class Checker:
                 # Verify variable exists in scope
                 if stmt["id"] not in local_env:
                     raise CheckError(f"[{fn_id}] 'assign' to undeclared variable: '{stmt['id']}'")
+                # Verify variable is mutable (declared with mut: true)
+                if stmt["id"] not in local_mut:
+                    raise CheckError(
+                        f"[{fn_id}] 'assign' to immutable variable: '{stmt['id']}' "
+                        f"(declare with \"mut\": true to make it mutable)"
+                    )
                 val_type = self._check_expr(fn_id, stmt["val"], local_env)
                 declared = local_env[stmt["id"]]
                 if not types_equal(val_type, declared):
@@ -194,11 +212,11 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'loop' from/to/step must be int")
                 loop_env = dict(local_env)
                 loop_env[stmt["bind"]] = from_type
-                self._check_body(fn_id, stmt["body"], loop_env, expected_return)
+                # loop bind variable is immutable; propagate outer mut_set
+                self._check_body(fn_id, stmt["body"], loop_env, local_mut, expected_return)
 
             else:
-                # Unknown op — not necessarily an error for effects ops we don't handle yet
-                pass
+                raise CheckError(f"[{fn_id}] Unknown op: '{op}'")
 
         return expected_return
 

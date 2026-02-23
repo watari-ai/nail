@@ -14,13 +14,21 @@ Modern programming languages carry decades of design decisions optimized for hum
 
 NAIL removes that weight entirely.
 
+## Why NAIL? Three Core Guarantees
+
+| | Guarantee | Example |
+|---|---|---|
+| **Zero Ambiguity** | The same spec generates identical code every time | JCS canonical form: `json.dumps(sort_keys=True, separators=(',',':'))` — one representation, always |
+| **Effect System** | Side effects tracked at the type level | `fn main [] → fn helper [IO]` is a compile-time error, not a lint warning |
+| **Verification Layers** | AI-written code passes 3 independent checks before running | L0 (schema) → L1 (types) → L2 (effects) — all enforced, no silent passes |
+
 ## Core Design Principles
 
 1. **AI-first, human-second** — Written and maintained by AI. Human developers interact at the specification layer, not the code layer.
-2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior.
+2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior. Enforced by JCS canonical form.
 3. **Effects as types** — All side effects (IO, network, filesystem) are declared in function signatures and enforced by the type system.
-4. **Formal verification (v0.2+)** — v0.1 focuses on correct L0–L2 implementation. Full formal verification (termination proof, etc.) is a v0.2+ milestone.
-5. **Minimal context** — The same logic expressed in fewer tokens than equivalent Python or JavaScript. AI inference is cheaper.
+4. **Verification layers (L0–L2)** — Every program passes schema, type, and effect checks before execution. No silent passes.
+5. **Formal verification (v0.3+)** — Full termination proofs and formal verification are a future milestone.
 6. **Self-evolving** — The language specification itself is developed and improved by AI, with humans providing intent and constraints.
 
 ## FAQ: Is NAIL just a JSON AST?
@@ -47,10 +55,18 @@ Every function declares its side effects (`io`, `net`, `fs`) in its signature. C
 **3. Canonical form.**
 There is exactly one valid JSON representation for any given program. No formatting choices, no style variants. An LLM generating the same logic twice will produce token-for-token identical output.
 
+This is enforced by the JCS (JSON Canonicalization Scheme, RFC 8785) implementation: `nail canonicalize` normalizes any NAIL program to its canonical form, and `nail check --strict` rejects non-canonical input. Example files are stored in canonical form.
+
 **4. Designed for LLM *generation*, not LLM *reading*.**
 NAIL is not optimized for an LLM to read existing code. It is optimized for an LLM to write new code: zero ambiguity, zero implicit behavior, zero hallucination surface area.
 
 The analogy: SQL is "just text for querying tables," but the relational model and declarative semantics are what make it SQL — not the text format.
+
+## FAQ: Why JSON and not S-expressions (Lisp)?
+
+Modern LLMs have JSON structured output modes built in (OpenAI, Anthropic, Google all provide `response_format: json`). JSON is the de facto interchange format of AI systems in 2026. Using S-expressions would make NAIL "typed Scheme with effects" — a 60-year-old idea without the novelty.
+
+JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonicalize`) is only possible because JSON has well-defined serialization semantics (RFC 8785 / JCS). S-expressions have no such standard.
 
 ## Status
 
@@ -58,9 +74,9 @@ The analogy: SQL is "just text for querying tables," but the relational model an
 
 This project is in early design phase. The specification is a living document.
 
-## Benchmark: NAIL vs Python
+## Secondary Effects: Token Efficiency
 
-Phase 2 validation experiment (2026-02-22): an LLM implemented the same 5 tasks in both Python and NAIL.
+A byproduct of NAIL's minimal, unambiguous design is reduced token usage. In a Phase 2 validation experiment (2026-02-22), an LLM implemented the same 5 tasks in both Python and NAIL.
 
 | Metric | NAIL | Python |
 |---|---|---|
@@ -69,9 +85,9 @@ Phase 2 validation experiment (2026-02-22): an LLM implemented the same 5 tasks 
 | Avg tokens per function | **173** | 571 |
 | Type annotations | Always required (compile error) | Optional |
 
-Key finding: NAIL uses ~70% fewer tokens per function than equivalent Python. All NAIL failures traced to spec gaps (not AI errors), validating the zero-ambiguity design.
+NAIL used ~70% fewer tokens per function — a secondary benefit of the zero-ambiguity design, not its primary goal. All NAIL failures traced to spec gaps (not AI errors).
 
-→ Full results: [`experiments/phase2/ANALYSIS.md`](./experiments/phase2/ANALYSIS.md) — reproducible with `nail run/check`.
+→ Full results: [`experiments/phase2/ANALYSIS.md`](./experiments/phase2/ANALYSIS.md)
 
 ## Structure
 

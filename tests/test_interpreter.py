@@ -372,6 +372,129 @@ class TestStringOps(unittest.TestCase):
         self.assertEqual(result, "false")
 
 
+# ──────────────────────────────────────────────
+#  v0.2 Tests — Checker Fixes
+# ──────────────────────────────────────────────
+
+class TestMutValidation(unittest.TestCase):
+    """Test that assign to immutable variable raises CheckError."""
+
+    def test_assign_to_immutable_raises(self):
+        """assign to a variable declared without mut: true must fail."""
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "let", "id": "x", "type": INT64, "val": {"lit": 5}},
+            # no "mut": true above → x is immutable
+            {"op": "assign", "id": "x", "val": {"lit": 10}},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_assign_to_mutable_ok(self):
+        """assign to a mut: true variable must succeed."""
+        spec = fn_spec("f", [], INT64, [
+            {"op": "let", "id": "x", "type": INT64, "val": {"lit": 5}, "mut": True},
+            {"op": "assign", "id": "x", "val": {"lit": 10}},
+            {"op": "return", "val": {"ref": "x"}},
+        ])
+        result = run_spec(spec)
+        assert result == 10
+
+    def test_assign_mutable_in_loop(self):
+        """assign inside loop body to outer mutable variable must succeed."""
+        spec = fn_spec("f", [], INT64, [
+            {"op": "let", "id": "total", "type": INT64, "val": {"lit": 0}, "mut": True},
+            {
+                "op": "loop", "bind": "i",
+                "from": {"lit": 1}, "to": {"lit": 4}, "step": {"lit": 1},
+                "body": [
+                    {"op": "assign", "id": "total",
+                     "val": {"op": "+", "l": {"ref": "total"}, "r": {"ref": "i"}}}
+                ]
+            },
+            {"op": "return", "val": {"ref": "total"}},
+        ])
+        result = run_spec(spec)
+        assert result == 6  # 1+2+3
+
+    def test_immutable_in_loop_raises(self):
+        """assign inside loop body to outer immutable variable must fail."""
+        spec = fn_spec("f", [], INT64, [
+            {"op": "let", "id": "total", "type": INT64, "val": {"lit": 0}},  # no mut
+            {
+                "op": "loop", "bind": "i",
+                "from": {"lit": 1}, "to": {"lit": 4}, "step": {"lit": 1},
+                "body": [
+                    {"op": "assign", "id": "total",
+                     "val": {"op": "+", "l": {"ref": "total"}, "r": {"ref": "i"}}}
+                ]
+            },
+            {"op": "return", "val": {"ref": "total"}},
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestUnknownOp(unittest.TestCase):
+    """Test that unknown ops raise CheckError (Zero Ambiguity)."""
+
+    def test_unknown_op_raises(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "frobnicate", "val": {"lit": 42}},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_unknown_expr_op_raises(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "quantum_add", "l": {"lit": 1}, "r": {"lit": 2}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestCanonicalForm(unittest.TestCase):
+    """Test JCS canonical form checking."""
+
+    def _canonical_spec(self):
+        return {
+            "nail": "0.1.0",
+            "kind": "fn",
+            "id": "f",
+            "effects": [],
+            "params": [],
+            "returns": {"type": "unit"},
+            "body": [{"op": "return", "val": {"lit": None, "type": {"type": "unit"}}}],
+        }
+
+    def test_strict_canonical_ok(self):
+        spec = self._canonical_spec()
+        canonical_text = json.dumps(spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+        checker = Checker(spec, raw_text=canonical_text, strict=True)
+        checker.check()  # should not raise
+
+    def test_strict_non_canonical_raises(self):
+        spec = self._canonical_spec()
+        # pretty-printed is NOT canonical
+        pretty_text = json.dumps(spec, indent=2)
+        checker = Checker(spec, raw_text=pretty_text, strict=True)
+        with self.assertRaises(CheckError):
+            checker.check()
+
+    def test_non_strict_non_canonical_ok(self):
+        spec = self._canonical_spec()
+        pretty_text = json.dumps(spec, indent=2)
+        checker = Checker(spec, raw_text=pretty_text, strict=False)
+        checker.check()  # non-strict: should not raise
+
+    def test_canonicalize_output(self):
+        """nail canonicalize should produce sort_keys, no-spaces output."""
+        spec = {"z": 1, "a": 2, "m": [3, 1, 2]}
+        out = json.dumps(spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+        self.assertEqual(out, '{"a":2,"m":[3,1,2],"z":1}')
+
+
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromModule(sys.modules[__name__])
