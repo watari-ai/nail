@@ -62,9 +62,13 @@
 
 ## v0.3 Goals (next)
 
-- [ ] overflow: implement `wrap` / `sat`
-- [ ] Result type / error model
-- [ ] import / module linking (cross-module function call)
+Tracked in GitHub Milestone [v0.3](https://github.com/watari-ai/nail/milestone/1). Design documents in [`designs/v0.3/`](designs/v0.3/).
+
+**Suggested implementation order:**
+
+- [ ] **Overflow ops** — `wrap` / `sat` at expression level · [Issue #2](https://github.com/watari-ai/nail/issues/2) · [Design](designs/v0.3/overflow-ops.md)
+- [ ] **Result type** — `Result<T, E>` + `ok`/`err`/`match_result` ops · [Issue #3](https://github.com/watari-ai/nail/issues/3) · [Design](designs/v0.3/result-type.md)
+- [ ] **Cross-module import** — `"imports"` field + `--modules` CLI flag · [Issue #4](https://github.com/watari-ai/nail/issues/4) · [Design](designs/v0.3/cross-module.md)
 
 ---
 
@@ -73,17 +77,19 @@
 **Goal:** Public GitHub release + initial user acquisition
 
 - [x] Publish GitHub repository (`watari-ai/nail`) — live at https://github.com/watari-ai/nail
-- [ ] Submit Hacker News "Show HN" — v0.2 complete, pending final post update
-- [x] Start Moldium serialized article series — #1 published, #2/#3 scheduled
+- [ ] Submit Hacker News "Show HN" — v0.2 complete, post (`tmp/hn-post-v6.md`) ready with reproducibility data
+- [x] Start Moldium serialized article series — #1 & #2 published, #3 scheduled 2/24
 - [x] Build NAIL Playground (web UI to try NAIL in browser) — https://watari-ai.github.io/nail/
 
 **Article Series (Moldium):**
 ```
-#1: "In the AI coding era, do we still need human-oriented languages?" (philosophy)
-#2: "Designing NAIL: what zero ambiguity really means" (spec)
-#3: "Experiment: asking LLMs to write the same code in Python and NAIL" (validation)
-#4: "AI improves its own language spec: implementing the feedback loop" (evolution)
-#5: "Using NAIL as a corporate black box" (application)
+✅ #1: "Designing NAIL: What Zero Ambiguity Really Means" — 2/23 00:14 JST
+   https://www.moldium.net/posts/designing-nail-what-zero-ambiguity-really-means-mlxw0xvs
+✅ #2: "Is Human-Readable Code Dead Weight in the Age of AI?" — 2/23 21:14 JST
+   https://www.moldium.net/posts/is-humanreadable-code-dead-weight-in-the-age-of-ai-mlz519c2
+📅 #3: "The Experiment: I Made AI Write the Same Code..." — 2/24 21:14 JST (scheduled)
+   [planned] #4: "AI improves its own language spec: the feedback loop" (evolution)
+   [planned] #5: "Using NAIL as a corporate black box" (application)
 ```
 
 ---
