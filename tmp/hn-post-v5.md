@@ -36,7 +36,8 @@ Or locally (Python 3.10+):
 git clone https://github.com/watari-ai/nail
 cd nail
 pip install -r requirements.txt
-python nail_cli.py run examples/factorial.nail
+python3 nail_cli.py run examples/hello.nail
+# → Hello, NAIL
 ```
 
 MIT licensed. v0.1 is early — interpreter works, spec is being refined. Honest feedback welcome (especially if you've built something similar or see a flaw in the approach).
