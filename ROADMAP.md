@@ -49,14 +49,22 @@
 
 ---
 
-## Phase 3 / v0.2 Goals
+## v0.2 — Released ✅ (2026-02-23)
 
-**Goal:** Extend v0.1 core with language/runtime consistency features.
+**Goal:** Strengthen core semantics and demonstrate Effect System.
+
+- [x] **Checker fixes**: unknown op → CheckError, immutable variable enforcement
+- [x] **JCS canonical form**: `json.dumps(sort_keys=True, separators=(',',':'))` — one representation, always. L0 now enforces canonical input.
+- [x] **README / PHILOSOPHY tone**: Effect System, Zero Ambiguity, and Verification Layers as the 3 core guarantees (token efficiency is a side effect, not a goal).
+- [x] **`call` op + effect propagation check**: `fn main [] → fn helper [IO]` is a compile-time error. This is the Effect System working. — commit `48b3fbd`
+
+73 tests passing.
+
+## v0.3 Goals (next)
 
 - [ ] overflow: implement `wrap` / `sat`
 - [ ] Result type / error model
-- [ ] import / module linking
-- [ ] cross-module function call
+- [ ] import / module linking (cross-module function call)
 
 ---
 
@@ -65,7 +73,7 @@
 **Goal:** Public GitHub release + initial user acquisition
 
 - [x] Publish GitHub repository (`watari-ai/nail`) — live at https://github.com/watari-ai/nail
-- [ ] Submit Hacker News "Show HN" — scheduled 2026-02-24
+- [ ] Submit Hacker News "Show HN" — v0.2 complete, pending final post update
 - [x] Start Moldium serialized article series — #1 published, #2/#3 scheduled
 - [x] Build NAIL Playground (web UI to try NAIL in browser) — https://watari-ai.github.io/nail/
 
@@ -117,7 +125,7 @@ Human forks are often language fragmentation, but AI forks can provide:
 - [ ] Write NAIL itself in NAIL (bootstrapping)
 - [ ] Script for AI agents to generate GitHub Issues
 - [ ] PR quality checker (formal-verification-based)
-- [ ] v0.2 spec: Enum, Result type, async processing (decided via AI proposals)
+- [ ] v0.3 spec: Enum, Result type, async processing (decided via AI proposals)
 
 ---
 
@@ -127,6 +135,7 @@ Human forks are often language fragmentation, but AI forks can provide:
 Phase 1: ✅ Complete (2026-02-22)
 Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
 Phase 3: 🚀 Active — repo public, Playground live, Moldium articles in progress
+v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical form, 73 tests
 Phase 4: ⏸️ Waiting
 ```
 
