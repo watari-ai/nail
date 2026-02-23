@@ -629,6 +629,48 @@ const EXAMPLES = {
         }
       ]
     }
+  },
+
+  effect_violation: {
+    label: "✗ Effect violation: IO in pure function",
+    description: "Fails at L2: pure function (`effects: []`) cannot call `print` with IO effect.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "pure_but_prints",
+      "effects": [],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "print", "val": { "lit": "This must fail at check-time." }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  type_mismatch: {
+    label: "✗ Type mismatch: string where int is expected",
+    description: "Fails at L1: passes a string into integer addition.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "bad_add",
+      "effects": [],
+      "params": [],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "+",
+            "l": { "lit": 1 },
+            "r": { "lit": "hello" }
+          }
+        }
+      ]
+    }
   }
 };
 

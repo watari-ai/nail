@@ -33,6 +33,13 @@ What makes NAIL different from "JSON-serialized AST":
 
 **1. The verifier layers are the language.**
 The JSON schema (L0), type checker (L1), and effect checker (L2) are not tools built *on top of* NAIL — they *are* NAIL. A program passing all three layers is formally correct by construction.
+Layering is intentional: L0 is minimal by design, while L1/L2 enforce semantic correctness.
+
+| Layer | Responsibility |
+|---|---|
+| **L0 (Schema)** | Minimum structural validity — accepts correctly shaped JSON programs |
+| **L1 (Type Checker)** | Type correctness — catches int/string mismatches and undefined variables |
+| **L2 (Effect Checker)** | Effect isolation — IO in pure functions is a compile-time error |
 
 **2. Effects as first-class types.**
 Every function declares its side effects (`io`, `net`, `fs`) in its signature. Calling an IO function from a pure context is a compile-time error — not a lint warning, not a runtime panic.
@@ -98,7 +105,7 @@ python server.py
 # → open http://127.0.0.1:7429
 ```
 
-Features: live JSON editor, 6 built-in examples, argument passing, dark theme.
+Features: live JSON editor, 8 built-in examples, argument passing, dark theme.
 See [`playground/README.md`](./playground/README.md) for details.
 
 ## Quick Start
@@ -106,11 +113,7 @@ See [`playground/README.md`](./playground/README.md) for details.
 **Browser — no install:**
 → [https://naillang.com](https://naillang.com)
 
-**pip:**
-```bash
-pip install nail-lang
-nail run examples/hello.nail
-```
+**CLI (coming soon):** PyPI package is in progress.
 
 **Clone & run:**
 ```bash

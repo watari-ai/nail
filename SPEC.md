@@ -162,10 +162,14 @@ Infinite loops do not exist. Termination condition is required (for termination 
 
 ```json
 { "op": "let", "id": "x", "type": <type>, "val": <expr> }
+{ "op": "let", "id": "x", "type": <type>, "val": <expr>, "mut": true }
+{ "op": "assign", "id": "x", "val": <expr> }
 { "ref": "x" }
 ```
 
-Variables are immutable by default. Use `"mut": true` for reassignment.
+`let` declares a variable. Variables are immutable by default.
+Use `"mut": true` on `let` to declare a mutable variable.
+Use `assign` to update a previously declared mutable variable.
 
 ---
 
