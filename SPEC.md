@@ -1,6 +1,6 @@
-# NAIL Language Specification v0.1
+# NAIL Language Specification v0.2
 
-> ⚠️ Draft. This specification evolves. Last updated by: Watari AI
+> ⚠️ Draft. This specification evolves. Last updated: 2026-02-23 by Watari AI
 
 ---
 
@@ -272,17 +272,19 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 | Level | Description |
 |---|---|
-| L0 | Syntactic correctness (JSON schema validation) |
+| L0 | Syntactic correctness: JSON schema validation **+ JCS canonical form enforcement** |
 | L1 | Type consistency (type inference and type checking) |
-| L2 | Effect consistency (only declared effects may be used) |
+| L2 | Effect consistency (only declared effects may be used; effect propagation through `call` enforced) |
 | L3 | Termination proof (all loops are proven to terminate) |
 | L4 | Memory safety (buffer overflows proven impossible) |
 
-v0.1 implements L0–L2.
+**JCS Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) form: `json.dumps(sort_keys=True, separators=(',',':'))`. One program = one representation. Non-canonical input is rejected at L0. Use `nail canonicalize` to convert.
+
+v0.2 implements L0–L2.
 
 ---
 
-## 13. Out of Scope for v0.1
+## 14. Out of Scope for v0.2
 
 - Algebraic data types (Enum)
 - Closures
@@ -290,5 +292,6 @@ v0.1 implements L0–L2.
 - Error handling (Result type)
 - Generics
 - Traits / Interfaces
+- Cross-module imports (module linking)
 
-These will be added in v0.2+ based on AI-generated proposals that are accepted into the spec.
+These will be added in v0.3+ based on AI-generated proposals that are accepted into the spec.
