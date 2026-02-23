@@ -1,8 +1,22 @@
 # Reproducibility Demo
 
-> **Status**: Run 1 completed (v1 prompt) — NAIL 0/10 valid (missing version field).  
-> Run 2 in progress (v2 prompt, schema fully specified).  
-> See `run.py` for current prompt.
+> **Status**: ✅ Experiment complete (v3 prompt).  
+> NAIL: 10/10 valid, 1 unique hash (100% convergence).  
+> Python: 1 unique hash (100% convergence for trivial task).  
+> See `results_report.md` for full analysis.
+
+## Key Findings
+
+For a fully-specified deterministic function (`add`):
+
+- All 10 NAIL runs produced **identical canonical JSON** (1 unique hash)
+- Correctness guaranteed by the NAIL checker (10/10 valid)
+- Python also converged (1 unique hash) — as expected for trivial tasks
+
+The critical difference: NAIL convergence is **structurally guaranteed** by canonical form.  
+Python convergence is **coincidental** (variable names, whitespace, style may vary on harder tasks).
+
+See `experiments/phase2/` for harder multi-problem comparisons.
 
 This experiment demonstrates NAIL's reproducibility claim:
 
