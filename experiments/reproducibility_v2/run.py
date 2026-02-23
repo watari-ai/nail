@@ -35,7 +35,7 @@ if str(ROOT) not in sys.path:
 
 from interpreter import CheckError, Checker, NailEffectError, NailTypeError  # noqa: E402
 
-RUNS_PER_PROBLEM = 10
+RUNS_PER_PROBLEM = 5
 DELAY_SECONDS = 2
 RESULTS_PATH = Path(__file__).with_name("results_v2.json")
 RUN_UUID = uuid.uuid4().hex[:8]  # unique per execution — prevents session-id reuse across runs

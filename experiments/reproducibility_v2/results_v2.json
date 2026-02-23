@@ -1,0 +1,289 @@
+{
+  "version": "v2",
+  "runs_per_problem": 5,
+  "problems": [
+    "clamp",
+    "fibonacci",
+    "fizzbuzz_count"
+  ],
+  "summary": {
+    "per_problem": {
+      "clamp": {
+        "nail_runs": 5,
+        "nail_valid": 5,
+        "nail_unique_hashes": 1,
+        "nail_match_rate": "100.0%",
+        "python_runs": 5,
+        "python_unique_hashes": 1,
+        "python_match_rate": "100.0%"
+      },
+      "fibonacci": {
+        "nail_runs": 5,
+        "nail_valid": 5,
+        "nail_unique_hashes": 5,
+        "nail_match_rate": "20.0%",
+        "python_runs": 5,
+        "python_unique_hashes": 3,
+        "python_match_rate": "60.0%"
+      },
+      "fizzbuzz_count": {
+        "nail_runs": 5,
+        "nail_valid": 5,
+        "nail_unique_hashes": 2,
+        "nail_match_rate": "60.0%",
+        "python_runs": 5,
+        "python_unique_hashes": 1,
+        "python_match_rate": "100.0%"
+      }
+    },
+    "overall": {
+      "nail_total_runs": 15,
+      "nail_total_valid": 15,
+      "nail_total_unique_hashes": 8,
+      "python_total_runs": 15,
+      "python_total_unique_hashes": 5
+    }
+  },
+  "runs": [
+    {
+      "run_id": 0,
+      "problem": "clamp",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "148c436fe5228e0f6cdf1112cee617e2e8df237368c6b798360104cc4fdc3830",
+      "valid": true
+    },
+    {
+      "run_id": 1,
+      "problem": "clamp",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "148c436fe5228e0f6cdf1112cee617e2e8df237368c6b798360104cc4fdc3830",
+      "valid": true
+    },
+    {
+      "run_id": 2,
+      "problem": "clamp",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "148c436fe5228e0f6cdf1112cee617e2e8df237368c6b798360104cc4fdc3830",
+      "valid": true
+    },
+    {
+      "run_id": 3,
+      "problem": "clamp",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "148c436fe5228e0f6cdf1112cee617e2e8df237368c6b798360104cc4fdc3830",
+      "valid": true
+    },
+    {
+      "run_id": 4,
+      "problem": "clamp",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"lt\",\"r\":{\"ref\":\"lo\"}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"val\"},\"op\":\"gt\",\"r\":{\"ref\":\"hi\"}},\"else\":[{\"op\":\"return\",\"val\":{\"ref\":\"val\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"hi\"}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"lo\"}}]}],\"effects\":[],\"id\":\"clamp\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"val\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"lo\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"hi\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "148c436fe5228e0f6cdf1112cee617e2e8df237368c6b798360104cc4fdc3830",
+      "valid": true
+    },
+    {
+      "run_id": 0,
+      "problem": "clamp",
+      "lang": "python",
+      "raw": "def clamp(val: int, lo: int, hi: int) -> int:\n    return max(lo, min(val, hi))",
+      "sha256_hash": "a385f191b3af78d8f69d1805a778fbaee7d49bf9b33eced7babebe58c8779b68"
+    },
+    {
+      "run_id": 1,
+      "problem": "clamp",
+      "lang": "python",
+      "raw": "def clamp(val: int, lo: int, hi: int) -> int:\n    return max(lo, min(val, hi))",
+      "sha256_hash": "a385f191b3af78d8f69d1805a778fbaee7d49bf9b33eced7babebe58c8779b68"
+    },
+    {
+      "run_id": 2,
+      "problem": "clamp",
+      "lang": "python",
+      "raw": "def clamp(val: int, lo: int, hi: int) -> int:\n    return max(lo, min(val, hi))",
+      "sha256_hash": "a385f191b3af78d8f69d1805a778fbaee7d49bf9b33eced7babebe58c8779b68"
+    },
+    {
+      "run_id": 3,
+      "problem": "clamp",
+      "lang": "python",
+      "raw": "def clamp(val: int, lo: int, hi: int) -> int:\n    return max(lo, min(val, hi))",
+      "sha256_hash": "a385f191b3af78d8f69d1805a778fbaee7d49bf9b33eced7babebe58c8779b68"
+    },
+    {
+      "run_id": 4,
+      "problem": "clamp",
+      "lang": "python",
+      "raw": "def clamp(val: int, lo: int, hi: int) -> int:\n    return max(lo, min(val, hi))",
+      "sha256_hash": "a385f191b3af78d8f69d1805a778fbaee7d49bf9b33eced7babebe58c8779b68"
+    },
+    {
+      "run_id": 0,
+      "problem": "fibonacci",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]},{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"bind\":\"i\",\"body\":[{\"id\":\"tmp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"tmp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]},{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"bind\":\"i\",\"body\":[{\"id\":\"tmp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"tmp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "bc54b4d4a42c9e9b9ef631c6026d7587c4035b09cb0ab115f5425d84218a4020",
+      "valid": true
+    },
+    {
+      "run_id": 1,
+      "problem": "fibonacci",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"lte\",\"r\":{\"lit\":0}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":1}},\"else\":[{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":1}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"lte\",\"r\":{\"lit\":0}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":1}},\"else\":[{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":1}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "60b0bf1d6763dbf883ade6941b7b98d74cca2653014f3ab29e70c063ffc0cc74",
+      "valid": true
+    },
+    {
+      "run_id": 2,
+      "problem": "fibonacci",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"lte\",\"r\":{\"lit\":1}},\"else\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"id\":\"tmp\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"id\":\"tmp\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"tmp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"n\"}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"lte\",\"r\":{\"lit\":1}},\"else\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"id\":\"tmp\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"id\":\"tmp\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"tmp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"ref\":\"n\"}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "634216baea2aa22be257bec016919547125f1de1a5819d76f506587cff94d3c5",
+      "valid": true
+    },
+    {
+      "run_id": 3,
+      "problem": "fibonacci",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"ref\":\"n\"}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"ref\":\"n\"}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "09930cb2d47bdf29a3eac11af6f8b51e7f9c9522f0416df1e57554fe7db9d889",
+      "valid": true
+    },
+    {
+      "run_id": 4,
+      "problem": "fibonacci",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":1}},\"else\":[{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":1}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"a\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"id\":\"b\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":1}},{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":0}},\"else\":[{\"cond\":{\"l\":{\"ref\":\"n\"},\"op\":\"eq\",\"r\":{\"lit\":1}},\"else\":[{\"bind\":\"i\",\"body\":[{\"id\":\"temp\",\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}},{\"id\":\"a\",\"op\":\"assign\",\"val\":{\"ref\":\"b\"}},{\"id\":\"b\",\"op\":\"assign\",\"val\":{\"ref\":\"temp\"}}],\"from\":{\"lit\":2},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"b\"}}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":1}}]}],\"op\":\"if\",\"then\":[{\"op\":\"return\",\"val\":{\"lit\":0}}]}],\"effects\":[],\"id\":\"fibonacci\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "5e75f8ee789187ad181a66d7028a396421972b23b526544963e85712ea8f806e",
+      "valid": true
+    },
+    {
+      "run_id": 0,
+      "problem": "fibonacci",
+      "lang": "python",
+      "raw": "def fibonacci(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a",
+      "sha256_hash": "f217b699d9a9a25d0101e95cf6220f58fbca3340c9f7d915e14753af981ca97d"
+    },
+    {
+      "run_id": 1,
+      "problem": "fibonacci",
+      "lang": "python",
+      "raw": "def fibonacci(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a",
+      "sha256_hash": "f217b699d9a9a25d0101e95cf6220f58fbca3340c9f7d915e14753af981ca97d"
+    },
+    {
+      "run_id": 2,
+      "problem": "fibonacci",
+      "lang": "python",
+      "raw": "def fibonacci(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a",
+      "sha256_hash": "f217b699d9a9a25d0101e95cf6220f58fbca3340c9f7d915e14753af981ca97d"
+    },
+    {
+      "run_id": 3,
+      "problem": "fibonacci",
+      "lang": "python",
+      "raw": "def fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    if n == 1:\n        return 1\n    a, b = 0, 1\n    for _ in range(2, n + 1):\n        a, b = b, a + b\n    return b",
+      "sha256_hash": "504d2792e461073b7ef2944c3644128355b8cc02237bd4e3367a4b972f01fdb4"
+    },
+    {
+      "run_id": 4,
+      "problem": "fibonacci",
+      "lang": "python",
+      "raw": "def fibonacci(n: int) -> int:\n    if n <= 0:\n        return 0\n    a, b = 0, 1\n    for _ in range(n - 1):\n        a, b = b, a + b\n    return b",
+      "sha256_hash": "6b3bf0e1e7ec15e31111fc097a29124b1519f0a511810bed70344d070f74a3ba"
+    },
+    {
+      "run_id": 0,
+      "problem": "fizzbuzz_count",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"count\"}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"count\"}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "3a318714b03857921b21aaeaded17cf6fd761ffbcc15b6feb7175947aaa0cf18",
+      "valid": true
+    },
+    {
+      "run_id": 1,
+      "problem": "fizzbuzz_count",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "1e9850e8edaed3aca485699c0af58161fed7bbd72a8faee04902bc7e3ec6a7cd",
+      "valid": true
+    },
+    {
+      "run_id": 2,
+      "problem": "fizzbuzz_count",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "1e9850e8edaed3aca485699c0af58161fed7bbd72a8faee04902bc7e3ec6a7cd",
+      "valid": true
+    },
+    {
+      "run_id": 3,
+      "problem": "fizzbuzz_count",
+      "lang": "nail",
+      "raw": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"count\"}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"count\"}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "3a318714b03857921b21aaeaded17cf6fd761ffbcc15b6feb7175947aaa0cf18",
+      "valid": true
+    },
+    {
+      "run_id": 4,
+      "problem": "fizzbuzz_count",
+      "lang": "nail",
+      "raw": "{\"body\": [{\"id\": \"count\", \"mut\": true, \"op\": \"let\", \"type\": {\"bits\": 64, \"overflow\": \"panic\", \"type\": \"int\"}, \"val\": {\"lit\": 0}}, {\"bind\": \"i\", \"body\": [{\"cond\": {\"l\": {\"l\": {\"l\": {\"ref\": \"i\"}, \"op\": \"%\", \"r\": {\"lit\": 3}}, \"op\": \"eq\", \"r\": {\"lit\": 0}}, \"op\": \"or\", \"r\": {\"l\": {\"l\": {\"ref\": \"i\"}, \"op\": \"%\", \"r\": {\"lit\": 5}}, \"op\": \"eq\", \"r\": {\"lit\": 0}}}, \"else\": [], \"op\": \"if\", \"then\": [{\"id\": \"count\", \"op\": \"assign\", \"val\": {\"l\": {\"ref\": \"count\"}, \"op\": \"+\", \"r\": {\"lit\": 1}}}]}], \"from\": {\"lit\": 1}, \"op\": \"loop\", \"step\": {\"lit\": 1}, \"to\": {\"l\": {\"ref\": \"n\"}, \"op\": \"+\", \"r\": {\"lit\": 1}}}, {\"op\": \"return\", \"val\": {\"ref\": \"count\"}}], \"effects\": [], \"id\": \"fizzbuzz_count\", \"kind\": \"fn\", \"nail\": \"0.2\", \"params\": [{\"id\": \"n\", \"type\": {\"bits\": 64, \"overflow\": \"panic\", \"type\": \"int\"}}], \"returns\": {\"bits\": 64, \"overflow\": \"panic\", \"type\": \"int\"}}",
+      "normalized": "{\"body\":[{\"id\":\"count\",\"mut\":true,\"op\":\"let\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"},\"val\":{\"lit\":0}},{\"bind\":\"i\",\"body\":[{\"cond\":{\"l\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":3}},\"op\":\"eq\",\"r\":{\"lit\":0}},\"op\":\"or\",\"r\":{\"l\":{\"l\":{\"ref\":\"i\"},\"op\":\"%\",\"r\":{\"lit\":5}},\"op\":\"eq\",\"r\":{\"lit\":0}}},\"else\":[],\"op\":\"if\",\"then\":[{\"id\":\"count\",\"op\":\"assign\",\"val\":{\"l\":{\"ref\":\"count\"},\"op\":\"+\",\"r\":{\"lit\":1}}}]}],\"from\":{\"lit\":1},\"op\":\"loop\",\"step\":{\"lit\":1},\"to\":{\"l\":{\"ref\":\"n\"},\"op\":\"+\",\"r\":{\"lit\":1}}},{\"op\":\"return\",\"val\":{\"ref\":\"count\"}}],\"effects\":[],\"id\":\"fizzbuzz_count\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"n\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "3a318714b03857921b21aaeaded17cf6fd761ffbcc15b6feb7175947aaa0cf18",
+      "valid": true
+    },
+    {
+      "run_id": 0,
+      "problem": "fizzbuzz_count",
+      "lang": "python",
+      "raw": "def fizzbuzz_count(n: int) -> int:\n    return sum(1 for i in range(1, n + 1) if i % 3 == 0 or i % 5 == 0)",
+      "sha256_hash": "b8083cb7e91d01e76dae9583a7a557fe511853bcabe3f0ff664c18e3d8163712"
+    },
+    {
+      "run_id": 1,
+      "problem": "fizzbuzz_count",
+      "lang": "python",
+      "raw": "def fizzbuzz_count(n: int) -> int:\n    return sum(1 for i in range(1, n + 1) if i % 3 == 0 or i % 5 == 0)",
+      "sha256_hash": "b8083cb7e91d01e76dae9583a7a557fe511853bcabe3f0ff664c18e3d8163712"
+    },
+    {
+      "run_id": 2,
+      "problem": "fizzbuzz_count",
+      "lang": "python",
+      "raw": "def fizzbuzz_count(n: int) -> int:\n    return sum(1 for i in range(1, n + 1) if i % 3 == 0 or i % 5 == 0)",
+      "sha256_hash": "b8083cb7e91d01e76dae9583a7a557fe511853bcabe3f0ff664c18e3d8163712"
+    },
+    {
+      "run_id": 3,
+      "problem": "fizzbuzz_count",
+      "lang": "python",
+      "raw": "def fizzbuzz_count(n: int) -> int:\n    return sum(1 for i in range(1, n + 1) if i % 3 == 0 or i % 5 == 0)",
+      "sha256_hash": "b8083cb7e91d01e76dae9583a7a557fe511853bcabe3f0ff664c18e3d8163712"
+    },
+    {
+      "run_id": 4,
+      "problem": "fizzbuzz_count",
+      "lang": "python",
+      "raw": "def fizzbuzz_count(n: int) -> int:\n    return sum(1 for i in range(1, n + 1) if i % 3 == 0 or i % 5 == 0)",
+      "sha256_hash": "b8083cb7e91d01e76dae9583a7a557fe511853bcabe3f0ff664c18e3d8163712"
+    }
+  ]
+}
