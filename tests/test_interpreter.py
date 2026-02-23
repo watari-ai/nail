@@ -57,6 +57,16 @@ def fn_spec(fn_id, params, returns, body, effects=None):
     }
 
 
+def module_spec(module_id, defs, exports=None):
+    return {
+        "nail": "0.1.0",
+        "kind": "module",
+        "id": module_id,
+        "exports": exports or [],
+        "defs": defs,
+    }
+
+
 # ──────────────────────────────────────────────
 #  L0 Tests — Schema Validation
 # ──────────────────────────────────────────────
@@ -176,6 +186,137 @@ class TestL2Effects(unittest.TestCase):
             {"op": "print", "val": {"lit": "hi"}},  # missing "effect" field
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["IO"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestFunctionCalls(unittest.TestCase):
+
+    def test_pure_calls_pure_ok(self):
+        callee = fn_spec("add", [
+            {"id": "a", "type": INT64},
+            {"id": "b", "type": INT64},
+        ], INT64, [{"op": "return", "val": {"op": "+", "l": {"ref": "a"}, "r": {"ref": "b"}}}])
+        caller = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "add", "args": [{"lit": 1}, {"lit": 2}]}}
+        ])
+        spec = module_spec("m", [caller, callee], exports=["main", "add"])
+        result = run_spec(spec, call_fn="main")
+        self.assertEqual(result, 3)
+
+    def test_io_calls_io_ok(self):
+        printer = fn_spec("print_header", [{"id": "s", "type": STR_T}], UNIT_T, [
+            {"op": "print", "val": {"ref": "s"}, "effect": "IO"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["IO"])
+        caller = fn_spec("main", [], UNIT_T, [
+            {"op": "call", "fn": "print_header", "args": [{"lit": "hello"}]},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["IO"])
+        spec = module_spec("m", [caller, printer], exports=["main"])
+        result = run_spec(spec, call_fn="main")
+        self.assertIs(result, UNIT)
+
+    def test_pure_calls_io_fails(self):
+        io_fn = fn_spec("io_fn", [], UNIT_T, [
+            {"op": "print", "val": {"lit": "x"}, "effect": "IO"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["IO"])
+        pure_main = fn_spec("main", [], UNIT_T, [
+            {"op": "call", "fn": "io_fn", "args": []},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=[])
+        spec = module_spec("m", [pure_main, io_fn], exports=["main"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_call_arg_type_mismatch_fails(self):
+        callee = fn_spec("id_int", [{"id": "x", "type": INT64}], INT64, [
+            {"op": "return", "val": {"ref": "x"}}
+        ])
+        caller = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "id_int", "args": [{"lit": "oops"}]}}
+        ])
+        spec = module_spec("m", [caller, callee], exports=["main"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_call_arg_count_mismatch_fails(self):
+        callee = fn_spec("one_arg", [{"id": "x", "type": INT64}], INT64, [
+            {"op": "return", "val": {"ref": "x"}}
+        ])
+        caller = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "one_arg", "args": [{"lit": 1}, {"lit": 2}]}}
+        ])
+        spec = module_spec("m", [caller, callee], exports=["main"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_call_unknown_function_fails(self):
+        main = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "missing", "args": []}}
+        ])
+        spec = module_spec("m", [main], exports=["main"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_direct_recursion_fails(self):
+        loop_fn = fn_spec("a", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "a", "args": []}}
+        ])
+        spec = module_spec("m", [loop_fn], exports=["a"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_mutual_recursion_fails(self):
+        fn_a = fn_spec("a", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "b", "args": []}}
+        ])
+        fn_b = fn_spec("b", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "a", "args": []}}
+        ])
+        spec = module_spec("m", [fn_a, fn_b], exports=["a"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_call_in_fn_kind_fails(self):
+        spec = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "main", "args": []}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestCallOpV024(unittest.TestCase):
+
+    def test_call_returns_value(self):
+        result = run_file("call_demo.nail")
+        self.assertEqual(result, 120)
+
+    def test_effect_propagation_main_pure_calls_io_fails(self):
+        path = Path(__file__).parent.parent / "examples" / "bad_effect_call.nail"
+        with open(path) as f:
+            spec = json.load(f)
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_unknown_function_call_raises(self):
+        helper = fn_spec("helper", [], INT64, [{"op": "return", "val": {"lit": 1}}])
+        main = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "does_not_exist", "args": []}}
+        ])
+        spec = module_spec("m", [main, helper], exports=["main"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_call_arg_type_mismatch_raises(self):
+        helper = fn_spec("helper", [{"id": "n", "type": INT64}], INT64, [
+            {"op": "return", "val": {"ref": "n"}}
+        ])
+        main = fn_spec("main", [], INT64, [
+            {"op": "return", "val": {"op": "call", "fn": "helper", "args": [{"lit": "bad"}]}}
+        ])
+        spec = module_spec("m", [main, helper], exports=["main"])
         with self.assertRaises(CheckError):
             Checker(spec).check()
 

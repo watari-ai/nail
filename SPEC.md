@@ -114,6 +114,22 @@ Multiple effects are listed as an array: `["IO", "NET"]`, etc.
 { "op": "not", "v": <expr> }
 ```
 
+### Function Call (v0.2)
+```json
+{ "op": "call", "fn": "add", "args": [ <expr>, <expr> ] }
+```
+
+`call` can be used as:
+- an expression (return value is used)
+- a statement in `body` (return value is discarded)
+
+Rules:
+- Calls are allowed only in `kind: "module"`.
+- `kind: "fn"` cannot call functions.
+- Forward references are allowed within a module.
+- Effect propagation is required: `caller.effects ⊇ callee.effects`.
+- Recursion is forbidden (direct and mutual). Any cycle in the call graph is a compile error.
+
 ---
 
 ## 6. Control Flow
@@ -215,6 +231,10 @@ Effectful operations are a compile error if the corresponding effect is not decl
   ]
 }
 ```
+
+`defs` are checked in 2 passes:
+1. Collect all function signatures (for forward references)
+2. Type/effect-check all bodies
 
 ---
 

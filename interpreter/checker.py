@@ -24,6 +24,8 @@ class Checker:
         self.spec = spec
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
+        self.fn_registry: dict[str, dict] = {}
+        self.call_graph: dict[str, set[str]] = {}
         self.raw_text = raw_text
         self.strict = strict
 
@@ -86,11 +88,14 @@ class Checker:
         defs = mod.get("defs", [])
         if not isinstance(defs, list):
             raise CheckError("Module 'defs' must be a list")
+        self.fn_registry = {}
+        self.call_graph = {}
+        self._collect_fn_registry(defs)
         for fn in defs:
             if not isinstance(fn, dict):
                 raise CheckError(f"Module def must be a dict, got {type(fn)}")
-            self._check_fn_schema(fn)
             self._check_fn(fn)
+        self._detect_recursive_calls()
         # Validate exports
         exports = mod.get("exports", [])
         defined_ids = {fn["id"] for fn in defs if "id" in fn}
@@ -98,8 +103,46 @@ class Checker:
             if exp not in defined_ids:
                 raise CheckError(f"Exported function '{exp}' not defined in module")
 
+    def _collect_fn_registry(self, defs: list[dict]):
+        for fn in defs:
+            if not isinstance(fn, dict):
+                raise CheckError(f"Module def must be a dict, got {type(fn)}")
+            self._check_fn_schema(fn)
+            fn_id = fn.get("id")
+            if not fn_id:
+                raise CheckError("Function definition missing 'id'")
+            if fn_id in self.fn_registry:
+                raise CheckError(f"Duplicate function id in module: '{fn_id}'")
+            self.fn_registry[fn_id] = fn
+            self.call_graph[fn_id] = set()
+
+    def _detect_recursive_calls(self):
+        WHITE, GRAY, BLACK = 0, 1, 2
+        state: dict[str, int] = {fn_id: WHITE for fn_id in self.call_graph}
+        stack: list[str] = []
+
+        def dfs(node: str):
+            state[node] = GRAY
+            stack.append(node)
+            for nxt in self.call_graph.get(node, set()):
+                nxt_state = state.get(nxt, WHITE)
+                if nxt_state == WHITE:
+                    dfs(nxt)
+                elif nxt_state == GRAY:
+                    cycle_start = stack.index(nxt)
+                    cycle = stack[cycle_start:] + [nxt]
+                    cycle_text = " -> ".join(cycle)
+                    raise CheckError(f"Recursive call detected: {cycle_text}")
+            stack.pop()
+            state[node] = BLACK
+
+        for fn_id in self.call_graph:
+            if state[fn_id] == WHITE:
+                dfs(fn_id)
+
     def _check_fn(self, fn: dict):
         fn_id = fn["id"]
+        self.call_graph.setdefault(fn_id, set())
 
         # L2: collect declared effects
         self.declared_effects = set(fn["effects"])
@@ -170,6 +213,10 @@ class Checker:
                 # print accepts string only
                 if not isinstance(val_type, StringType):
                     raise CheckError(f"[{fn_id}] 'print' expects string, got {val_type}")
+
+            elif op == "call":
+                # Call can be used as a statement (discard return value)
+                self._check_op_expr(fn_id, stmt, local_env)
 
             elif op == "if":
                 cond_type = self._check_expr(fn_id, stmt.get("cond"), local_env)
@@ -328,5 +375,61 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
 
+        # Variable reference alias (v0.2 compatibility)
+        elif op == "var":
+            name = expr.get("id")
+            if not isinstance(name, str) or not name:
+                raise CheckError(f"[{fn_id}] 'var' requires string field 'id'")
+            if name not in env:
+                raise CheckError(f"[{fn_id}] Undefined variable: '{name}'")
+            return env[name]
+
+        elif op == "call":
+            return self._check_call_expr(fn_id, expr, env)
+
         else:
             raise CheckError(f"[{fn_id}] Unknown op in expression: '{op}'")
+
+    def _check_call_expr(self, fn_id: str, expr: dict, env: dict) -> NailType:
+        if self.spec.get("kind") != "module":
+            raise CheckError(f"[{fn_id}] Function call is only allowed in kind:'module'")
+
+        callee_id = expr.get("fn")
+        if not isinstance(callee_id, str) or not callee_id:
+            raise CheckError(f"[{fn_id}] 'call' requires string field 'fn'")
+
+        if callee_id not in self.fn_registry:
+            raise CheckError(f"[{fn_id}] Unknown function: '{callee_id}'")
+
+        callee = self.fn_registry[callee_id]
+        self.call_graph.setdefault(fn_id, set()).add(callee_id)
+
+        callee_effects = set(callee.get("effects", []))
+        missing_effects = callee_effects - self.declared_effects
+        if missing_effects:
+            missing_text = ", ".join(sorted(missing_effects))
+            declared_text = ", ".join(sorted(self.declared_effects))
+            raise CheckError(
+                f"[{fn_id}] Calling '{callee_id}' requires effects {{{missing_text}}}, "
+                f"but '{fn_id}' declares {{{declared_text}}}"
+            )
+
+        args = expr.get("args", [])
+        if not isinstance(args, list):
+            raise CheckError(f"[{fn_id}] 'call.args' must be a list")
+
+        params = callee.get("params", [])
+        if len(args) != len(params):
+            raise CheckError(
+                f"[{fn_id}] '{callee_id}' expects {len(params)} args, got {len(args)}"
+            )
+
+        for i, (arg_expr, param) in enumerate(zip(args, params)):
+            arg_type = self._check_expr(fn_id, arg_expr, env)
+            param_type = parse_type(param["type"])
+            if not types_equal(arg_type, param_type):
+                raise CheckError(
+                    f"[{fn_id}] Arg {i} to '{callee_id}' type mismatch: expected {param_type}, got {arg_type}"
+                )
+
+        return parse_type(callee["returns"])

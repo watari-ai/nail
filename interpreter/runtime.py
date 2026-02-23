@@ -22,6 +22,9 @@ class Runtime:
     def __init__(self, spec: dict):
         self.spec = spec
         self.declared_effects = set(spec.get("effects", []))
+        self.fn_registry = {}
+        if spec.get("kind") == "module":
+            self.fn_registry = {fn["id"]: fn for fn in spec.get("defs", [])}
 
     def run(self, args: dict | None = None):
         """Run the program. For kind:fn, executes it directly.
@@ -39,11 +42,10 @@ class Runtime:
         kind = self.spec.get("kind")
         if kind != "module":
             raise NailRuntimeError("run_fn() requires kind:module")
-        defs = {fn["id"]: fn for fn in self.spec.get("defs", [])}
-        if fn_id not in defs:
-            available = list(defs.keys())
+        if fn_id not in self.fn_registry:
+            available = list(self.fn_registry.keys())
             raise NailRuntimeError(f"Function '{fn_id}' not found in module. Available: {available}")
-        return self._run_fn(defs[fn_id], args or {})
+        return self._run_fn(self.fn_registry[fn_id], args or {})
 
     def _run_fn(self, fn: dict, args: dict) -> Any:
         env = dict(args)
@@ -95,6 +97,10 @@ class Runtime:
         elif op == "print":
             val = self._eval(stmt["val"], env)
             print(val)
+            return _CONTINUE
+
+        elif op == "call":
+            self._eval_op(stmt, env)
             return _CONTINUE
 
         elif op == "if":
@@ -212,6 +218,33 @@ class Runtime:
             if not isinstance(l, str) or not isinstance(r, str):
                 raise NailRuntimeError(f"'concat' requires two strings, got {type(l)}, {type(r)}")
             return l + r
+
+        # Variable reference alias (v0.2 compatibility)
+        elif op == "var":
+            name = expr.get("id")
+            if not isinstance(name, str) or not name:
+                raise NailRuntimeError("'var' requires string field 'id'")
+            if name not in env:
+                raise NailRuntimeError(f"Undefined variable: {name}")
+            return env[name]
+
+        elif op == "call":
+            if self.spec.get("kind") != "module":
+                raise NailRuntimeError("Function call is only supported for kind:module")
+            callee_id = expr.get("fn")
+            if callee_id not in self.fn_registry:
+                raise NailRuntimeError(f"Unknown function: {callee_id!r}")
+            callee = self.fn_registry[callee_id]
+            args_expr = expr.get("args", [])
+            params = callee.get("params", [])
+            if len(args_expr) != len(params):
+                raise NailRuntimeError(
+                    f"Function '{callee_id}' expects {len(params)} args, got {len(args_expr)}"
+                )
+            call_args = {}
+            for param, arg_expr in zip(params, args_expr):
+                call_args[param["id"]] = self._eval(arg_expr, env)
+            return self._run_fn(callee, call_args)
 
         else:
             raise NailRuntimeError(f"Unknown op: {op}")
