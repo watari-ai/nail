@@ -1,0 +1,150 @@
+{
+  "runs": [
+    {
+      "run_id": 0,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 1,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 2,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 3,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 4,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 5,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 6,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 7,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 8,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 9,
+      "lang": "nail",
+      "raw": "{\"nail\":\"0.2\",\"kind\":\"fn\",\"id\":\"add\",\"effects\":[],\"params\":[{\"id\":\"a\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}},{\"id\":\"b\",\"type\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"}}],\"returns\":{\"type\":\"int\",\"bits\":64,\"overflow\":\"panic\"},\"body\":[{\"op\":\"return\",\"val\":{\"op\":\"+\",\"l\":{\"ref\":\"a\"},\"r\":{\"ref\":\"b\"}}}]}",
+      "normalized": "{\"body\":[{\"op\":\"return\",\"val\":{\"l\":{\"ref\":\"a\"},\"op\":\"+\",\"r\":{\"ref\":\"b\"}}}],\"effects\":[],\"id\":\"add\",\"kind\":\"fn\",\"nail\":\"0.2\",\"params\":[{\"id\":\"a\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}},{\"id\":\"b\",\"type\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}],\"returns\":{\"bits\":64,\"overflow\":\"panic\",\"type\":\"int\"}}",
+      "sha256_hash": "fefcea43e333f6797ab58c67a82f13d850ac8c6f84866b316e50656f02cd0e0f",
+      "valid": true
+    },
+    {
+      "run_id": 0,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 1,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 2,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 3,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 4,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 5,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 6,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 7,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 8,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    },
+    {
+      "run_id": 9,
+      "lang": "python",
+      "raw": "def add(a: int, b: int) -> int:\n    return a + b",
+      "sha256_hash": "deadc39260c03caa9167e97f7f71d7baf391aaa83090a1b4802c2b0eb3995f57"
+    }
+  ],
+  "summary": {
+    "nail_unique_hashes": 1,
+    "python_unique_hashes": 1,
+    "nail_match_rate": "100.0%",
+    "python_match_rate": "100.0%"
+  }
+}
