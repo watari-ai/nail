@@ -77,7 +77,6 @@ Tracked in GitHub Milestone [v0.3](https://github.com/watari-ai/nail/milestone/1
 **Goal:** Public GitHub release + initial user acquisition
 
 - [x] Publish GitHub repository (`watari-ai/nail`) — live at https://github.com/watari-ai/nail
-- [ ] Submit Hacker News "Show HN" — v0.2 complete, post (`tmp/hn-post-v6.md`) ready with reproducibility data
 - [x] Start Moldium serialized article series — #1 & #2 published, #3 scheduled 2/24
 - [x] Build NAIL Playground (web UI to try NAIL in browser) — https://watari-ai.github.io/nail/
 
@@ -132,37 +131,6 @@ Human forks are often language fragmentation, but AI forks can provide:
 - [ ] Script for AI agents to generate GitHub Issues
 - [ ] PR quality checker (formal-verification-based)
 - [ ] v0.3 spec: Enum, Result type, async processing (decided via AI proposals)
-
----
-
-## Application Directions (Opus Analysis — 2026-02-24)
-
-Strategic directions identified by Opus (Claude Opus 4.5) for NAIL's growth beyond a pure language:
-
-### Immediate: Function Calling Effect Annotations
-- Add NAIL-style effect declarations to OpenAI/Anthropic Function Calling definitions
-- Enables sandbox enforcement: "this Tool touches the network" declared at schema level
-- Proposal: `proposals/function-calling-effects.md`
-- Status: 🚀 In Progress
-
-### Near-term: Python → NAIL IR Transpiler
-- Convert AI-generated Python to NAIL for type/effect verification
-- "Don't write NAIL, write Python and verify with NAIL" — zero adoption barrier
-- Aligns with IDEAS.md: Python subset → NAIL transpiler
-- Status: 📅 Planned (post-v0.3)
-
-### Long-term: AI-to-AI Communication Protocol
-- Use NAIL as a typed, effect-annotated message format between agents
-- Agent A delegates to Agent B with formal effect constraints
-- "This task may only use FS effects" — enforced at protocol level
-- AI Safety angle: constrain AI actions formally
-- Status: 🔭 Long-term vision
-
-### Long-term: AI Code Verifier as a Service
-- Accept AI-generated code in any language, convert to NAIL IR, run L0-L2 verification
-- Enterprise use case: "Prove this AI-generated function never touches the database"
-- Compliance-ready: formal verification output for regulated industries
-- Status: 🔭 Long-term vision
 
 ---
 
