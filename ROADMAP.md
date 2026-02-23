@@ -86,6 +86,14 @@ Tracked in GitHub Milestone [v0.3](https://github.com/watari-ai/nail/milestone/1
 - [ ] **Verify-fix loop demo** — script where AI generates NAIL code → checker rejects → AI reads error and revises → passes; document the loop behavior
 - [ ] **Richer examples** — list operations, `map`/`filter`-style patterns using current ops; stress-test the spec against realistic tasks
 
+**Encoding Exploration Experiment** _(inspired by Dimitris Papailiopoulos' Claude Code vs Codex experiment, 2026-02-24)_
+
+> Codex invented "pair tokens" — merging two related digits into one token — reducing input from 23 to 12 tokens and enabling a 3.7× smaller model. The key: representation shapes required compute. NAIL's JSON encoding was designed by humans. Has it actually been optimized for AI processing?
+
+- [ ] **Encoding optimization experiment** — give an AI agent the task: "Design the most efficient NAIL encoding that minimizes LLM token cost while maintaining Zero Ambiguity." Compare against current JSON format. Measure: token count per operation, generation reproducibility, checker pass rate.
+- [ ] **Priority constraint field** — the experiment showed that implicit secondary objectives are silently ignored by AI (Codex v1 skipped hard minimization because it was listed as "secondary"). Proposal: add an explicit `"priorities"` or `"constraints"` field to NAIL ops so AI agents receive unambiguous objective weighting. Draft spec in `proposals/priority-constraints.md`.
+- [ ] **Phase transition mapping** — document NAIL's sharp pass/fail thresholds (analogous to d=12 fail / d=16 succeed). Where are NAIL's "specification cliff edges"? Which spec gaps cause catastrophic AI failures vs graceful degradation? Results can strengthen the Zero Ambiguity argument for HN post / Moldium articles.
+
 ---
 
 ## Phase 4: OSS for AI (ongoing)
