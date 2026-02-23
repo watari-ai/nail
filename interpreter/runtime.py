@@ -219,15 +219,6 @@ class Runtime:
                 raise NailRuntimeError(f"'concat' requires two strings, got {type(l)}, {type(r)}")
             return l + r
 
-        # Variable reference alias (v0.2 compatibility)
-        elif op == "var":
-            name = expr.get("id")
-            if not isinstance(name, str) or not name:
-                raise NailRuntimeError("'var' requires string field 'id'")
-            if name not in env:
-                raise NailRuntimeError(f"Undefined variable: {name}")
-            return env[name]
-
         elif op == "call":
             if self.spec.get("kind") != "module":
                 raise NailRuntimeError("Function call is only supported for kind:module")

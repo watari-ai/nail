@@ -375,15 +375,6 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
 
-        # Variable reference alias (v0.2 compatibility)
-        elif op == "var":
-            name = expr.get("id")
-            if not isinstance(name, str) or not name:
-                raise CheckError(f"[{fn_id}] 'var' requires string field 'id'")
-            if name not in env:
-                raise CheckError(f"[{fn_id}] Undefined variable: '{name}'")
-            return env[name]
-
         elif op == "call":
             return self._check_call_expr(fn_id, expr, env)
 
