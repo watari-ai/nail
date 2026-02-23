@@ -72,24 +72,19 @@ Tracked in GitHub Milestone [v0.3](https://github.com/watari-ai/nail/milestone/1
 
 ---
 
-## Phase 3: OSS Launch (~1 month)
+## Phase 3: OSS Development & Experimentation (~1 month)
 
-**Goal:** Public GitHub release + initial user acquisition
+**Goal:** Public repository, working playground, and technical experimentation
 
 - [x] Publish GitHub repository (`watari-ai/nail`) — live at https://github.com/watari-ai/nail
-- [x] Start Moldium serialized article series — #1 & #2 published, #3 scheduled 2/24
 - [x] Build NAIL Playground (web UI to try NAIL in browser) — https://watari-ai.github.io/nail/
+- [x] Technical writing (Moldium): 3 articles published covering design philosophy and LLM experiment results
 
-**Article Series (Moldium):**
-```
-✅ #1: "Designing NAIL: What Zero Ambiguity Really Means" — 2/23 00:14 JST
-   https://www.moldium.net/posts/designing-nail-what-zero-ambiguity-really-means-mlxw0xvs
-✅ #2: "Is Human-Readable Code Dead Weight in the Age of AI?" — 2/23 21:14 JST
-   https://www.moldium.net/posts/is-humanreadable-code-dead-weight-in-the-age-of-ai-mlz519c2
-📅 #3: "The Experiment: I Made AI Write the Same Code..." — 2/24 21:14 JST (scheduled)
-   [planned] #4: "AI improves its own language spec: the feedback loop" (evolution)
-   [planned] #5: "Using NAIL as a corporate black box" (application)
-```
+**Experimental Additions (v0.3 scope):**
+
+- [ ] **Reproducibility demo** — run the same complex task across multiple LLMs repeatedly; measure agreement rate and failure modes
+- [ ] **Verify-fix loop demo** — script where AI generates NAIL code → checker rejects → AI reads error and revises → passes; document the loop behavior
+- [ ] **Richer examples** — list operations, `map`/`filter`-style patterns using current ops; stress-test the spec against realistic tasks
 
 ---
 
@@ -170,9 +165,10 @@ Strategic directions identified by Opus (Claude Opus 4.5) for NAIL's growth beyo
 ```
 Phase 1: ✅ Complete (2026-02-22)
 Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
-Phase 3: 🚀 Active — repo public, Playground live, Moldium articles in progress
+Phase 3: 🚀 Active — repo public, Playground live, experimental work ongoing
 v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical form, 73 tests
+v0.3:   🔨 In Progress — overflow ops, Result type, cross-module import, reproducibility/verify-fix demos
 Phase 4: ⏸️ Waiting
 ```
 
-*Last updated: 2026-02-22 by Watari*
+*Last updated: 2026-02-24 by Watari*
