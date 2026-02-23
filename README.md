@@ -131,6 +131,8 @@ See [`playground/README.md`](./playground/README.md) for details.
 
 **CLI (coming soon):** PyPI package is in progress.
 
+**Requirements:** Python 3.10+
+
 **Clone & run:**
 ```bash
 git clone https://github.com/watari-ai/nail.git
