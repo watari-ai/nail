@@ -24,6 +24,7 @@ import re
 import subprocess
 import sys
 import time
+import uuid
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -37,6 +38,7 @@ from interpreter import CheckError, Checker, NailEffectError, NailTypeError  # n
 RUNS_PER_PROBLEM = 10
 DELAY_SECONDS = 2
 RESULTS_PATH = Path(__file__).with_name("results_v2.json")
+RUN_UUID = uuid.uuid4().hex[:8]  # unique per execution — prevents session-id reuse across runs
 
 # ---------------------------------------------------------------------------
 # Problems
@@ -267,7 +269,7 @@ def run_nail_trials_for_problem(problem: dict[str, Any]) -> list[dict[str, Any]]
     rows: list[dict[str, Any]] = []
 
     for i in range(RUNS_PER_PROBLEM):
-        session_id = f"nail-repro-v2-{name}-{i}"
+        session_id = f"nail-repro-v2-{RUN_UUID}-{name}-{i}"
         raw, err = call_claude(prompt, session_id)
         row: dict[str, Any] = {
             "run_id": i,
@@ -313,7 +315,7 @@ def run_python_trials_for_problem(problem: dict[str, Any]) -> list[dict[str, Any
     rows: list[dict[str, Any]] = []
 
     for i in range(RUNS_PER_PROBLEM):
-        session_id = f"python-repro-v2-{name}-{i}"
+        session_id = f"python-repro-v2-{RUN_UUID}-{name}-{i}"
         raw, err = call_claude(prompt, session_id)
         row: dict[str, Any] = {
             "run_id": i,
