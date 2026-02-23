@@ -15,7 +15,7 @@ NAIL is a programming language built from scratch for AI agents. The entire repr
 
 **Phase 2 experiment results:** We had Claude and GPT-4o implement 5 functions (is_even, abs_val, max_of_two, clamp, factorial) in both NAIL and Python. NAIL results: 5/5 passed spec verification — the structured format made it structurally impossible to produce type errors or ambiguous code. The one NAIL failure (factorial) revealed a spec gap, not a model error — which is exactly what a strict language should do.
 
-**Try it in your browser:** https://watari-ai.github.io/nail/
+**Try it in your browser:** https://naillang.com
 
 NAIL isn't meant to replace Python for humans. It's meant to be the language AI agents use when talking to each other and to runtimes — where precision matters more than readability.
 
