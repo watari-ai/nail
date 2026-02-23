@@ -135,6 +135,37 @@ Human forks are often language fragmentation, but AI forks can provide:
 
 ---
 
+## Application Directions (Opus Analysis — 2026-02-24)
+
+Strategic directions identified by Opus (Claude Opus 4.5) for NAIL's growth beyond a pure language:
+
+### Immediate: Function Calling Effect Annotations
+- Add NAIL-style effect declarations to OpenAI/Anthropic Function Calling definitions
+- Enables sandbox enforcement: "this Tool touches the network" declared at schema level
+- Proposal: `proposals/function-calling-effects.md`
+- Status: 🚀 In Progress
+
+### Near-term: Python → NAIL IR Transpiler
+- Convert AI-generated Python to NAIL for type/effect verification
+- "Don't write NAIL, write Python and verify with NAIL" — zero adoption barrier
+- Aligns with IDEAS.md: Python subset → NAIL transpiler
+- Status: 📅 Planned (post-v0.3)
+
+### Long-term: AI-to-AI Communication Protocol
+- Use NAIL as a typed, effect-annotated message format between agents
+- Agent A delegates to Agent B with formal effect constraints
+- "This task may only use FS effects" — enforced at protocol level
+- AI Safety angle: constrain AI actions formally
+- Status: 🔭 Long-term vision
+
+### Long-term: AI Code Verifier as a Service
+- Accept AI-generated code in any language, convert to NAIL IR, run L0-L2 verification
+- Enterprise use case: "Prove this AI-generated function never touches the database"
+- Compliance-ready: formal verification output for regulated industries
+- Status: 🔭 Long-term vision
+
+---
+
 ## Current Status
 
 ```
