@@ -4,6 +4,9 @@ Executes validated NAIL programs.
 """
 
 from typing import Any
+from pathlib import Path
+from urllib.parse import urlparse
+from urllib.request import urlopen
 from .types import (
     IntType, FloatType, BoolType, StringType, UnitType, OptionType,
     NailRuntimeError, parse_type, types_equal,
@@ -25,7 +28,8 @@ class Runtime:
         modules — optional {module_id: module_spec} for cross-module calls
         """
         self.spec = spec
-        self.declared_effects = set(spec.get("effects", []))
+        self.declared_effects = set()
+        self.declared_effect_caps: dict[str, list[dict]] = {}
         self.fn_registry: dict[str, dict] = {}
         self.type_aliases: dict[str, dict] = {}
         self._alias_spec_cache: dict[str, dict] = {}
@@ -43,6 +47,7 @@ class Runtime:
             self.module_type_aliases[mod_id] = mod_spec.get("types", {}) or {}
         # Bug 3 fix: stack of currently-executing module IDs for local call resolution
         self._module_id_stack: list[str | None] = []
+        self._effect_policy_stack: list[tuple[set[str], dict[str, list[dict]]]] = []
 
     def run(self, args: dict | None = None):
         """Run the program. For kind:fn, executes it directly.
@@ -66,7 +71,9 @@ class Runtime:
         return self._run_fn(self.fn_registry[fn_id], args or {})
 
     def _run_fn(self, fn: dict, args: dict, module_id: str | None = None) -> Any:
+        fn_effects, fn_caps = self._collect_declared_effects(fn.get("effects", []))
         self._module_id_stack.append(module_id)
+        self._effect_policy_stack.append((fn_effects, fn_caps))
         try:
             env = dict(args)
             # Bind params
@@ -78,6 +85,7 @@ class Runtime:
             # At the top-level function boundary, _CONTINUE means implicit unit return
             return UNIT if result is _CONTINUE else result
         finally:
+            self._effect_policy_stack.pop()
             self._module_id_stack.pop()
 
     def _run_body(self, body: list, env: dict) -> Any:
@@ -140,18 +148,40 @@ class Runtime:
             return _CONTINUE
 
         elif op == "read_file":
-            # v0.2 reference interpreter: FS ops not yet executed
-            raise NailRuntimeError(
-                "'read_file' is recognized by the checker but not yet executed "
-                "in the v0.3 reference interpreter (planned for v0.4+)"
-            )
+            effect = self._normalize_effect_kind(stmt.get("effect"))
+            if effect != "FS":
+                raise NailRuntimeError("'read_file' must declare effect: FS")
+            self._require_effect("FS", "'read_file' uses FS effect, but function does not declare it")
+            path = self._eval(stmt["path"], env)
+            if not isinstance(path, str):
+                raise NailRuntimeError(f"'read_file' path must evaluate to string, got {type(path).__name__}")
+            self._enforce_fs_boundary(path)
+            try:
+                content = Path(path).read_text(encoding="utf-8")
+            except OSError as e:
+                raise NailRuntimeError(f"read_file failed for {path!r}: {e}") from e
+            if "into" in stmt:
+                env[stmt["into"]] = content
+            return _CONTINUE
 
         elif op == "http_get":
-            # v0.2 reference interpreter: NET ops not yet executed
-            raise NailRuntimeError(
-                "'http_get' is recognized by the checker but not yet executed "
-                "in the v0.3 reference interpreter (planned for v0.4+)"
-            )
+            effect = self._normalize_effect_kind(stmt.get("effect"))
+            if effect != "NET":
+                raise NailRuntimeError("'http_get' must declare effect: NET")
+            self._require_effect("NET", "'http_get' uses NET effect, but function does not declare it")
+            url = self._eval(stmt["url"], env)
+            if not isinstance(url, str):
+                raise NailRuntimeError(f"'http_get' url must evaluate to string, got {type(url).__name__}")
+            self._enforce_net_boundary(url)
+            try:
+                with urlopen(url, timeout=10) as resp:
+                    body = resp.read()
+            except OSError as e:
+                raise NailRuntimeError(f"http_get failed for {url!r}: {e}") from e
+            text = body.decode("utf-8", errors="replace") if isinstance(body, bytes) else str(body)
+            if "into" in stmt:
+                env[stmt["into"]] = text
+            return _CONTINUE
 
         elif op == "call":
             self._eval_op(stmt, env)
@@ -467,6 +497,91 @@ class Runtime:
             module_id=target_module_id,
         )
         return parse_type(resolved)
+
+    def _normalize_effect_kind(self, kind: Any) -> str:
+        if not isinstance(kind, str):
+            return ""
+        if kind == "Net":
+            return "NET"
+        return kind
+
+    def _collect_declared_effects(self, effect_decls: list[Any]) -> tuple[set[str], dict[str, list[dict]]]:
+        kinds: set[str] = set()
+        caps: dict[str, list[dict]] = {}
+        for effect_decl in effect_decls:
+            if isinstance(effect_decl, str):
+                kind = self._normalize_effect_kind(effect_decl)
+                kinds.add(kind)
+                continue
+            if isinstance(effect_decl, dict):
+                kind = self._normalize_effect_kind(effect_decl.get("kind"))
+                if not kind:
+                    raise NailRuntimeError("Structured effect requires string field 'kind'")
+                kinds.add(kind)
+                cap = dict(effect_decl)
+                cap["kind"] = kind
+                caps.setdefault(kind, []).append(cap)
+                continue
+            raise NailRuntimeError(f"Effect declarations must be string or object, got {type(effect_decl)}")
+        return kinds, caps
+
+    def _current_effect_policy(self) -> tuple[set[str], dict[str, list[dict]]]:
+        if not self._effect_policy_stack:
+            return set(), {}
+        return self._effect_policy_stack[-1]
+
+    def _require_effect(self, effect_kind: str, message: str) -> None:
+        kinds, _ = self._current_effect_policy()
+        if effect_kind not in kinds:
+            raise NailRuntimeError(message)
+
+    def _enforce_fs_boundary(self, path: str) -> None:
+        _, caps = self._current_effect_policy()
+        fs_caps = caps.get("FS", [])
+        if not fs_caps:
+            return
+        for cap in fs_caps:
+            if self._fs_capability_allows(cap, path):
+                return
+        raise NailRuntimeError(f"read_file blocked by FS capability policy: {path!r}")
+
+    def _enforce_net_boundary(self, url: str) -> None:
+        _, caps = self._current_effect_policy()
+        net_caps = caps.get("NET", [])
+        if not net_caps:
+            return
+        for cap in net_caps:
+            if self._net_capability_allows(cap, url):
+                return
+        raise NailRuntimeError(f"http_get blocked by NET capability policy: {url!r}")
+
+    def _fs_capability_allows(self, cap: dict, path_value: str) -> bool:
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "read" not in ops:
+            return False
+        allow_entries = cap.get("allow", [])
+        target_path = Path(path_value)
+        target = (Path.cwd() / target_path).resolve(strict=False) if not target_path.is_absolute() else target_path.resolve(strict=False)
+        for allowed in allow_entries:
+            base_path = Path(str(allowed))
+            base = (Path.cwd() / base_path).resolve(strict=False) if not base_path.is_absolute() else base_path.resolve(strict=False)
+            try:
+                target.relative_to(base)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    def _net_capability_allows(self, cap: dict, url_value: str) -> bool:
+        parsed = urlparse(url_value)
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return False
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "get" not in ops:
+            return False
+        allow_domains = cap.get("allow", [])
+        return host in {str(domain).lower() for domain in allow_domains}
 
 
 class _Continue:

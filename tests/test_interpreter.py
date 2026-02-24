@@ -10,7 +10,9 @@ Run: python3 -m pytest tests/ -v
 import sys
 import json
 import unittest
+import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -275,23 +277,66 @@ class TestEffectfulOpContract(unittest.TestCase):
         with self.assertRaises(CheckError):
             Checker(spec).check()
 
-    def test_read_file_deferred_runtime_error_is_stable(self):
-        spec = fn_spec("f", [], UNIT_T, [
-            {"op": "read_file", "path": {"lit": "/tmp/demo.txt"}, "effect": "FS"},
-            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
-        ], effects=["FS"])
-        Checker(spec).check()
-        with self.assertRaisesRegex(NailRuntimeError, r"'read_file' is recognized by the checker but not yet executed"):
-            Runtime(spec).run()
+    def test_granular_fs_effect_allowed_path_happy_path(self):
+        with tempfile.TemporaryDirectory() as td:
+            allowed_root = Path(td) / "data"
+            allowed_root.mkdir(parents=True, exist_ok=True)
+            target_file = allowed_root / "ok.txt"
+            target_file.write_text("ok", encoding="utf-8")
+            spec = fn_spec("f", [], STR_T, [
+                {"op": "read_file", "path": {"lit": str(target_file)}, "effect": "FS", "into": "contents"},
+                {"op": "return", "val": {"ref": "contents"}},
+            ], effects=[{"kind": "FS", "allow": [str(allowed_root)], "ops": ["read"]}])
+            Checker(spec).check()
+            result = Runtime(spec).run()
+            self.assertEqual(result, "ok")
 
-    def test_http_get_deferred_runtime_error_is_stable(self):
-        spec = fn_spec("f", [], UNIT_T, [
-            {"op": "http_get", "url": {"lit": "https://example.com"}, "effect": "NET"},
-            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
-        ], effects=["NET"])
+    def test_granular_fs_effect_denied_path_raises(self):
+        with tempfile.TemporaryDirectory() as td:
+            allowed_root = Path(td) / "allowed"
+            denied_root = Path(td) / "denied"
+            allowed_root.mkdir(parents=True, exist_ok=True)
+            denied_root.mkdir(parents=True, exist_ok=True)
+            denied_file = denied_root / "secret.txt"
+            denied_file.write_text("nope", encoding="utf-8")
+            spec = fn_spec("f", [], UNIT_T, [
+                {"op": "read_file", "path": {"lit": str(denied_file)}, "effect": "FS"},
+                {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+            ], effects=[{"kind": "FS", "allow": [str(allowed_root)], "ops": ["read"]}])
+            with self.assertRaises(CheckError):
+                Checker(spec).check()
+
+    def test_granular_net_effect_allowed_domain_happy_path(self):
+        class _FakeResponse:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+            def read(self):
+                return b"payload"
+
+        spec = fn_spec("f", [], STR_T, [
+            {"op": "http_get", "url": {"lit": "https://api.example.com/v1"}, "effect": "NET", "into": "body"},
+            {"op": "return", "val": {"ref": "body"}},
+        ], effects=[{"kind": "Net", "allow": ["api.example.com"]}])
         Checker(spec).check()
-        with self.assertRaisesRegex(NailRuntimeError, r"'http_get' is recognized by the checker but not yet executed"):
-            Runtime(spec).run()
+        with patch("interpreter.runtime.urlopen", return_value=_FakeResponse()):
+            result = Runtime(spec).run()
+        self.assertEqual(result, "payload")
+
+    def test_backward_compat_string_fs_still_works(self):
+        with tempfile.TemporaryDirectory() as td:
+            target_file = Path(td) / "legacy.txt"
+            target_file.write_text("legacy", encoding="utf-8")
+            spec = fn_spec("f", [], STR_T, [
+                {"op": "read_file", "path": {"lit": str(target_file)}, "effect": "FS", "into": "contents"},
+                {"op": "return", "val": {"ref": "contents"}},
+            ], effects=["FS"])
+            Checker(spec).check()
+            result = Runtime(spec).run()
+            self.assertEqual(result, "legacy")
 
 
 class TestFunctionCalls(unittest.TestCase):
