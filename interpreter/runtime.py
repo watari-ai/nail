@@ -460,6 +460,28 @@ class Runtime:
                 raise NailTypeError(f"'max2' requires numeric operands, got {type(l).__name__}")
             return l if l >= r else r
 
+        elif op == "clamp":
+            val = self._eval(expr.get("val"), env)
+            lo = self._eval(expr.get("lo"), env)
+            hi = self._eval(expr.get("hi"), env)
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise NailTypeError(f"'clamp' requires numeric value, got {type(val).__name__}")
+            if type(val) is not type(lo) or type(val) is not type(hi):
+                raise NailTypeError(f"'clamp' val/lo/hi types must all match: {type(val).__name__}, {type(lo).__name__}, {type(hi).__name__}")
+            return max(lo, min(hi, val))
+
+        elif op == "bool_to_int":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, bool):
+                raise NailTypeError(f"'bool_to_int' requires bool, got {type(val).__name__}")
+            return 1 if val else 0
+
+        elif op == "int_to_bool":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, int) or isinstance(val, bool):
+                raise NailTypeError(f"'int_to_bool' requires int, got {type(val).__name__}")
+            return val != 0
+
         # Collection ops (v0.4)
         elif op == "list_get":
             list_expr = expr.get("list")

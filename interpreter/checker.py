@@ -1006,6 +1006,28 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'max2' requires numeric operands, got {l_type}")
             return l_type
 
+        elif op == "clamp":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            lo_type = self._check_expr(fn_id, expr.get("lo"), env)
+            hi_type = self._check_expr(fn_id, expr.get("hi"), env)
+            if not (types_equal(val_type, lo_type) and types_equal(lo_type, hi_type)):
+                raise CheckError(f"[{fn_id}] 'clamp' val/lo/hi types must all match: {val_type}, {lo_type}, {hi_type}")
+            if not isinstance(val_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'clamp' requires numeric operands, got {val_type}")
+            return val_type
+
+        elif op == "bool_to_int":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, BoolType):
+                raise CheckError(f"[{fn_id}] 'bool_to_int' requires bool, got {val_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "int_to_bool":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, IntType):
+                raise CheckError(f"[{fn_id}] 'int_to_bool' requires int, got {val_type}")
+            return BoolType()
+
         # Collection ops (v0.4)
         elif op == "list_get":
             list_expr = expr.get("list")
