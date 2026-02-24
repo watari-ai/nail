@@ -224,7 +224,7 @@ v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical
 v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI v0.3.0 published
 v0.4:   ✅ Complete (2026-02-24) — 320 tests, type aliases, fine-grained effects, collection ops,
         FC Effect Annotations (integrations/), Python→NAIL transpiler (transpiler/), PyPI v0.4.0 published
-v0.5:   🚀 In Progress — Enum/ADT, Core StdLib (running), Transpiler review pending
+v0.5:   ✅ COMPLETE — Enum/ADT, Core StdLib, FC Annotations, Return-path exhaustiveness, CI canonical check
 v0.6:   📅 Planned — L3 Formal Verification, Generics, Error Message Improvement
 Phase 4: 🚀 Active
 ```
