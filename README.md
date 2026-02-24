@@ -1,6 +1,7 @@
 # NAIL — Native AI Language
 
 [![CI](https://github.com/watari-ai/nail/actions/workflows/ci.yml/badge.svg)](https://github.com/watari-ai/nail/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/nail-lang)](https://pypi.org/project/nail-lang/)
 
 > A programming language designed to be written by AI, not humans.
 
@@ -145,7 +146,7 @@ See [`playground/README.md`](./playground/README.md) for details.
 **Browser — no install:**
 → [https://naillang.com](https://naillang.com)
 
-**CLI (coming soon):** PyPI package is in progress.
+**CLI:** `pip install nail-lang`
 
 **Requirements:** Python 3.10+
 

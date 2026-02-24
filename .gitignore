@@ -5,3 +5,6 @@ __pycache__/
 .venv/
 tmp/
 experiments/reproducibility/results.json
+dist/
+build/
+*.egg-info/

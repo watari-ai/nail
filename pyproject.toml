@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "nail-lang"
@@ -19,3 +19,13 @@ nail = "nail_cli:main"
 [project.urls]
 Homepage = "https://naillang.com"
 Repository = "https://github.com/watari-ai/nail"
+
+[tool.setuptools]
+py-modules = ["nail_cli"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["interpreter*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.nail"]
