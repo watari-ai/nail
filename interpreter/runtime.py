@@ -312,6 +312,96 @@ class Runtime:
                 raise NailRuntimeError(f"'concat' requires two strings, got {type(l)}, {type(r)}")
             return l + r
 
+        elif op == "str_len":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, str):
+                raise NailTypeError(f"'str_len' requires string value, got {type(val).__name__}")
+            return len(val)
+
+        elif op == "str_split":
+            val = self._eval(expr.get("val"), env)
+            sep = self._eval(expr.get("sep"), env)
+            if not isinstance(val, str) or not isinstance(sep, str):
+                raise NailTypeError(
+                    f"'str_split' requires string val and sep, got {type(val).__name__}, {type(sep).__name__}"
+                )
+            try:
+                return val.split(sep)
+            except ValueError as e:
+                raise NailRuntimeError(f"'str_split' failed: {e}") from e
+
+        elif op == "str_trim":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, str):
+                raise NailTypeError(f"'str_trim' requires string value, got {type(val).__name__}")
+            return val.strip()
+
+        elif op == "str_upper":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, str):
+                raise NailTypeError(f"'str_upper' requires string value, got {type(val).__name__}")
+            return val.upper()
+
+        elif op == "str_lower":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, str):
+                raise NailTypeError(f"'str_lower' requires string value, got {type(val).__name__}")
+            return val.lower()
+
+        elif op == "str_contains":
+            val = self._eval(expr.get("val"), env)
+            sub = self._eval(expr.get("sub"), env)
+            if not isinstance(val, str) or not isinstance(sub, str):
+                raise NailTypeError(
+                    f"'str_contains' requires string val and sub, got {type(val).__name__}, {type(sub).__name__}"
+                )
+            return sub in val
+
+        elif op == "str_starts_with":
+            val = self._eval(expr.get("val"), env)
+            prefix = self._eval(expr.get("prefix"), env)
+            if not isinstance(val, str) or not isinstance(prefix, str):
+                raise NailTypeError(
+                    f"'str_starts_with' requires string val and prefix, got {type(val).__name__}, {type(prefix).__name__}"
+                )
+            return val.startswith(prefix)
+
+        elif op == "str_replace":
+            val = self._eval(expr.get("val"), env)
+            from_val = self._eval(expr.get("from"), env)
+            to_val = self._eval(expr.get("to"), env)
+            if not isinstance(val, str) or not isinstance(from_val, str) or not isinstance(to_val, str):
+                raise NailTypeError(
+                    f"'str_replace' requires string val/from/to, got "
+                    f"{type(val).__name__}, {type(from_val).__name__}, {type(to_val).__name__}"
+                )
+            return val.replace(from_val, to_val)
+
+        # Math operations (v0.5)
+        elif op == "abs":
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(val, (int, float)) or isinstance(val, bool):
+                raise NailTypeError(f"'abs' requires numeric value, got {type(val).__name__}")
+            return abs(val)
+
+        elif op == "min2":
+            l = self._eval(expr.get("l"), env)
+            r = self._eval(expr.get("r"), env)
+            if type(l) is not type(r):
+                raise NailTypeError(f"'min2' type mismatch: {type(l).__name__} vs {type(r).__name__}")
+            if not isinstance(l, (int, float)) or isinstance(l, bool):
+                raise NailTypeError(f"'min2' requires numeric operands, got {type(l).__name__}")
+            return l if l <= r else r
+
+        elif op == "max2":
+            l = self._eval(expr.get("l"), env)
+            r = self._eval(expr.get("r"), env)
+            if type(l) is not type(r):
+                raise NailTypeError(f"'max2' type mismatch: {type(l).__name__} vs {type(r).__name__}")
+            if not isinstance(l, (int, float)) or isinstance(l, bool):
+                raise NailTypeError(f"'max2' requires numeric operands, got {type(l).__name__}")
+            return l if l >= r else r
+
         # Collection ops (v0.4)
         elif op == "list_get":
             list_expr = expr.get("list")
@@ -354,6 +444,25 @@ class Runtime:
                 raise NailTypeError(f"'list_len' requires list value, got {type(list_val).__name__}")
             return len(list_val)
 
+        elif op == "list_slice":
+            list_val = self._eval(expr.get("list"), env)
+            from_val = self._eval(expr.get("from"), env)
+            to_val = self._eval(expr.get("to"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_slice' requires list value, got {type(list_val).__name__}")
+            if not isinstance(from_val, int) or isinstance(from_val, bool):
+                raise NailTypeError(f"'list_slice.from' must be int, got {type(from_val).__name__}")
+            if not isinstance(to_val, int) or isinstance(to_val, bool):
+                raise NailTypeError(f"'list_slice.to' must be int, got {type(to_val).__name__}")
+            return list_val[from_val:to_val]
+
+        elif op == "list_contains":
+            list_val = self._eval(expr.get("list"), env)
+            val = self._eval(expr.get("val"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_contains' requires list value, got {type(list_val).__name__}")
+            return val in list_val
+
         elif op == "map_get":
             map_expr = expr.get("map")
             if not isinstance(map_expr, dict) or "ref" not in map_expr:
@@ -371,6 +480,25 @@ class Runtime:
             if key not in map_val:
                 raise NailRuntimeError(f"'map_get' key not found: {key!r}")
             return map_val[key]
+
+        elif op == "map_has":
+            map_val = self._eval(expr.get("map"), env)
+            key = self._eval(expr.get("key"), env)
+            if not isinstance(map_val, dict):
+                raise NailTypeError(f"'map_has' requires map value, got {type(map_val).__name__}")
+            if map_val:
+                sample_key = next(iter(map_val.keys()))
+                if type(key) is not type(sample_key):
+                    raise NailTypeError(
+                        f"'map_has.key' type mismatch: expected {type(sample_key).__name__}, got {type(key).__name__}"
+                    )
+            return key in map_val
+
+        elif op == "map_keys":
+            map_val = self._eval(expr.get("map"), env)
+            if not isinstance(map_val, dict):
+                raise NailTypeError(f"'map_keys' requires map value, got {type(map_val).__name__}")
+            return list(map_val.keys())
 
         elif op == "ok":
             return NailResult("ok", self._eval(expr["val"], env))

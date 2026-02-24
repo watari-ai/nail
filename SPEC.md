@@ -257,6 +257,19 @@ Capability enforcement:
 - `int_to_str(Int) -> String` — Convert integer to string
 - `float_to_str(Float) -> String` — Convert float to string
 - `bool_to_str(Bool) -> String` — Convert boolean to string
+- `str_len(String) -> Int`
+- `str_split(String, String) -> list<String>`
+- `str_trim(String) -> String`
+- `str_upper(String) -> String`
+- `str_lower(String) -> String`
+- `str_contains(String, String) -> Bool`
+- `str_starts_with(String, String) -> Bool`
+- `str_replace(String, String, String) -> String`
+
+### Math Operations (v0.5)
+- `abs(Number) -> Number`
+- `min2(Number, Number) -> Number`
+- `max2(Number, Number) -> Number`
 
 ### Collection Operations (v0.4)
 ```json
@@ -264,6 +277,10 @@ Capability enforcement:
 { "op": "list_push", "list": <var>, "value": <expr> }
 { "op": "list_len",  "list": <var> }
 { "op": "map_get",   "map": <var>,  "key": <expr> }
+{ "op": "list_slice", "list": <list_expr>, "from": <int_expr>, "to": <int_expr> }
+{ "op": "list_contains", "list": <list_expr>, "val": <expr> }
+{ "op": "map_has",   "map": <map_expr>, "key": <expr> }
+{ "op": "map_keys",  "map": <map_expr> }
 ```
 
 Rules:
@@ -271,7 +288,11 @@ Rules:
   Out-of-bounds is a runtime error.
 - `list_push`: `list` must be `list<T>`, `value` must be `T`; mutates in place; returns `unit`.
 - `list_len`: `list` must be `list<T>`; returns `int`.
+- `list_slice`: `list` must be `list<T>`, `from` and `to` must be `int`; returns `list<T>`.
+- `list_contains`: `list` must be `list<T>`, `val` must be `T`; returns `bool`.
 - `map_get`: `map` must be `map<K, V>`, `key` must be `K`; returns `V`.
+- `map_has`: `map` must be `map<K, V>`, `key` must be `K`; returns `bool`.
+- `map_keys`: `map` must be `map<K, V>`; returns `list<K>`.
 
 ### Overflow Policy (v0.3)
 - **Type-level**: Only `"overflow": "panic"` is valid in type declarations. This is the default.

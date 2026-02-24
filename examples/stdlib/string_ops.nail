@@ -1,0 +1,149 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "stdlib_string_ops",
+  "exports": [
+    "main",
+    "token_count"
+  ],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "token_count",
+      "effects": [],
+      "params": [
+        {
+          "id": "line",
+          "type": {
+            "type": "string"
+          }
+        }
+      ],
+      "returns": {
+        "type": "int",
+        "bits": 64,
+        "overflow": "panic"
+      },
+      "body": [
+        {
+          "op": "let",
+          "id": "parts",
+          "type": {
+            "type": "list",
+            "inner": {
+              "type": "string"
+            },
+            "len": "dynamic"
+          },
+          "val": {
+            "op": "str_split",
+            "val": {
+              "op": "str_trim",
+              "val": {
+                "ref": "line"
+              }
+            },
+            "sep": {
+              "lit": " "
+            }
+          }
+        },
+        {
+          "op": "return",
+          "val": {
+            "op": "list_len",
+            "list": {
+              "ref": "parts"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": [],
+      "params": [],
+      "returns": {
+        "type": "bool"
+      },
+      "body": [
+        {
+          "op": "let",
+          "id": "normalized",
+          "type": {
+            "type": "string"
+          },
+          "val": {
+            "op": "str_lower",
+            "val": {
+              "op": "str_replace",
+              "val": {
+                "lit": "  NAIL-LANG  "
+              },
+              "from": {
+                "lit": "-"
+              },
+              "to": {
+                "lit": " "
+              }
+            }
+          }
+        },
+        {
+          "op": "let",
+          "id": "len",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          },
+          "val": {
+            "op": "str_len",
+            "val": {
+              "op": "str_trim",
+              "val": {
+                "ref": "normalized"
+              }
+            }
+          }
+        },
+        {
+          "op": "return",
+          "val": {
+            "op": "and",
+            "l": {
+              "op": "str_starts_with",
+              "val": {
+                "op": "str_upper",
+                "val": {
+                  "op": "str_trim",
+                  "val": {
+                    "ref": "normalized"
+                  }
+                }
+              },
+              "prefix": {
+                "lit": "NAIL"
+              }
+            },
+            "r": {
+              "op": "str_contains",
+              "val": {
+                "op": "str_trim",
+                "val": {
+                  "ref": "normalized"
+                }
+              },
+              "sub": {
+                "lit": "lang"
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

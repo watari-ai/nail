@@ -1,0 +1,111 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "stdlib_map_ops",
+  "exports": [
+    "has_user",
+    "key_count"
+  ],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "has_user",
+      "effects": [],
+      "params": [
+        {
+          "id": "users",
+          "type": {
+            "type": "map",
+            "key": {
+              "type": "string"
+            },
+            "value": {
+              "type": "int",
+              "bits": 64,
+              "overflow": "panic"
+            }
+          }
+        },
+        {
+          "id": "user_id",
+          "type": {
+            "type": "string"
+          }
+        }
+      ],
+      "returns": {
+        "type": "bool"
+      },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "map_has",
+            "map": {
+              "ref": "users"
+            },
+            "key": {
+              "ref": "user_id"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "key_count",
+      "effects": [],
+      "params": [
+        {
+          "id": "users",
+          "type": {
+            "type": "map",
+            "key": {
+              "type": "string"
+            },
+            "value": {
+              "type": "int",
+              "bits": 64,
+              "overflow": "panic"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "type": "int",
+        "bits": 64,
+        "overflow": "panic"
+      },
+      "body": [
+        {
+          "op": "let",
+          "id": "keys",
+          "type": {
+            "type": "list",
+            "inner": {
+              "type": "string"
+            },
+            "len": "dynamic"
+          },
+          "val": {
+            "op": "map_keys",
+            "map": {
+              "ref": "users"
+            }
+          }
+        },
+        {
+          "op": "return",
+          "val": {
+            "op": "list_len",
+            "list": {
+              "ref": "keys"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

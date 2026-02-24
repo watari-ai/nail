@@ -1,0 +1,130 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "stdlib_math_ops",
+  "exports": [
+    "abs_val",
+    "clamp_low",
+    "clamp_high"
+  ],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "abs_val",
+      "effects": [],
+      "params": [
+        {
+          "id": "x",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          }
+        }
+      ],
+      "returns": {
+        "type": "int",
+        "bits": 64,
+        "overflow": "panic"
+      },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "abs",
+            "val": {
+              "ref": "x"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "clamp_low",
+      "effects": [],
+      "params": [
+        {
+          "id": "x",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          }
+        },
+        {
+          "id": "lo",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          }
+        }
+      ],
+      "returns": {
+        "type": "int",
+        "bits": 64,
+        "overflow": "panic"
+      },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "max2",
+            "l": {
+              "ref": "x"
+            },
+            "r": {
+              "ref": "lo"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "clamp_high",
+      "effects": [],
+      "params": [
+        {
+          "id": "x",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          }
+        },
+        {
+          "id": "hi",
+          "type": {
+            "type": "int",
+            "bits": 64,
+            "overflow": "panic"
+          }
+        }
+      ],
+      "returns": {
+        "type": "int",
+        "bits": 64,
+        "overflow": "panic"
+      },
+      "body": [
+        {
+          "op": "return",
+          "val": {
+            "op": "min2",
+            "l": {
+              "ref": "x"
+            },
+            "r": {
+              "ref": "hi"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
