@@ -87,7 +87,7 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 
 ## Status
 
-🧪 **Experimental — v0.3** — `pip install nail-lang`
+🧪 **Experimental — v0.4** — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -100,11 +100,66 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 | Recursion/cycle detection | ✅ Implemented |
 | Return-path exhaustiveness check | ✅ Implemented |
 | L0 JSON Schema + L1 Type + L2 Effect checks | ✅ Implemented |
-| `read_file` (FS) / `http_get` (NET) | ⚠️ Checker validates; runtime not yet executed |
 | Overflow modes: `wrap` / `sat` / `panic` | ✅ Implemented (v0.3) |
 | Result type (`ok`/`err`/`match_result`) | ✅ Implemented (v0.3) |
 | Cross-module import + effect propagation | ✅ Implemented (v0.3) |
-| Formal verification / termination proofs | 🔮 Future (v0.4+) |
+| **Type aliases** (module-level `types` dict, circular detection) | ✅ Implemented (v0.4) |
+| **Fine-grained Effect capabilities** (path/op allow-lists) | ✅ Implemented (v0.4) |
+| **Collection type operations** (`list_get/push/len`, `map_get`) | ✅ Implemented (v0.4) |
+| `read_file` (FS) / `http_get` (NET) | ✅ Fully implemented (v0.4) |
+| Formal verification / termination proofs | 🔮 Future (v0.6+) |
+
+### v0.4 New Features
+
+#### Type Aliases
+
+Define named type aliases at the module level and use them in function signatures and expressions:
+
+```json
+{"nail":"0.4","kind":"module",
+  "types": {
+    "UserId":   {"type":"int","bits":64,"overflow":"panic"},
+    "Username": {"type":"string"}
+  },
+  "defs":[
+    {"id":"greet_user",
+     "effects":[],
+     "params":[{"id":"uid","type":"UserId"},{"id":"name","type":"Username"}],
+     "returns":{"type":"string"},
+     "body":[
+       {"op":"return","value":{"op":"concat","args":[{"lit":"Hello, "},{"var":"name"}]}}
+     ]}
+  ]
+}
+```
+
+Circular aliases (`A → B → A`) are caught at check time as a `CheckError`:
+
+```
+$ nail check circular.nail
+CheckError: circular type alias detected: 'A' → 'B' → 'A'
+```
+
+#### Fine-grained Effect Capabilities
+
+Effect declarations can now specify structured constraints — restricting which paths, URLs, or operations are permitted. Legacy string-style declarations (`"FS"`, `"NET"`) remain fully supported.
+
+```json
+{"nail":"0.4","kind":"fn","id":"read_config",
+  "effects":[{"kind":"FS","allow":["/etc/myapp/"],"ops":["read"]}],
+  "params":[],"returns":{"type":"string"},
+  "body":[
+    {"op":"return","value":{"op":"read_file","path":{"lit":"/etc/myapp/config.toml"}}}
+  ]
+}
+```
+
+Attempting to write, or to access a path outside the allow-list, is a **runtime error** enforced by the Effect Capability:
+
+```
+$ nail run write_attempt.nail
+EffectDenied: 'write' not in allowed ops for FS capability (allow: ['/etc/myapp/'], ops: ['read'])
+```
 
 ## Secondary Effects: Token Efficiency
 
