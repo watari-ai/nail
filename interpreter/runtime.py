@@ -19,12 +19,22 @@ class NailOverflowError(NailRuntimeError):
 
 
 class Runtime:
-    def __init__(self, spec: dict):
+    def __init__(self, spec: dict, modules: dict | None = None):
+        """
+        spec    — the NAIL module/fn spec to execute
+        modules — optional {module_id: module_spec} for cross-module calls
+        """
         self.spec = spec
         self.declared_effects = set(spec.get("effects", []))
-        self.fn_registry = {}
+        self.fn_registry: dict[str, dict] = {}
         if spec.get("kind") == "module":
             self.fn_registry = {fn["id"]: fn for fn in spec.get("defs", [])}
+        # Build module_fn_registry for cross-module calls
+        self.module_fn_registry: dict[str, dict[str, dict]] = {}
+        for mod_id, mod_spec in (modules or {}).items():
+            self.module_fn_registry[mod_id] = {
+                fn["id"]: fn for fn in mod_spec.get("defs", []) if "id" in fn
+            }
 
     def run(self, args: dict | None = None):
         """Run the program. For kind:fn, executes it directly.
@@ -265,9 +275,24 @@ class Runtime:
             if self.spec.get("kind") != "module":
                 raise NailRuntimeError("Function call is only supported for kind:module")
             callee_id = expr.get("fn")
-            if callee_id not in self.fn_registry:
-                raise NailRuntimeError(f"Unknown function: {callee_id!r}")
-            callee = self.fn_registry[callee_id]
+            cross_module = expr.get("module")
+
+            if cross_module:
+                # Cross-module call
+                if cross_module not in self.module_fn_registry:
+                    raise NailRuntimeError(
+                        f"Module '{cross_module}' not loaded. "
+                        f"Pass modules={{'{cross_module}': ...}} to Runtime()."
+                    )
+                mod_fns = self.module_fn_registry[cross_module]
+                if callee_id not in mod_fns:
+                    raise NailRuntimeError(f"Function '{callee_id}' not found in module '{cross_module}'")
+                callee = mod_fns[callee_id]
+            else:
+                if callee_id not in self.fn_registry:
+                    raise NailRuntimeError(f"Unknown function: {callee_id!r}")
+                callee = self.fn_registry[callee_id]
+
             args_expr = expr.get("args", [])
             params = callee.get("params", [])
             if len(args_expr) != len(params):

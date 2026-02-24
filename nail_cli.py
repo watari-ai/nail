@@ -81,14 +81,27 @@ def cmd_canonicalize(path: str | None):
     print(json.dumps(spec, sort_keys=True, ensure_ascii=False, separators=(',', ':')))
 
 
-def cmd_check(path: str, strict: bool = False):
+def load_modules(module_paths: list[str]) -> dict:
+    """Load module specs from file paths → {module_id: spec}."""
+    modules = {}
+    for mp in module_paths:
+        mod_spec = load(mp)
+        mod_id = mod_spec.get("id")
+        if not mod_id:
+            mod_id = Path(mp).stem  # fall back to filename without extension
+        modules[mod_id] = mod_spec
+    return modules
+
+
+def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = None):
     spec = load(path)
     raw_text = None
     if strict:
         with open(path) as f:
             raw_text = f.read()
+    modules = load_modules(module_paths or [])
     try:
-        checker = Checker(spec, raw_text=raw_text, strict=strict)
+        checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules)
         checker.check()
         kind = spec.get("kind", "?")
         prog_id = spec.get("id", "?")
@@ -109,15 +122,16 @@ def cmd_check(path: str, strict: bool = False):
         sys.exit(1)
 
 
-def cmd_run(path: str, call_fn: str | None, raw_args: list[str]):
+def cmd_run(path: str, call_fn: str | None, raw_args: list[str], module_paths: list[str] | None = None):
     spec = load(path)
+    modules = load_modules(module_paths or [])
 
     # Parse arguments
     args = dict(parse_arg(a) for a in raw_args)
 
     # Check first
     try:
-        checker = Checker(spec)
+        checker = Checker(spec, modules=modules)
         checker.check()
     except (CheckError, NailTypeError, NailEffectError) as e:
         print(f"✗ Verification failed: {e}", file=sys.stderr)
@@ -125,7 +139,7 @@ def cmd_run(path: str, call_fn: str | None, raw_args: list[str]):
 
     # Run
     try:
-        runtime = Runtime(spec)
+        runtime = Runtime(spec, modules=modules)
         kind = spec.get("kind")
 
         if kind == "module":
@@ -165,7 +179,8 @@ def main():
             sys.exit(1)
         file_path = args[1]
         strict = "--strict" in args[2:]
-        cmd_check(file_path, strict=strict)
+        module_paths = [args[i+1] for i in range(2, len(args)-1) if args[i] == "--modules"]
+        cmd_check(file_path, strict=strict, module_paths=module_paths)
 
     elif cmd == "canonicalize":
         file_path = args[1] if len(args) > 1 else None
@@ -180,6 +195,7 @@ def main():
         call_fn = None
         raw_args = []
 
+        module_paths = []
         i = 2
         while i < len(args):
             if args[i] == "--call" and i + 1 < len(args):
@@ -188,11 +204,14 @@ def main():
             elif args[i] == "--arg" and i + 1 < len(args):
                 raw_args.append(args[i + 1])
                 i += 2
+            elif args[i] == "--modules" and i + 1 < len(args):
+                module_paths.append(args[i + 1])
+                i += 2
             else:
                 print(f"Unknown option: {args[i]}", file=sys.stderr)
                 sys.exit(1)
 
-        cmd_run(file_path, call_fn, raw_args)
+        cmd_run(file_path, call_fn, raw_args, module_paths=module_paths)
 
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)

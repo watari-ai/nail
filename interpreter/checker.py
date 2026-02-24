@@ -31,7 +31,13 @@ class _ResultErrIntermediate:
 
 
 class Checker:
-    def __init__(self, spec: dict, raw_text: str | None = None, strict: bool = False):
+    def __init__(
+        self,
+        spec: dict,
+        raw_text: str | None = None,
+        strict: bool = False,
+        modules: dict | None = None,   # {module_id: module_spec} for cross-module imports
+    ):
         self.spec = spec
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
@@ -39,6 +45,9 @@ class Checker:
         self.call_graph: dict[str, set[str]] = {}
         self.raw_text = raw_text
         self.strict = strict
+        self.modules: dict[str, dict] = modules or {}
+        # module_fn_registry: {module_id: {fn_id: fn_spec}}
+        self.module_fn_registry: dict[str, dict[str, dict]] = {}
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -115,6 +124,10 @@ class Checker:
             raise CheckError("Module 'defs' must be a list")
         self.fn_registry = {}
         self.call_graph = {}
+
+        # Process imports: validate and build module_fn_registry
+        self._process_imports(mod)
+
         self._collect_fn_registry(defs)
         for fn in defs:
             if not isinstance(fn, dict):
@@ -127,6 +140,49 @@ class Checker:
         for exp in exports:
             if exp not in defined_ids:
                 raise CheckError(f"Exported function '{exp}' not defined in module")
+
+    def _process_imports(self, mod: dict):
+        """Validate import declarations and populate module_fn_registry."""
+        imports = mod.get("imports", [])
+        if not imports:
+            return
+        # Circular import detection: track visiting set
+        this_id = mod.get("id", "<entrypoint>")
+        self._detect_circular_imports(this_id, set())
+
+        for imp in imports:
+            module_id = imp.get("module")
+            fns = imp.get("fns", [])
+            if not module_id:
+                raise CheckError("Import declaration missing 'module' field")
+            if module_id not in self.modules:
+                raise CheckError(
+                    f"Imported module '{module_id}' not found. "
+                    f"Pass it via modules={{'{module_id}': ...}} or --modules CLI flag."
+                )
+            imported_mod = self.modules[module_id]
+            # Build fn lookup for the imported module
+            imported_fns = {fn["id"]: fn for fn in imported_mod.get("defs", []) if "id" in fn}
+            for fn_id in fns:
+                if fn_id not in imported_fns:
+                    raise CheckError(
+                        f"Function '{fn_id}' not found in module '{module_id}'"
+                    )
+            self.module_fn_registry[module_id] = imported_fns
+
+    def _detect_circular_imports(self, module_id: str, visiting: set[str]):
+        """DFS to detect import cycles."""
+        if module_id in visiting:
+            path = " → ".join(sorted(visiting)) + f" → {module_id}"
+            raise CheckError(f"Circular import detected: {path}")
+        if module_id not in self.modules:
+            return
+        mod = self.modules[module_id]
+        visiting = visiting | {module_id}
+        for imp in mod.get("imports", []):
+            dep = imp.get("module")
+            if dep:
+                self._detect_circular_imports(dep, visiting)
 
     def _collect_fn_registry(self, defs: list[dict]):
         for fn in defs:
@@ -525,6 +581,42 @@ class Checker:
         callee_id = expr.get("fn")
         if not isinstance(callee_id, str) or not callee_id:
             raise CheckError(f"[{fn_id}] 'call' requires string field 'fn'")
+
+        # Cross-module call: resolve from module_fn_registry
+        cross_module = expr.get("module")
+        if cross_module:
+            if cross_module not in self.module_fn_registry:
+                raise CheckError(
+                    f"[{fn_id}] Module '{cross_module}' not imported. "
+                    f"Add it to imports[] and pass modules={{'{cross_module}': ...}}."
+                )
+            mod_fns = self.module_fn_registry[cross_module]
+            if callee_id not in mod_fns:
+                raise CheckError(f"[{fn_id}] Function '{callee_id}' not found in module '{cross_module}'")
+            callee = mod_fns[callee_id]
+            # Effect propagation across module boundary
+            callee_effects = set(callee.get("effects", []))
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] Cross-module call to '{cross_module}.{callee_id}' requires "
+                    f"effects {{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only has "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            args = expr.get("args", [])
+            params = callee.get("params", [])
+            if len(args) != len(params):
+                raise CheckError(
+                    f"[{fn_id}] '{cross_module}.{callee_id}' expects {len(params)} args, got {len(args)}"
+                )
+            for i, (arg_expr, param) in enumerate(zip(args, params)):
+                arg_type = self._check_expr(fn_id, arg_expr, env)
+                param_type = parse_type(param["type"])
+                if not types_equal(arg_type, param_type):
+                    raise CheckError(
+                        f"[{fn_id}] Arg {i} to '{cross_module}.{callee_id}': expected {param_type}, got {arg_type}"
+                    )
+            return parse_type(callee["returns"])
 
         if callee_id not in self.fn_registry:
             raise CheckError(f"[{fn_id}] Unknown function: '{callee_id}'")

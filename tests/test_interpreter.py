@@ -833,6 +833,114 @@ class TestCanonicalForm(unittest.TestCase):
         with self.assertRaises(CheckError):
             Checker(spec).check()
 
+    # ------------------------------------------------------------------
+    # Cross-module imports (v0.3 feature, Issue #4)
+    # ------------------------------------------------------------------
+
+    def _math_utils_spec(self) -> dict:
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        return {
+            "nail": "0.3", "kind": "module", "id": "math_utils", "imports": [],
+            "defs": [
+                {"nail": "0.3", "kind": "fn", "id": "add", "effects": [],
+                 "params": [{"id": "a", "type": INT64}, {"id": "b", "type": INT64}],
+                 "returns": INT64,
+                 "body": [{"op": "return", "val": {"op": "+", "l": {"ref": "a"}, "r": {"ref": "b"}}}]},
+                {"nail": "0.3", "kind": "fn", "id": "square", "effects": [],
+                 "params": [{"id": "x", "type": INT64}], "returns": INT64,
+                 "body": [{"op": "return", "val": {"op": "*", "l": {"ref": "x"}, "r": {"ref": "x"}}}]},
+            ],
+        }
+
+    def _main_spec(self) -> dict:
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        return {
+            "nail": "0.3", "kind": "module", "id": "main",
+            "imports": [{"module": "math_utils", "fns": ["add", "square"]}],
+            "defs": [
+                {"nail": "0.3", "kind": "fn", "id": "sum_of_squares", "effects": [],
+                 "params": [{"id": "a", "type": INT64}, {"id": "b", "type": INT64}],
+                 "returns": INT64,
+                 "body": [
+                     {"op": "let", "id": "sq_a", "type": INT64,
+                      "val": {"op": "call", "module": "math_utils", "fn": "square", "args": [{"ref": "a"}]}},
+                     {"op": "let", "id": "sq_b", "type": INT64,
+                      "val": {"op": "call", "module": "math_utils", "fn": "square", "args": [{"ref": "b"}]}},
+                     {"op": "return", "val": {"op": "call", "module": "math_utils", "fn": "add",
+                                              "args": [{"ref": "sq_a"}, {"ref": "sq_b"}]}},
+                 ]},
+            ],
+        }
+
+    def test_cross_module_checker_passes(self):
+        """Cross-module import checker must pass."""
+        modules = {"math_utils": self._math_utils_spec()}
+        Checker(self._main_spec(), modules=modules).check()
+
+    def test_cross_module_runtime(self):
+        """sum_of_squares(3, 4) should return 25."""
+        modules = {"math_utils": self._math_utils_spec()}
+        rt = Runtime(self._main_spec(), modules=modules)
+        self.assertEqual(rt.run_fn("sum_of_squares", {"a": 3, "b": 4}), 25)
+
+    def test_cross_module_missing_module_raises(self):
+        """Calling without providing the module should raise CheckError."""
+        with self.assertRaises(CheckError):
+            Checker(self._main_spec()).check()  # no modules provided
+
+    def test_cross_module_missing_fn_raises(self):
+        """Importing a function that doesn't exist in the module must raise."""
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        main = {
+            "nail": "0.3", "kind": "module", "id": "main",
+            "imports": [{"module": "math_utils", "fns": ["nonexistent_fn"]}],
+            "defs": [],
+        }
+        modules = {"math_utils": self._math_utils_spec()}
+        with self.assertRaises(CheckError):
+            Checker(main, modules=modules).check()
+
+    def test_cross_module_effect_propagation_raises(self):
+        """Cross-module call to IO fn from pure fn must raise CheckError."""
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        io_mod = {
+            "nail": "0.3", "kind": "module", "id": "io_utils", "imports": [],
+            "defs": [
+                {"nail": "0.3", "kind": "fn", "id": "print_num", "effects": ["IO"],
+                 "params": [{"id": "n", "type": INT64}], "returns": {"type": "unit"},
+                 "body": []},
+            ],
+        }
+        main = {
+            "nail": "0.3", "kind": "module", "id": "main",
+            "imports": [{"module": "io_utils", "fns": ["print_num"]}],
+            "defs": [
+                {"nail": "0.3", "kind": "fn", "id": "pure_fn", "effects": [],  # pure!
+                 "params": [{"id": "n", "type": INT64}], "returns": INT64,
+                 "body": [
+                     {"op": "call", "module": "io_utils", "fn": "print_num", "args": [{"ref": "n"}]},
+                     {"op": "return", "val": {"ref": "n"}},
+                 ]},
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(main, modules={"io_utils": io_mod}).check()
+
+    def test_cross_module_circular_import_raises(self):
+        """Circular imports must raise CheckError."""
+        a_mod = {
+            "nail": "0.3", "kind": "module", "id": "a",
+            "imports": [{"module": "b", "fns": []}],
+            "defs": [],
+        }
+        b_mod = {
+            "nail": "0.3", "kind": "module", "id": "b",
+            "imports": [{"module": "a", "fns": []}],
+            "defs": [],
+        }
+        with self.assertRaises(CheckError):
+            Checker(a_mod, modules={"a": a_mod, "b": b_mod}).check()
+
     def test_match_result_both_branches_required(self):
         """match_result guarantees return if both branches return."""
         INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
