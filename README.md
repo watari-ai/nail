@@ -87,9 +87,24 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 
 ## Status
 
-🧪 **Experimental — v0.2**
+🧪 **Experimental — v0.2** — `pip install nail-lang`
 
-Core language (types, effects, modules, canonical form) is implemented and tested. The specification is stable but evolving.
+| Feature | Status |
+|---|---|
+| Types: int/float/bool/string/option/list/map/unit | ✅ Implemented |
+| Effect system (IO/FS/NET/TIME/RAND/MUT) | ✅ Implemented |
+| JCS canonical form + `nail canonicalize` + `--strict` | ✅ Implemented |
+| `kind: fn` + `kind: module` + function calls | ✅ Implemented |
+| Mutable variables (`let mut` + `assign`) | ✅ Implemented |
+| Bounded loops + if/else | ✅ Implemented |
+| Recursion/cycle detection | ✅ Implemented |
+| Return-path exhaustiveness check | ✅ Implemented |
+| L0 JSON Schema + L1 Type + L2 Effect checks | ✅ Implemented |
+| `read_file` (FS) / `http_get` (NET) | ⚠️ Checker validates; runtime not yet executed |
+| Overflow modes: `wrap` / `sat` | 📅 Planned (v0.3) |
+| Result type (`ok`/`err`/`match_result`) | 📅 Planned (v0.3) |
+| Cross-module import | 📅 Planned (v0.3) |
+| Formal verification / termination proofs | 🔮 Future |
 
 ## Secondary Effects: Token Efficiency
 
