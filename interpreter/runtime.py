@@ -147,6 +147,55 @@ class Runtime:
                 return ret
             return _CONTINUE
 
+        elif op == "enum_make":
+            tag = stmt.get("tag")
+            if not isinstance(tag, str) or not tag:
+                raise NailRuntimeError("'enum_make' requires non-empty string field 'tag'")
+            fields_expr = stmt.get("fields", {})
+            if fields_expr is None:
+                fields_expr = {}
+            if not isinstance(fields_expr, dict):
+                raise NailRuntimeError("'enum_make.fields' must be an object")
+            value = {"__tag__": tag}
+            for field_name, field_expr in fields_expr.items():
+                value[field_name] = self._eval(field_expr, env)
+            into = stmt.get("into")
+            if not isinstance(into, str) or not into:
+                raise NailRuntimeError("'enum_make' requires non-empty string field 'into'")
+            env[into] = value
+            return _CONTINUE
+
+        elif op == "match_enum":
+            enum_val = self._eval(stmt.get("val"), env)
+            if not isinstance(enum_val, dict) or "__tag__" not in enum_val:
+                raise NailRuntimeError("'match_enum' expects enum object with '__tag__'")
+            tag = enum_val["__tag__"]
+            if not isinstance(tag, str):
+                raise NailRuntimeError("'match_enum' enum tag must be string")
+            matched_case = None
+            for case in stmt.get("cases", []):
+                if isinstance(case, dict) and case.get("tag") == tag:
+                    matched_case = case
+                    break
+            if matched_case is not None:
+                binds = matched_case.get("binds", {})
+                if binds is None:
+                    binds = {}
+                if not isinstance(binds, dict):
+                    raise NailRuntimeError(f"'match_enum' binds for tag '{tag}' must be an object")
+                for field_name, bind_name in binds.items():
+                    if field_name not in enum_val:
+                        raise NailRuntimeError(f"'match_enum' field '{field_name}' not found for tag '{tag}'")
+                    env[bind_name] = enum_val[field_name]
+                ret = self._run_body(matched_case.get("body", []), env)
+            else:
+                if "default" not in stmt:
+                    raise NailRuntimeError(f"'match_enum' has no case for tag '{tag}' and no default")
+                ret = self._run_body(stmt.get("default", []), env)
+            if ret is not _CONTINUE:
+                return ret
+            return _CONTINUE
+
         elif op == "read_file":
             effect = self._normalize_effect_kind(stmt.get("effect"))
             if effect != "FS":
@@ -541,6 +590,34 @@ class Runtime:
             resolved["err"] = self._resolve_type_spec(
                 type_spec["err"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
             )
+            return resolved
+        if t == "enum":
+            variants = type_spec.get("variants")
+            if not isinstance(variants, list):
+                return dict(type_spec)
+            resolved = dict(type_spec)
+            resolved_variants = []
+            for variant in variants:
+                if not isinstance(variant, dict):
+                    resolved_variants.append(variant)
+                    continue
+                rv = dict(variant)
+                fields = variant.get("fields")
+                if isinstance(fields, list):
+                    resolved_fields = []
+                    for field in fields:
+                        if not isinstance(field, dict):
+                            resolved_fields.append(field)
+                            continue
+                        rf = dict(field)
+                        if "type" in field:
+                            rf["type"] = self._resolve_type_spec(
+                                field["type"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+                            )
+                        resolved_fields.append(rf)
+                    rv["fields"] = resolved_fields
+                resolved_variants.append(rv)
+            resolved["variants"] = resolved_variants
             return resolved
         return dict(type_spec)
 

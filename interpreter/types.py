@@ -111,7 +111,34 @@ class ResultType:
     def __str__(self): return f"result<{self.ok}, {self.err}>"
 
 
-NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType
+@dataclass(frozen=True)
+class EnumField:
+    name: str
+    type: Any  # NailType
+
+
+@dataclass(frozen=True)
+class EnumVariant:
+    tag: str
+    fields: tuple[EnumField, ...] = ()
+
+
+@dataclass(frozen=True)
+class EnumType:
+    variants: tuple[EnumVariant, ...]
+
+    def variant_for(self, tag: str) -> EnumVariant | None:
+        for variant in self.variants:
+            if variant.tag == tag:
+                return variant
+        return None
+
+    def __str__(self):
+        tags = ", ".join(v.tag for v in self.variants)
+        return f"enum<{tags}>"
+
+
+NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType
 
 
 def parse_type(spec: dict) -> NailType:
@@ -158,6 +185,44 @@ def parse_type(spec: dict) -> NailType:
         if ok_spec is None or err_spec is None:
             raise NailTypeError("result type requires both 'ok' and 'err' sub-types")
         return ResultType(ok=parse_type(ok_spec), err=parse_type(err_spec))
+    elif t == "enum":
+        variants_spec = spec.get("variants")
+        if not isinstance(variants_spec, list) or not variants_spec:
+            raise NailTypeError("enum type requires non-empty 'variants' list")
+        variants: list[EnumVariant] = []
+        seen_tags: set[str] = set()
+        for i, variant_spec in enumerate(variants_spec):
+            if not isinstance(variant_spec, dict):
+                raise NailTypeError(f"enum variant at index {i} must be an object")
+            tag = variant_spec.get("tag")
+            if not isinstance(tag, str) or not tag:
+                raise NailTypeError(f"enum variant at index {i} requires non-empty string 'tag'")
+            if tag in seen_tags:
+                raise NailTypeError(f"duplicate enum variant tag: {tag}")
+            seen_tags.add(tag)
+
+            fields_spec = variant_spec.get("fields", [])
+            if fields_spec is None:
+                fields_spec = []
+            if not isinstance(fields_spec, list):
+                raise NailTypeError(f"enum variant '{tag}' fields must be a list")
+            fields: list[EnumField] = []
+            seen_field_names: set[str] = set()
+            for field_i, field_spec in enumerate(fields_spec):
+                if not isinstance(field_spec, dict):
+                    raise NailTypeError(f"enum variant '{tag}' field at index {field_i} must be an object")
+                field_name = field_spec.get("name")
+                field_type_spec = field_spec.get("type")
+                if not isinstance(field_name, str) or not field_name:
+                    raise NailTypeError(f"enum variant '{tag}' field at index {field_i} requires non-empty string 'name'")
+                if field_name in seen_field_names:
+                    raise NailTypeError(f"enum variant '{tag}' has duplicate field '{field_name}'")
+                if not isinstance(field_type_spec, dict):
+                    raise NailTypeError(f"enum variant '{tag}' field '{field_name}' requires object 'type'")
+                seen_field_names.add(field_name)
+                fields.append(EnumField(name=field_name, type=parse_type(field_type_spec)))
+            variants.append(EnumVariant(tag=tag, fields=tuple(fields)))
+        return EnumType(variants=tuple(variants))
     else:
         raise NailTypeError(f"Unknown type: {t}")
 

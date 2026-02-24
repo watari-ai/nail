@@ -1,39 +1,194 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://nail-lang.org/schema/nail-l0.json",
-  "title": "NAIL L0 Program Schema",
-  "description": "Permissive structural validation for NAIL v0.1 function/module documents.",
-  "type": "object",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "definitions": {
-    "type_spec": {
-      "type": "object",
+    "expr": {
+      "additionalProperties": true,
+      "minProperties": 1,
+      "type": "object"
+    },
+    "function": {
+      "additionalProperties": true,
       "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "int",
-            "float",
-            "bool",
-            "string",
-            "bytes",
-            "option",
-            "list",
-            "map",
-            "unit",
-            "result",
-            "alias"
-          ]
+        "body": {
+          "items": {
+            "$ref": "#/definitions/stmt"
+          },
+          "type": "array"
         },
+        "effects": {
+          "items": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "properties": {
+                  "allow": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "ops": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "type": "object"
+              }
+            ]
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "fn"
+        },
+        "nail": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "params": {
+          "items": {
+            "$ref": "#/definitions/param"
+          },
+          "type": "array"
+        },
+        "returns": {
+          "$ref": "#/definitions/type_spec"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "params",
+        "returns",
+        "effects",
+        "body"
+      ],
+      "type": "object"
+    },
+    "module": {
+      "additionalProperties": true,
+      "properties": {
+        "defs": {
+          "items": {
+            "$ref": "#/definitions/function"
+          },
+          "type": "array"
+        },
+        "exports": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "id": {
+          "type": "string"
+        },
+        "imports": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "fns": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "from": {
+                "type": "string"
+              },
+              "module": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "module",
+              "from"
+            ],
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "kind": {
+          "const": "module"
+        },
+        "nail": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "types": {
+          "additionalProperties": {
+            "$ref": "#/definitions/type_spec"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "id",
+        "defs"
+      ],
+      "type": "object"
+    },
+    "param": {
+      "additionalProperties": true,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/type_spec"
+        }
+      },
+      "required": [
+        "id",
+        "type"
+      ],
+      "type": "object"
+    },
+    "stmt": {
+      "additionalProperties": true,
+      "properties": {
+        "op": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "op"
+      ],
+      "type": "object"
+    },
+    "type_spec": {
+      "additionalProperties": true,
+      "properties": {
         "bits": {
           "type": "integer"
-        },
-        "overflow": {
-          "type": "string"
         },
         "encoding": {
           "type": "string"
         },
         "inner": {
+          "$ref": "#/definitions/type_spec"
+        },
+        "key": {
           "$ref": "#/definitions/type_spec"
         },
         "len": {
@@ -46,193 +201,67 @@
             }
           ]
         },
-        "key": {
-          "$ref": "#/definitions/type_spec"
-        },
-        "value": {
-          "$ref": "#/definitions/type_spec"
-        }
-      },
-      "required": [
-        "type"
-      ],
-      "additionalProperties": true
-    },
-    "expr": {
-      "type": "object",
-      "additionalProperties": true,
-      "minProperties": 1
-    },
-    "stmt": {
-      "type": "object",
-      "properties": {
-        "op": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "op"
-      ],
-      "additionalProperties": true
-    },
-    "param": {
-      "type": "object",
-      "properties": {
-        "id": {
+        "overflow": {
           "type": "string"
         },
         "type": {
-          "$ref": "#/definitions/type_spec"
-        }
-      },
-      "required": [
-        "id",
-        "type"
-      ],
-      "additionalProperties": true
-    },
-    "function": {
-      "type": "object",
-      "properties": {
-        "nail": {
+          "enum": [
+            "int",
+            "float",
+            "bool",
+            "string",
+            "bytes",
+            "option",
+            "list",
+            "map",
+            "unit",
+            "result",
+            "alias",
+            "enum"
+          ],
           "type": "string"
         },
-        "kind": {
-          "const": "fn"
-        },
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "params": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/param"
-          }
-        },
-        "returns": {
+        "value": {
           "$ref": "#/definitions/type_spec"
         },
-        "effects": {
-          "type": "array",
+        "variants": {
           "items": {
-            "oneOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string"
-                  },
-                  "allow": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  },
-                  "ops": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "required": [
-                  "kind"
-                ],
-                "additionalProperties": true
-              }
-            ]
-          }
-        },
-        "body": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/stmt"
-          }
-        }
-      },
-      "required": [
-        "kind",
-        "id",
-        "params",
-        "returns",
-        "effects",
-        "body"
-      ],
-      "additionalProperties": true
-    },
-    "module": {
-      "type": "object",
-      "properties": {
-        "nail": {
-          "type": "string"
-        },
-        "kind": {
-          "const": "module"
-        },
-        "id": {
-          "type": "string"
-        },
-        "name": {
-          "type": "string"
-        },
-        "exports": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "imports": {
-          "type": "array",
-          "items": {
-            "type": "object",
+            "additionalProperties": true,
             "properties": {
-              "module": {
-                "type": "string"
-              },
-              "from": {
-                "type": "string"
-              },
-              "fns": {
-                "type": "array",
+              "fields": {
                 "items": {
-                  "type": "string"
-                }
+                  "additionalProperties": true,
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "tag": {
+                "type": "string"
               }
             },
             "required": [
-              "module",
-              "from"
+              "tag"
             ],
-            "additionalProperties": false
-          }
-        },
-        "types": {
-          "type": "object",
-          "additionalProperties": {
-            "$ref": "#/definitions/type_spec"
-          }
-        },
-        "defs": {
-          "type": "array",
-          "items": {
-            "$ref": "#/definitions/function"
-          }
+            "type": "object"
+          },
+          "type": "array"
         }
       },
       "required": [
-        "kind",
-        "id",
-        "defs"
+        "type"
       ],
-      "additionalProperties": true
+      "type": "object"
     }
   },
+  "description": "Permissive structural validation for NAIL v0.1 function/module documents.",
   "oneOf": [
     {
       "$ref": "#/definitions/function"
@@ -240,5 +269,7 @@
     {
       "$ref": "#/definitions/module"
     }
-  ]
+  ],
+  "title": "NAIL L0 Program Schema",
+  "type": "object"
 }

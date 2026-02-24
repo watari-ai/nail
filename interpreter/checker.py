@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from .types import (
     NailType, NailTypeError, NailEffectError,
     parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType,
     VALID_EFFECTS,
 )
 
@@ -57,8 +57,10 @@ class Checker:
         # Type aliases for the current module and imported modules
         self.type_aliases: dict[str, dict] = {}
         self._alias_spec_cache: dict[str, dict] = {}
+        self._enum_type_cache: dict[str, EnumType] = {}
         self.module_type_aliases: dict[str, dict[str, dict]] = {}
         self._module_alias_spec_cache: dict[str, dict[str, dict]] = {}
+        self._module_enum_type_cache: dict[str, dict[str, EnumType]] = {}
         # Track which imported modules have already been body-checked (Bug 2 fix)
         self._checked_module_ids: set[str] = set()
 
@@ -129,6 +131,7 @@ class Checker:
                 raise CheckError(f"Type alias '{alias_name}' must map to a type dict")
         self.type_aliases = raw_types
         self._alias_spec_cache = {}
+        self._enum_type_cache = {}
         module_id = mod.get("id", "<module>")
         for alias_name in self.type_aliases:
             self._resolve_alias_spec(
@@ -138,6 +141,9 @@ class Checker:
                 stack=[],
                 module_id=module_id,
             )
+            resolved_spec = self._alias_spec_cache[alias_name]
+            if resolved_spec.get("type") == "enum":
+                self._enum_type_cache[alias_name] = parse_type(resolved_spec)
 
     def _resolve_alias_spec(
         self,
@@ -220,6 +226,34 @@ class Checker:
             resolved["err"] = self._resolve_type_spec(
                 type_spec["err"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
             )
+            return resolved
+        if t == "enum":
+            variants = type_spec.get("variants")
+            if not isinstance(variants, list):
+                return dict(type_spec)
+            resolved = dict(type_spec)
+            resolved_variants = []
+            for variant in variants:
+                if not isinstance(variant, dict):
+                    resolved_variants.append(variant)
+                    continue
+                rv = dict(variant)
+                fields = variant.get("fields")
+                if isinstance(fields, list):
+                    resolved_fields = []
+                    for field in fields:
+                        if not isinstance(field, dict):
+                            resolved_fields.append(field)
+                            continue
+                        rf = dict(field)
+                        if "type" in field:
+                            rf["type"] = self._resolve_type_spec(
+                                field["type"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+                            )
+                        resolved_fields.append(rf)
+                    rv["fields"] = resolved_fields
+                resolved_variants.append(rv)
+            resolved["variants"] = resolved_variants
             return resolved
         return dict(type_spec)
 
@@ -306,6 +340,7 @@ class Checker:
                 raise CheckError(f"Module '{module_id}' has invalid 'types' field (must be dict)")
             self.module_type_aliases[module_id] = imported_aliases
             self._module_alias_spec_cache[module_id] = {}
+            self._module_enum_type_cache[module_id] = {}
             for alias_name, alias_spec in imported_aliases.items():
                 if not isinstance(alias_name, str) or not alias_name:
                     raise CheckError(f"Module '{module_id}' has invalid type alias name")
@@ -318,6 +353,9 @@ class Checker:
                     stack=[],
                     module_id=module_id,
                 )
+                resolved_spec = self._module_alias_spec_cache[module_id][alias_name]
+                if resolved_spec.get("type") == "enum":
+                    self._module_enum_type_cache[module_id][alias_name] = parse_type(resolved_spec)
             # Build fn lookup for the imported module
             imported_fns = {fn["id"]: fn for fn in imported_mod.get("defs", []) if "id" in fn}
             for fn_id in fns:
@@ -567,6 +605,103 @@ class Checker:
                 if ok_guaranteed and err_guaranteed:
                     guaranteed_return = True
 
+            elif op == "enum_make":
+                enum_type = self._resolve_enum_type_for_make(fn_id, stmt, local_env)
+                variant = enum_type.variant_for(stmt.get("tag"))
+                if variant is None:
+                    raise CheckError(f"[{fn_id}] Unknown enum tag '{stmt.get('tag')}' for enum_make")
+                fields_expr = stmt.get("fields", {})
+                if fields_expr is None:
+                    fields_expr = {}
+                if not isinstance(fields_expr, dict):
+                    raise CheckError(f"[{fn_id}] 'enum_make.fields' must be an object")
+                expected_names = {field.name for field in variant.fields}
+                actual_names = set(fields_expr.keys())
+                if actual_names != expected_names:
+                    missing = sorted(expected_names - actual_names)
+                    extra = sorted(actual_names - expected_names)
+                    problems = []
+                    if missing:
+                        problems.append(f"missing fields {missing}")
+                    if extra:
+                        problems.append(f"unknown fields {extra}")
+                    raise CheckError(
+                        f"[{fn_id}] enum_make for tag '{variant.tag}' has invalid fields: {', '.join(problems)}"
+                    )
+                for field in variant.fields:
+                    value_type = self._check_expr(fn_id, fields_expr[field.name], local_env)
+                    if not types_equal(value_type, field.type):
+                        raise CheckError(
+                            f"[{fn_id}] enum_make field '{field.name}' type mismatch: expected {field.type}, got {value_type}"
+                        )
+                into = stmt.get("into")
+                if not isinstance(into, str) or not into:
+                    raise CheckError(f"[{fn_id}] 'enum_make' requires non-empty string field 'into'")
+                local_env[into] = enum_type
+
+            elif op == "match_enum":
+                val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
+                if not isinstance(val_type, EnumType):
+                    raise CheckError(f"[{fn_id}] 'match_enum' expects enum value, got {val_type}")
+                cases = stmt.get("cases")
+                if not isinstance(cases, list):
+                    raise CheckError(f"[{fn_id}] 'match_enum.cases' must be a list")
+                enum_tags = {variant.tag for variant in val_type.variants}
+                case_tags: set[str] = set()
+                case_guaranteed: list[bool] = []
+                for case in cases:
+                    if not isinstance(case, dict):
+                        raise CheckError(f"[{fn_id}] each match_enum case must be an object")
+                    tag = case.get("tag")
+                    if not isinstance(tag, str) or not tag:
+                        raise CheckError(f"[{fn_id}] each match_enum case requires non-empty string 'tag'")
+                    if tag in case_tags:
+                        raise CheckError(f"[{fn_id}] duplicate match_enum case tag: '{tag}'")
+                    case_tags.add(tag)
+                    variant = val_type.variant_for(tag)
+                    if variant is None:
+                        raise CheckError(f"[{fn_id}] match_enum case tag '{tag}' is not in target enum")
+                    binds = case.get("binds", {})
+                    if binds is None:
+                        binds = {}
+                    if not isinstance(binds, dict):
+                        raise CheckError(f"[{fn_id}] match_enum case '{tag}' binds must be an object")
+                    variant_fields = {field.name: field.type for field in variant.fields}
+                    for field_name, bind_name in binds.items():
+                        if field_name not in variant_fields:
+                            raise CheckError(
+                                f"[{fn_id}] match_enum case '{tag}' bind '{field_name}' is not a field of the variant"
+                            )
+                        if not isinstance(bind_name, str) or not bind_name:
+                            raise CheckError(
+                                f"[{fn_id}] match_enum case '{tag}' bind target must be non-empty string"
+                            )
+                    case_env = dict(local_env)
+                    for field_name, bind_name in binds.items():
+                        case_env[bind_name] = variant_fields[field_name]
+                    case_guaranteed.append(
+                        self._check_body(fn_id, case.get("body", []), case_env, local_mut, expected_return)
+                    )
+
+                default_body = stmt.get("default")
+                has_default = default_body is not None
+                if has_default and not isinstance(default_body, list):
+                    raise CheckError(f"[{fn_id}] 'match_enum.default' must be a list when present")
+                missing_tags = enum_tags - case_tags
+                if missing_tags and not has_default:
+                    raise CheckError(
+                        f"[{fn_id}] non-exhaustive match_enum: missing tags {sorted(missing_tags)} and no default"
+                    )
+                default_guaranteed = False
+                if has_default:
+                    default_guaranteed = self._check_body(fn_id, default_body, local_env, local_mut, expected_return)
+                if has_default:
+                    if all(case_guaranteed) and default_guaranteed:
+                        guaranteed_return = True
+                else:
+                    if case_guaranteed and all(case_guaranteed):
+                        guaranteed_return = True
+
             elif op == "call":
                 # Call can be used as a statement (discard return value)
                 self._check_op_expr(fn_id, stmt, local_env)
@@ -625,6 +760,38 @@ class Checker:
                 raise CheckError(f"[{fn_id}] Unknown op: '{op}'")
 
         return guaranteed_return
+
+    def _resolve_enum_type_for_make(self, fn_id: str, stmt: dict, env: dict[str, NailType]) -> EnumType:
+        into = stmt.get("into")
+        if isinstance(into, str) and into in env:
+            existing = env[into]
+            if not isinstance(existing, EnumType):
+                raise CheckError(f"[{fn_id}] enum_make.into '{into}' already exists and is not an enum")
+            return existing
+
+        explicit_type_spec = stmt.get("type")
+        if explicit_type_spec is not None:
+            explicit = self._parse_type(explicit_type_spec)
+            if not isinstance(explicit, EnumType):
+                raise CheckError(f"[{fn_id}] enum_make.type must resolve to enum, got {explicit}")
+            return explicit
+
+        tag = stmt.get("tag")
+        if not isinstance(tag, str) or not tag:
+            raise CheckError(f"[{fn_id}] 'enum_make' requires non-empty string field 'tag'")
+
+        candidates = [enum_t for enum_t in self._enum_type_cache.values() if enum_t.variant_for(tag) is not None]
+        if not candidates:
+            raise CheckError(
+                f"[{fn_id}] Cannot infer enum type for tag '{tag}'. "
+                f"Declare module type aliases with enum definitions or set enum_make.type."
+            )
+        if len(candidates) > 1:
+            raise CheckError(
+                f"[{fn_id}] Ambiguous enum tag '{tag}' across multiple enums. "
+                f"Specify enum_make.type explicitly."
+            )
+        return candidates[0]
 
     def _check_expr(self, fn_id: str, expr: Any, env: dict) -> NailType:
         if expr is None:
