@@ -19,23 +19,42 @@
             "option",
             "list",
             "map",
-            "unit"
+            "unit",
+            "result"
           ]
         },
-        "bits": { "type": "integer" },
-        "overflow": { "type": "string" },
-        "encoding": { "type": "string" },
-        "inner": { "$ref": "#/definitions/type_spec" },
+        "bits": {
+          "type": "integer"
+        },
+        "overflow": {
+          "type": "string"
+        },
+        "encoding": {
+          "type": "string"
+        },
+        "inner": {
+          "$ref": "#/definitions/type_spec"
+        },
         "len": {
           "oneOf": [
-            { "type": "integer" },
-            { "type": "string" }
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            }
           ]
         },
-        "key": { "$ref": "#/definitions/type_spec" },
-        "value": { "$ref": "#/definitions/type_spec" }
+        "key": {
+          "$ref": "#/definitions/type_spec"
+        },
+        "value": {
+          "$ref": "#/definitions/type_spec"
+        }
       },
-      "required": ["type"],
+      "required": [
+        "type"
+      ],
       "additionalProperties": true
     },
     "expr": {
@@ -46,66 +65,120 @@
     "stmt": {
       "type": "object",
       "properties": {
-        "op": { "type": "string" }
+        "op": {
+          "type": "string"
+        }
       },
-      "required": ["op"],
+      "required": [
+        "op"
+      ],
       "additionalProperties": true
     },
     "param": {
       "type": "object",
       "properties": {
-        "id": { "type": "string" },
-        "type": { "$ref": "#/definitions/type_spec" }
+        "id": {
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/definitions/type_spec"
+        }
       },
-      "required": ["id", "type"],
+      "required": [
+        "id",
+        "type"
+      ],
       "additionalProperties": true
     },
     "function": {
       "type": "object",
       "properties": {
-        "nail": { "type": "string" },
-        "kind": { "const": "fn" },
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "nail": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "fn"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
         "params": {
           "type": "array",
-          "items": { "$ref": "#/definitions/param" }
+          "items": {
+            "$ref": "#/definitions/param"
+          }
         },
-        "returns": { "$ref": "#/definitions/type_spec" },
+        "returns": {
+          "$ref": "#/definitions/type_spec"
+        },
         "effects": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "body": {
           "type": "array",
-          "items": { "$ref": "#/definitions/stmt" }
+          "items": {
+            "$ref": "#/definitions/stmt"
+          }
         }
       },
-      "required": ["kind", "id", "params", "returns", "effects", "body"],
+      "required": [
+        "kind",
+        "id",
+        "params",
+        "returns",
+        "effects",
+        "body"
+      ],
       "additionalProperties": true
     },
     "module": {
       "type": "object",
       "properties": {
-        "nail": { "type": "string" },
-        "kind": { "const": "module" },
-        "id": { "type": "string" },
-        "name": { "type": "string" },
+        "nail": {
+          "type": "string"
+        },
+        "kind": {
+          "const": "module"
+        },
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
         "exports": {
           "type": "array",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "defs": {
           "type": "array",
-          "items": { "$ref": "#/definitions/function" }
+          "items": {
+            "$ref": "#/definitions/function"
+          }
         }
       },
-      "required": ["kind", "id", "defs"],
+      "required": [
+        "kind",
+        "id",
+        "defs"
+      ],
       "additionalProperties": true
     }
   },
   "oneOf": [
-    { "$ref": "#/definitions/function" },
-    { "$ref": "#/definitions/module" }
+    {
+      "$ref": "#/definitions/function"
+    },
+    {
+      "$ref": "#/definitions/module"
+    }
   ]
 }
