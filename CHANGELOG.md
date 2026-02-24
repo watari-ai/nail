@@ -2,6 +2,54 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.5] — 2026-02-24
+
+### Added
+
+- **Enum / Algebraic Data Types** (Issue #52)
+  - `enum_make` op: construct a variant with or without fields
+  - `match_enum` op: exhaustive pattern matching — missing variant is a `CheckError`
+  - Module-level `types` dict supports `"type": "enum"` with `variants` list
+  - Each variant may have typed `fields`; field values are bound in match cases via `binds`
+  - Example: `{"tag": "Circle", "fields": [{"name": "radius", "type": {...}}]}`
+
+- **Core Standard Library** (Issue #54)
+  - Math: `abs`, `min2`, `max2`, `clamp`
+  - String: `str_len`, `str_concat`, `str_slice`, `str_contains`
+
+- **Function Calling Effect Annotations** (Issue #55)
+  - `integrations/function_calling.py`: annotate OpenAI/Anthropic tool schemas with NAIL effects
+  - `filter_by_effects(tools, allow)`: restrict which tools a sandbox can call
+  - Supports `from_openai()`, `from_anthropic()`, `to_nail_annotated()`, `validate_effects()`
+  - See `docs/integrations.md` for usage examples
+
+- **Python → NAIL IR Transpiler** (`transpiler/`)
+  - Converts type-annotated Python functions to NAIL JSON IR
+  - AST-based parsing; auto-detects IO/FS/NET effects from call patterns
+  - `transpile_function()`, `transpile_to_json()`, `transpile_and_check()` public API
+  - Supports: functions, basic types, return, if/else, for-range, augmented assign
+
+### Improved
+
+- **Return-path exhaustiveness** (Issue #43)
+  - Documented and tested: `if` without `else` is always rejected (`CheckError`)
+  - `match_enum` case missing `return` is caught by `_check_body` return tracking
+  - 9 new tests in `tests/test_return_exhaustiveness.py`
+
+- **Canonical form CI enforcement** (Issue #44)
+  - `tools/check-canonical.py`: validates/auto-fixes non-canonical `.nail` files
+  - CI step added: all examples must be in JCS canonical form
+
+- **SPEC.md §3.1: Effect Model Static vs Runtime** (Issue #45)
+  - Documents what the Checker (L2) guarantees vs Runtime (L2.5) enforces
+  - Three-Tier Error Model: Recoverable (Result) / Unrecoverable (panic) / Runtime error
+
+### Tests
+
+- 395 tests total (v0.4: 204, transpiler: 37, function_calling: 44, stdlib/enum: 66, exhaustiveness: 9, other: 35)
+
+---
+
 ## [v0.4] — 2026-02-24
 
 ### Added
