@@ -1,5 +1,7 @@
 # NAIL — Design Philosophy
 
+NAIL is a type-safe, effect-constrained execution format designed for AI agents — not for humans to write.
+
 ## Why Build This Language
 
 ### The Arrival of the AI Coding Era
@@ -68,6 +70,30 @@ NAIL defines not only a programming language, but also a **structure standard th
 The NAIL spec is not fixed. AI uses it, generates feedback, proposes improvements, and updates the spec.
 
 If this feedback loop matures, NAIL may evolve beyond "a language that is easy for AI to write" into "the most efficient representation for AI reasoning."
+
+---
+
+## What NAIL Is (and Is Not)
+
+### What NAIL Is
+
+- A **type-safe execution format** for AI agents: AI generates NAIL, NAIL runs with formal guarantees
+- A **verification layer**: L0 (schema), L1 (types), L2 (effects) before any execution
+- An **effect sandbox**: every side effect is declared in the function signature and enforced
+- A **reproducibility guarantee**: canonical form ensures identical semantics produce identical JSON
+
+### What NAIL Is NOT
+
+- A language for humans to write (no text syntax, no IDE support planned)
+- A general-purpose IR for all programs
+- A replacement for Python, Rust, or any human language
+- An experimental DSL — NAIL programs actually execute with formal safety guarantees
+
+## Position in the AI Stack
+
+NAIL sits at the execution layer of AI agent pipelines.
+
+This is the "Secure Plugin Format" for AI agents: any LLM can generate NAIL, any NAIL-compatible runtime can execute it safely.
 
 ---
 
