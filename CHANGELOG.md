@@ -2,7 +2,7 @@
 
 All notable changes to NAIL are documented here.
 
-## [v0.6] — 2026-02-24
+## [v0.6.0] — 2026-02-24
 
 ### Added
 
