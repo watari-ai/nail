@@ -72,14 +72,19 @@ Implemented autonomously via development cron agent. Design documents in [`desig
 
 ---
 
-## v0.4 Goals (next)
+## v0.4 Goals — Released ✅ (2026-02-24)
 
-Informed by [Gemini 2.0 Flash strategic evaluation](https://github.com/watari-ai/nail/issues/15) (Issue #15).
+Informed by [Gemini 2.0 Flash strategic evaluation](https://github.com/watari-ai/nail/issues/15) (Issue #15) and multi-AI strategic review.
 
-- [ ] **NAIL SDK** — Python package for generating/validating NAIL programs from host languages. Goal: `nail.call("fn_name", args)` returns a type-safe result.
-- [ ] **Nail-Lens** — Read-only pseudo-code renderer. Converts NAIL JSON → human-readable format without modifying the source of truth. Enables human audit for high-stakes deployments.
-- [ ] **Token efficiency benchmarks** — Focus on complex logic where NAIL's structural density outperforms Python+docstrings. Fix the "trivial function" benchmark bias.
-- [ ] **Formal verification** — Termination proofs for bounded loops (L3)
+- [x] **Type Aliases** — `alias` definitions with transitivity and circular detection (PR #49, 21 tests)
+- [x] **Fine-grained Effect Annotations** — `FS:/tmp/` path-scoped effects (PR #50, 35 tests)
+- [x] **Collection Type Operations** — `list_map`, `list_filter`, `list_fold`, `map_values`, `map_set` (PR #51, 39 tests)
+- [x] **Function Calling Effect Annotations** — OpenAI/Anthropic tool schema integration (`integrations/function_calling.py`, 44 tests, commit `e204297`)
+- [x] **Python → NAIL Transpiler** — AST-based conversion with auto-effect inference (`transpiler/python_to_nail.py`, 37 tests, commit `252d822`)
+- [x] **PyPI v0.4.0** — `pip install nail-lang` → https://pypi.org/project/nail-lang/0.4.0/
+- [ ] **NAIL SDK** — Deferred to v0.6+
+- [ ] **Nail-Lens** — Deferred to v0.7 (LSP section)
+- [ ] **Token efficiency benchmarks** — Deferred to Phase 3 experiments
 
 ---
 
@@ -216,8 +221,11 @@ Phase 1: ✅ Complete (2026-02-22)
 Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
 Phase 3: 🚀 Active — repo public, Playground live, experimental work ongoing
 v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical form, 73 tests
-v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI release pending
-v0.4:   📅 In Progress — Granular Effects, Collection Ops, Type Aliases, SDK, Nail-Lens, Benchmarks
+v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI v0.3.0 published
+v0.4:   ✅ Complete (2026-02-24) — 320 tests, type aliases, fine-grained effects, collection ops,
+        FC Effect Annotations (integrations/), Python→NAIL transpiler (transpiler/), PyPI v0.4.0 published
+v0.5:   🚀 In Progress — Enum/ADT, Core StdLib (running), Transpiler review pending
+v0.6:   📅 Planned — L3 Formal Verification, Generics, Error Message Improvement
 Phase 4: 🚀 Active
 ```
 
