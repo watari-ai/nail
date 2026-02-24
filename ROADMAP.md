@@ -91,10 +91,10 @@ Informed by [Gemini 2.0 Flash strategic evaluation](https://github.com/watari-ai
 ## v0.5 Goals — Proof of Utility
 Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 
-- [ ] **Enum / Algebraic Data Types (ADT)** — Natural extension of Result type. Required for state machines and complex data representation in real demos.
-- [ ] **Python (typed subset) → NAIL transpiler** — Convert type-annotated Python to NAIL for type+effect verification. Scope: functions with full type annotations only (no dynamic typing).
-- [ ] **Core Standard Library** — Official modules: string ops (split, trim, contains, replace), math functions, list/map utilities beyond v0.4 collection ops.
-- [ ] **Function Calling Effect Annotations** — Add NAIL-style effect declarations to OpenAI/Anthropic function_calling definitions. Proposal: proposals/function-calling-effects.md
+- [x] **Enum / Algebraic Data Types (ADT)** — Natural extension of Result type. Required for state machines and complex data representation in real demos.
+- [x] **Python (typed subset) → NAIL transpiler** — Convert type-annotated Python to NAIL for type+effect verification. Scope: functions with full type annotations only (no dynamic typing).
+- [x] **Core Standard Library** — Official modules: string ops (split, trim, contains, replace), math functions, list/map utilities beyond v0.4 collection ops.
+- [x] **Function Calling Effect Annotations** — Add NAIL-style effect declarations to OpenAI/Anthropic function_calling definitions. Proposal: proposals/function-calling-effects.md
 
 ## v0.6 Goals — Type System Strengthening + Formal Verification
 - [ ] **L3 Formal Verification** — Termination proofs for bounded loops. NAIL's strongest differentiator: 'this program is provably guaranteed to halt.'
