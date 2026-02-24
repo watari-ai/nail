@@ -231,6 +231,88 @@ We invite feedback on:
 
 ---
 
+## 8. LiteLLM Integration
+
+LiteLLM (https://github.com/BerriAI/litellm) is a widely-adopted gateway that normalizes 100+ LLM APIs to a unified OpenAI-compatible interface. The NAIL effect system integrates naturally with LiteLLM's tool routing layer.
+
+### 8.1 Pipeline Architecture
+
+NAIL validates and generates effect-annotated tool definitions upstream of LiteLLM's routing:
+
+```
+NAIL (effect validation + schema generation)
+    → JSON Schema with "effects" field
+    → LiteLLM (route to 100+ LLMs)
+    → Agent execution
+```
+
+### 8.2 Pre-flight Validation Example
+
+Before registering tools with LiteLLM's `completion()` call, use NAIL to validate effect contracts:
+
+```python
+from nail_lang import Checker, filter_by_effects
+import litellm
+
+# Define tools with NAIL effect annotations
+tools = [
+    {
+        "type": "function",
+        "function": {
+            "name": "read_file",
+            "description": "Read a file",
+            "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
+            "effects": ["FS"]
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "http_get",
+            "description": "Fetch URL",
+            "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]},
+            "effects": ["NET"]
+        }
+    }
+]
+
+# Filter to sandbox: only FS operations allowed
+sandbox_tools = filter_by_effects(tools, allowed=["FS", "IO"])
+
+# Pass verified tools to LiteLLM
+response = litellm.completion(
+    model="gpt-4o",
+    messages=[{"role": "user", "content": "Read the config file"}],
+    tools=sandbox_tools
+)
+```
+
+### 8.3 MCP Bridge Compatibility
+
+LiteLLM's MCP Bridge converts MCP tools to OpenAI format. NAIL effect annotations can be applied post-conversion:
+
+```python
+# LiteLLM converts MCP tools to OpenAI format
+mcp_tools = litellm.utils.convert_mcp_to_openai(mcp_server_tools)
+
+# NAIL adds effect annotations based on tool names/descriptions
+# TODO: future API — nail.annotate_effects() not yet implemented
+annotated_tools = nail.annotate_effects(mcp_tools)
+
+# Now safe to sandbox
+safe_tools = filter_by_effects(annotated_tools, allowed=["FS"])
+```
+
+### 8.4 Positioning
+
+LiteLLM answers "which LLM?". NAIL answers "which effects are permitted?". Together:
+- LiteLLM provides **provider portability** across 100+ models
+- NAIL provides **effect safety** across all tool calls
+
+If you use LiteLLM for LLM routing, use NAIL to enforce tool effect boundaries.
+
+---
+
 ## Appendix: Effect Taxonomy Detail
 
 | Effect | Read | Write | Examples |
