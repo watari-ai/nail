@@ -610,6 +610,12 @@ class Runtime:
         raise NailRuntimeError(f"read_file blocked by FS capability policy: {path!r}")
 
     def _enforce_net_boundary(self, url: str) -> None:
+        # Scheme validation: only http/https are permitted regardless of capability policy.
+        parsed_scheme = urlparse(url)
+        if parsed_scheme.scheme not in ("http", "https"):
+            raise NailRuntimeError(
+                f"http_get blocked: scheme {parsed_scheme.scheme!r} not allowed (only 'http' and 'https' are permitted)"
+            )
         _, caps = self._current_effect_policy()
         net_caps = caps.get("NET", [])
         if not net_caps:
@@ -638,6 +644,8 @@ class Runtime:
 
     def _net_capability_allows(self, cap: dict, url_value: str) -> bool:
         parsed = urlparse(url_value)
+        if parsed.scheme not in ("http", "https"):
+            return False
         host = (parsed.hostname or "").lower()
         if not host:
             return False

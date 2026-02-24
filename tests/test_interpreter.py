@@ -290,6 +290,33 @@ class TestEffectfulOpContract(unittest.TestCase):
         with self.assertRaises(CheckError):
             Checker(spec).check()
 
+    def test_http_get_file_scheme_blocked_by_checker(self):
+        """file:// URL must be rejected at check time (issue #37 regression)."""
+        spec = fn_spec("f", [], STR_T, [
+            {"op": "http_get", "url": {"lit": "file:///etc/passwd"}, "effect": "NET", "into": "body"},
+            {"op": "return", "val": {"ref": "body"}},
+        ], effects=["NET"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_http_get_ftp_scheme_blocked_by_checker(self):
+        """ftp:// URL must be rejected at check time (issue #37 regression)."""
+        spec = fn_spec("f", [], STR_T, [
+            {"op": "http_get", "url": {"lit": "ftp://example.com/file"}, "effect": "NET", "into": "body"},
+            {"op": "return", "val": {"ref": "body"}},
+        ], effects=["NET"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_http_get_file_scheme_blocked_by_runtime(self):
+        """file:// URL must be rejected at runtime (issue #37 regression)."""
+        spec = fn_spec("f", [], STR_T, [
+            {"op": "http_get", "url": {"lit": "file:///etc/passwd"}, "effect": "NET", "into": "body"},
+            {"op": "return", "val": {"ref": "body"}},
+        ], effects=["NET"])
+        with self.assertRaises(NailRuntimeError):
+            Runtime(spec).run()
+
     def test_granular_fs_effect_allowed_path_happy_path(self):
         with tempfile.TemporaryDirectory() as td:
             allowed_root = Path(td) / "data"

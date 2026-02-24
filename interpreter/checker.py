@@ -960,6 +960,15 @@ class Checker:
         raise CheckError(f"[{fn_id}] read_file path not allowed by declared FS capabilities: {path_value!r}")
 
     def _check_net_constraints(self, fn_id: str, url_expr: Any) -> None:
+        # Scheme validation for literal URLs (defence-in-depth; runtime always validates).
+        url_literal = self._string_literal(url_expr)
+        if url_literal is not None:
+            from urllib.parse import urlparse as _up
+            parsed = _up(url_literal)
+            if parsed.scheme not in ("http", "https"):
+                raise CheckError(
+                    f"[{fn_id}] http_get blocked: scheme {parsed.scheme!r} not allowed (only 'http' and 'https' are permitted)"
+                )
         caps = self.declared_effect_caps.get("NET", [])
         if not caps:
             return
@@ -989,6 +998,8 @@ class Checker:
 
     def _net_capability_allows(self, cap: dict, url_value: str) -> bool:
         parsed = urlparse(url_value)
+        if parsed.scheme not in ("http", "https"):
+            return False
         host = (parsed.hostname or "").lower()
         if not host:
             return False

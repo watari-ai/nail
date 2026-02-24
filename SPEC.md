@@ -80,16 +80,16 @@ Structured effect capabilities are also valid in `effects` (v0.4):
 ```json
 "effects": [
   { "kind": "FS",  "allow": ["/tmp/", "./data/"], "ops": ["read"] },
-  { "kind": "Net", "allow": ["api.example.com"] }
+  { "kind": "NET", "allow": ["api.example.com"] }
 ]
 ```
 
 Rules:
 - `effects` items may be string or object.
-- String effects remain fully supported for backward compatibility (`"FS"`, `"IO"`, `"NET"` and legacy `"Net"`).
+- String effects are fully supported (`"FS"`, `"IO"`, `"NET"`). The runtime normalises kind strings to uppercase, so `"Net"` is accepted but `"NET"` is the canonical form.
 - Object effects must include `kind`.
 - `kind: "FS"` may constrain filesystem access via `allow` and optional operation filter `ops`.
-- `kind: "Net"` (normalized as `NET`) may constrain outbound domains via `allow` and optional operation filter `ops`.
+- `kind: "NET"` may constrain outbound domains via `allow` and optional operation filter `ops`.
 - If any structured capability for a kind exists, operations of that kind are allowed only when one declared capability matches.
 
 ---
