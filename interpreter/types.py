@@ -1,6 +1,13 @@
 """
-NAIL Type System — v0.3
+NAIL Type System — v0.4
 Represents and validates NAIL's type hierarchy.
+
+v0.4 additions:
+  - FnType: internal representation of function signatures used by higher-order
+    collection operations (list_map / list_filter / list_fold).
+    FnType is NOT a first-class NAIL value type; functions are referenced by
+    string ID in NAIL JSON. FnType exists only so the checker can describe and
+    report expected function signatures in error messages.
 """
 
 from dataclasses import dataclass
@@ -138,7 +145,32 @@ class EnumType:
         return f"enum<{tags}>"
 
 
+@dataclass(frozen=True)
+class FnType:
+    """Internal: represents the expected signature of a function reference used
+    in higher-order collection operations (list_map, list_filter, list_fold).
+
+    This is NOT a first-class NAIL value type — NAIL has no closures or
+    function-value types.  FnType exists solely so the checker can produce
+    readable error messages like:
+
+        expected fn(int64(panic)) -> bool
+        got     fn(int64(panic)) -> int64(panic)
+
+    when a wrong function is passed to list_filter.
+    """
+
+    param_types: tuple  # tuple[NailType, ...]
+    return_type: Any    # NailType
+
+    def __str__(self) -> str:
+        params = ", ".join(str(p) for p in self.param_types)
+        return f"fn({params}) -> {self.return_type}"
+
+
 NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType
+# NOTE: FnType is intentionally excluded from NailType — it is an internal
+# checker representation only, not a first-class NAIL value type.
 
 
 def parse_type(spec: dict) -> NailType:

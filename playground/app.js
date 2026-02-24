@@ -173,6 +173,117 @@ const EXAMPLES = {
         }
       ]
     }
+  },
+
+  // ── v0.4 Examples ─────────────────────────────────────────────────────────
+
+  type_aliases: {
+    label: "Type Aliases",
+    group: "v0.4",
+    description: "Demonstrates module-level type aliases (v0.4). UserId, Score, and Username are aliases. The rank_label function accepts a Score alias and returns a Username alias.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "module",
+      "id": "type_aliases_demo",
+      "types": {
+        "UserId":   { "type": "int", "bits": 64, "overflow": "panic" },
+        "Score":    { "type": "int", "bits": 64, "overflow": "panic" },
+        "Username": { "type": "string" }
+      },
+      "exports": ["main"],
+      "defs": [
+        {
+          "nail": "0.1.0",
+          "kind": "fn",
+          "id": "rank_label",
+          "effects": [],
+          "params": [
+            { "id": "score", "type": { "type": "alias", "name": "Score" } }
+          ],
+          "returns": { "type": "alias", "name": "Username" },
+          "body": [
+            {
+              "op": "if",
+              "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 90 } },
+              "then": [ { "op": "return", "val": { "lit": "Gold" } } ],
+              "else": [
+                {
+                  "op": "if",
+                  "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 70 } },
+                  "then": [ { "op": "return", "val": { "lit": "Silver" } } ],
+                  "else": [ { "op": "return", "val": { "lit": "Bronze" } } ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nail": "0.1.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            { "op": "let", "id": "uid",   "type": { "type": "alias", "name": "UserId"   }, "val": { "lit": 42 } },
+            { "op": "let", "id": "score", "type": { "type": "alias", "name": "Score"    }, "val": { "lit": 85 } },
+            {
+              "op": "let", "id": "label",
+              "type": { "type": "alias", "name": "Username" },
+              "val": { "op": "call", "fn": "rank_label", "args": [ { "ref": "score" } ] }
+            },
+            {
+              "op": "print",
+              "val": {
+                "op": "concat", "l": { "lit": "User #" },
+                "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "uid" } },
+                  "r": { "op": "concat", "l": { "lit": " \u2014 Score: " },
+                    "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "score" } },
+                      "r": { "op": "concat", "l": { "lit": " \u2192 Rank: " }, "r": { "ref": "label" } }
+                    }
+                  }
+                }
+              },
+              "effect": "IO"
+            },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      ]
+    }
+  },
+
+  fine_grained_effect: {
+    label: "Fine-grained FS Effect",
+    group: "v0.4",
+    description: "Demonstrates structured effect capabilities (v0.4). The function declares { kind: 'FS', allow: ['/tmp/'], ops: ['read'] } — read-only access restricted to /tmp/. Reads /tmp/nail_demo.txt from the server.",
+    args: {},
+    program: {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "read_demo",
+      "effects": [
+        { "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] },
+        "IO"
+      ],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "read_file",
+          "path": { "lit": "/tmp/nail_demo.txt" },
+          "effect": "FS",
+          "into": "contents"
+        },
+        {
+          "op": "print",
+          "val": { "op": "concat", "l": { "lit": "File says: " }, "r": { "ref": "contents" } },
+          "effect": "IO"
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
   }
 };
 
@@ -341,12 +452,24 @@ exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
 // ── Populate Dropdown & Load Default ─────────────────────────────────────────
 
 (function init() {
-  // Build dropdown options
+  // Group examples by their optional `group` property; ungrouped go into "Core"
+  const groups = {};
   for (const [key, ex] of Object.entries(EXAMPLES)) {
-    const opt = document.createElement("option");
-    opt.value = key;
-    opt.textContent = ex.label;
-    exampleSel.appendChild(opt);
+    const g = ex.group || "Core";
+    if (!groups[g]) groups[g] = [];
+    groups[g].push([key, ex]);
+  }
+
+  for (const [groupName, items] of Object.entries(groups)) {
+    const grp = document.createElement("optgroup");
+    grp.label = groupName;
+    for (const [key, ex] of items) {
+      const opt = document.createElement("option");
+      opt.value = key;
+      opt.textContent = ex.label;
+      grp.appendChild(opt);
+    }
+    exampleSel.appendChild(grp);
   }
 
   // Load first example

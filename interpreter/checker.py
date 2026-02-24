@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 from .types import (
     NailType, NailTypeError, NailEffectError,
     parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType, FnType,
     VALID_EFFECTS,
 )
 
@@ -710,6 +710,14 @@ class Checker:
                 # list_push mutates and returns unit; valid as statement
                 self._check_op_expr(fn_id, stmt, local_env)
 
+            elif op == "map_set":
+                # map_set mutates a map entry and returns unit; valid as statement
+                self._check_op_expr(fn_id, stmt, local_env)
+
+            elif op in ("list_map", "list_filter", "list_fold", "map_values"):
+                # Higher-order collection ops may be used as statements (result discarded)
+                self._check_op_expr(fn_id, stmt, local_env)
+
             elif op == "if":
                 cond_type = self._check_expr(fn_id, stmt.get("cond"), local_env)
                 if not isinstance(cond_type, BoolType):
@@ -1085,6 +1093,189 @@ class Checker:
             if not isinstance(map_type, MapType):
                 raise CheckError(f"[{fn_id}] 'map_keys' requires map, got {map_type}")
             return ListType(inner=map_type.key, length="dynamic")
+
+        # ── v0.4 collection ops ──────────────────────────────────────────────
+
+        elif op == "map_values":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_values' requires map, got {map_type}")
+            return ListType(inner=map_type.value, length="dynamic")
+
+        elif op == "map_set":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise CheckError(f"[{fn_id}] 'map_set.map' must be a variable reference")
+            map_type = self._check_expr(fn_id, map_expr, env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_set' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_set.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            val_type = self._check_expr(fn_id, expr.get("value"), env)
+            if not types_equal(val_type, map_type.value):
+                raise CheckError(
+                    f"[{fn_id}] 'map_set.value' type mismatch: expected {map_type.value}, got {val_type}"
+                )
+            return UnitType()
+
+        elif op == "list_map":
+            # list_map: apply a single-argument function to every element of a list,
+            # returning a new list of the function's return type.
+            #
+            # JSON form:
+            #   {"op": "list_map", "list": <expr>, "fn": "<fn_id>"}
+            #
+            # Requires kind:module (function lookup via fn_registry).
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_map' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_map' requires list, got {list_type}")
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_map' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_map' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 1:
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' fn '{callee_id}' must take exactly 1 parameter, "
+                    f"got {len(callee_params)}"
+                )
+            param_type = self._parse_type(callee_params[0]["type"])
+            if not types_equal(param_type, list_type.inner):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type="<any>")
+                actual_sig = FnType(param_types=(param_type,), return_type=self._parse_type(callee["returns"]))
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' fn '{callee_id}' signature mismatch: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            # Effect propagation: callee effects must be a subset of caller effects
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ListType(inner=ret_type, length="dynamic")
+
+        elif op == "list_filter":
+            # list_filter: keep only elements for which a predicate function returns true.
+            #
+            # JSON form:
+            #   {"op": "list_filter", "list": <expr>, "fn": "<fn_id>"}
+            #
+            # The fn must take one argument of type list.inner and return bool.
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_filter' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_filter' requires list, got {list_type}")
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_filter' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_filter' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 1:
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' must take exactly 1 parameter, "
+                    f"got {len(callee_params)}"
+                )
+            param_type = self._parse_type(callee_params[0]["type"])
+            if not types_equal(param_type, list_type.inner):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type=BoolType())
+                actual_sig = FnType(param_types=(param_type,), return_type=self._parse_type(callee["returns"]))
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' signature mismatch: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            if not isinstance(ret_type, BoolType):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type=BoolType())
+                actual_sig = FnType(param_types=(param_type,), return_type=ret_type)
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' must return bool: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            # Effect propagation
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ListType(inner=list_type.inner, length="dynamic")
+
+        elif op == "list_fold":
+            # list_fold: left-fold a list into a single accumulator value.
+            #
+            # JSON form:
+            #   {"op": "list_fold", "list": <expr>, "init": <expr>, "fn": "<fn_id>"}
+            #
+            # The fn must take two arguments:
+            #   param[0]: accumulator type (same as init)
+            #   param[1]: element type    (same as list.inner)
+            # and return the accumulator type.
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_fold' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_fold' requires list, got {list_type}")
+            init_type = self._check_expr(fn_id, expr.get("init"), env)
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_fold' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_fold' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 2:
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' must take exactly 2 parameters, "
+                    f"got {len(callee_params)}"
+                )
+            accum_param_type = self._parse_type(callee_params[0]["type"])
+            elem_param_type = self._parse_type(callee_params[1]["type"])
+            if not types_equal(accum_param_type, init_type):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' first param (accumulator) "
+                    f"type {accum_param_type} != init type {init_type}"
+                )
+            if not types_equal(elem_param_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' second param (element) "
+                    f"type {elem_param_type} != list element type {list_type.inner}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            if not types_equal(ret_type, init_type):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' return type {ret_type} "
+                    f"!= accumulator type {init_type}"
+                )
+            # Effect propagation
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ret_type
 
         elif op == "ok":
             # Result::Ok constructor — returns _ResultOkIntermediate for return-site checking
