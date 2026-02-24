@@ -11,7 +11,7 @@ from typing import Any
 from .types import (
     NailType, NailTypeError, NailEffectError,
     parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType,
     VALID_EFFECTS,
 )
 
@@ -566,6 +566,10 @@ class Checker:
                 # Call can be used as a statement (discard return value)
                 self._check_op_expr(fn_id, stmt, local_env)
 
+            elif op == "list_push":
+                # list_push mutates and returns unit; valid as statement
+                self._check_op_expr(fn_id, stmt, local_env)
+
             elif op == "if":
                 cond_type = self._check_expr(fn_id, stmt.get("cond"), local_env)
                 if not isinstance(cond_type, BoolType):
@@ -737,6 +741,56 @@ class Checker:
             if not isinstance(l_type, StringType) or not isinstance(r_type, StringType):
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
+
+        # Collection ops (v0.4)
+        elif op == "list_get":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_get.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_get' requires list, got {list_type}")
+            index_type = self._check_expr(fn_id, expr.get("index"), env)
+            if not isinstance(index_type, IntType):
+                raise CheckError(f"[{fn_id}] 'list_get.index' must be int, got {index_type}")
+            return list_type.inner
+
+        elif op == "list_push":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_push.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_push' requires list, got {list_type}")
+            value_type = self._check_expr(fn_id, expr.get("value"), env)
+            if not types_equal(value_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_push.value' type mismatch: expected {list_type.inner}, got {value_type}"
+                )
+            return UnitType()
+
+        elif op == "list_len":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_len.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_len' requires list, got {list_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "map_get":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise CheckError(f"[{fn_id}] 'map_get.map' must be a variable reference")
+            map_type = self._check_expr(fn_id, map_expr, env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_get' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_get.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            return map_type.value
 
         elif op == "ok":
             # Result::Ok constructor — returns _ResultOkIntermediate for return-site checking

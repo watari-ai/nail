@@ -237,6 +237,21 @@ Each effectful operation must include an explicit `effect` field with the canoni
 - `float_to_str(Float) -> String` — Convert float to string
 - `bool_to_str(Bool) -> String` — Convert boolean to string
 
+### Collection Operations (v0.4)
+```json
+{ "op": "list_get",  "list": <var>, "index": <expr> }
+{ "op": "list_push", "list": <var>, "value": <expr> }
+{ "op": "list_len",  "list": <var> }
+{ "op": "map_get",   "map": <var>,  "key": <expr> }
+```
+
+Rules:
+- `list_get`: `list` must be `list<T>`, `index` must be `int`; returns `T`.
+  Out-of-bounds is a runtime error.
+- `list_push`: `list` must be `list<T>`, `value` must be `T`; mutates in place; returns `unit`.
+- `list_len`: `list` must be `list<T>`; returns `int`.
+- `map_get`: `map` must be `map<K, V>`, `key` must be `K`; returns `V`.
+
 ### Overflow Policy (v0.3)
 - **Type-level**: Only `"overflow": "panic"` is valid in type declarations. This is the default.
 - **Expression-level** (v0.3): Per-operation `"overflow"` field overrides the type default:

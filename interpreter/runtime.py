@@ -6,7 +6,7 @@ Executes validated NAIL programs.
 from typing import Any
 from .types import (
     IntType, FloatType, BoolType, StringType, UnitType, OptionType,
-    NailRuntimeError, parse_type, types_equal,
+    NailRuntimeError, NailTypeError, parse_type, types_equal,
 )
 
 
@@ -157,6 +157,10 @@ class Runtime:
             self._eval_op(stmt, env)
             return _CONTINUE
 
+        elif op == "list_push":
+            self._eval_op(stmt, env)
+            return _CONTINUE
+
         elif op == "if":
             cond = self._eval(stmt["cond"], env)
             branch = stmt["then"] if cond else stmt["else"]
@@ -277,6 +281,66 @@ class Runtime:
             if not isinstance(l, str) or not isinstance(r, str):
                 raise NailRuntimeError(f"'concat' requires two strings, got {type(l)}, {type(r)}")
             return l + r
+
+        # Collection ops (v0.4)
+        elif op == "list_get":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise NailTypeError("'list_get.list' must be a variable reference")
+            list_val = self._eval(list_expr, env)
+            index = self._eval(expr.get("index"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_get' requires list value, got {type(list_val).__name__}")
+            if not isinstance(index, int) or isinstance(index, bool):
+                raise NailTypeError(f"'list_get.index' must be int, got {type(index).__name__}")
+            if index < 0 or index >= len(list_val):
+                raise NailRuntimeError(f"'list_get' index out of bounds: {index} (len={len(list_val)})")
+            return list_val[index]
+
+        elif op == "list_push":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise NailTypeError("'list_push.list' must be a variable reference")
+            list_name = list_expr["ref"]
+            if list_name not in env:
+                raise NailRuntimeError(f"Undefined variable: {list_name}")
+            list_val = env[list_name]
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_push' requires list value, got {type(list_val).__name__}")
+            value = self._eval(expr.get("value"), env)
+            if list_val and type(value) is not type(list_val[0]):
+                raise NailTypeError(
+                    f"'list_push.value' type mismatch: expected {type(list_val[0]).__name__}, got {type(value).__name__}"
+                )
+            list_val.append(value)
+            return UNIT
+
+        elif op == "list_len":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise NailTypeError("'list_len.list' must be a variable reference")
+            list_val = self._eval(list_expr, env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_len' requires list value, got {type(list_val).__name__}")
+            return len(list_val)
+
+        elif op == "map_get":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise NailTypeError("'map_get.map' must be a variable reference")
+            map_val = self._eval(map_expr, env)
+            key = self._eval(expr.get("key"), env)
+            if not isinstance(map_val, dict):
+                raise NailTypeError(f"'map_get' requires map value, got {type(map_val).__name__}")
+            if map_val:
+                sample_key = next(iter(map_val.keys()))
+                if type(key) is not type(sample_key):
+                    raise NailTypeError(
+                        f"'map_get.key' type mismatch: expected {type(sample_key).__name__}, got {type(key).__name__}"
+                    )
+            if key not in map_val:
+                raise NailRuntimeError(f"'map_get' key not found: {key!r}")
+            return map_val[key]
 
         elif op == "ok":
             return NailResult("ok", self._eval(expr["val"], env))
