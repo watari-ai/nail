@@ -398,6 +398,67 @@ const EXAMPLES = {
     }
   },
 
+  // ── v0.7 examples ──────────────────────────────────────────────────────
+
+  generics_identity: {
+    label: "Generics — identity[T] (v0.7)",
+    group: "v0.7",
+    description: "Generic function (v0.7). identity[T](x: T) -> T works for any type. Called twice: once with int, once with string. The checker infers T from the argument — no type annotations at call sites.",
+    args: {},
+    program: {
+      "nail": "0.7.0",
+      "kind": "module",
+      "id": "generics_demo",
+      "exports": ["main"],
+      "defs": [
+        {
+          "nail": "0.7.0",
+          "kind": "fn",
+          "id": "identity",
+          "type_params": ["T"],
+          "effects": [],
+          "params": [
+            { "id": "x", "type": { "type": "param", "name": "T" } }
+          ],
+          "returns": { "type": "param", "name": "T" },
+          "body": [
+            { "op": "return", "val": { "ref": "x" } }
+          ]
+        },
+        {
+          "nail": "0.7.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            {
+              "op": "let", "id": "n",
+              "type": { "type": "int", "bits": 64, "overflow": "panic" },
+              "val": { "op": "call", "fn": "identity", "args": [{ "lit": 42 }] }
+            },
+            {
+              "op": "let", "id": "s",
+              "type": { "type": "string" },
+              "val": { "op": "call", "fn": "identity", "args": [{ "lit": "NAIL" }] }
+            },
+            {
+              "op": "print", "effect": "IO",
+              "val": { "op": "concat", "l": { "lit": "identity(42) = " },
+                       "r": { "op": "int_to_str", "v": { "ref": "n" } } }
+            },
+            {
+              "op": "print", "effect": "IO",
+              "val": { "op": "concat", "l": { "lit": "identity(\"NAIL\") = " }, "r": { "ref": "s" } }
+            },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      ]
+    }
+  },
+
   // ── v0.6 examples ──────────────────────────────────────────────────────
 
   l3_termination: {
