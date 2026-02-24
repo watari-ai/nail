@@ -113,6 +113,17 @@ class TestL0Schema(unittest.TestCase):
         }
         Checker(spec).check()
 
+    def test_malformed_import_missing_from_fails_l0(self):
+        spec = {
+            "nail": "0.3",
+            "kind": "module",
+            "id": "main",
+            "imports": [{"module": "math_utils"}],
+            "defs": [],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
 
 # ──────────────────────────────────────────────
 #  L1 Tests — Type Checking
@@ -1086,7 +1097,7 @@ class TestCanonicalForm(unittest.TestCase):
         INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
         return {
             "nail": "0.3", "kind": "module", "id": "main",
-            "imports": [{"module": "math_utils", "fns": ["add", "square"]}],
+            "imports": [{"module": "math_utils", "from": "math_utils.nail", "fns": ["add", "square"]}],
             "defs": [
                 {"nail": "0.3", "kind": "fn", "id": "sum_of_squares", "effects": [],
                  "params": [{"id": "a", "type": INT64}, {"id": "b", "type": INT64}],
@@ -1123,7 +1134,7 @@ class TestCanonicalForm(unittest.TestCase):
         INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
         main = {
             "nail": "0.3", "kind": "module", "id": "main",
-            "imports": [{"module": "math_utils", "fns": ["nonexistent_fn"]}],
+            "imports": [{"module": "math_utils", "from": "math_utils.nail", "fns": ["nonexistent_fn"]}],
             "defs": [],
         }
         modules = {"math_utils": self._math_utils_spec()}
@@ -1143,7 +1154,7 @@ class TestCanonicalForm(unittest.TestCase):
         }
         main = {
             "nail": "0.3", "kind": "module", "id": "main",
-            "imports": [{"module": "io_utils", "fns": ["print_num"]}],
+            "imports": [{"module": "io_utils", "from": "io_utils.nail", "fns": ["print_num"]}],
             "defs": [
                 {"nail": "0.3", "kind": "fn", "id": "pure_fn", "effects": [],  # pure!
                  "params": [{"id": "n", "type": INT64}], "returns": INT64,
@@ -1160,12 +1171,12 @@ class TestCanonicalForm(unittest.TestCase):
         """Circular imports must raise CheckError."""
         a_mod = {
             "nail": "0.3", "kind": "module", "id": "a",
-            "imports": [{"module": "b", "fns": []}],
+            "imports": [{"module": "b", "from": "b.nail", "fns": []}],
             "defs": [],
         }
         b_mod = {
             "nail": "0.3", "kind": "module", "id": "b",
-            "imports": [{"module": "a", "fns": []}],
+            "imports": [{"module": "a", "from": "a.nail", "fns": []}],
             "defs": [],
         }
         with self.assertRaises(CheckError):

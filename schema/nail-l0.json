@@ -187,6 +187,37 @@
             "type": "string"
           }
         },
+        "imports": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "module": {
+                "type": "string"
+              },
+              "from": {
+                "type": "string"
+              },
+              "fns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "module",
+              "from"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "types": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/type_spec"
+          }
+        },
         "defs": {
           "type": "array",
           "items": {
