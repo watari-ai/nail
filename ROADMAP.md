@@ -101,12 +101,31 @@ Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 - [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib. (deferred to v0.7+)
 - [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option. (deferred to v0.7+)
 
-## v0.7 Goals — Developer Experience + Connectivity
+## v0.7.0 (2026-02-25) — Generics & MCP Bridge ✅ COMPLETE
+- [x] **TypeParam / type inference** — `unify_types` / `substitute_type`, generic function definitions
+- [x] **import "from" optional schema** — auto-module load from file path
+- [x] **JSON error format** — `nail check --format json` for machine-parseable output
+- [x] **MCP Bridge** — `from_mcp` / `to_mcp` / `infer_effects` for MCP protocol integration
+- [x] **Shareable Playground links** — URL hash encoding for shareable examples
+
+## v0.7.2 (2026-02-25) — Generic Type Aliases ✅ COMPLETE
+- [x] **Module-level type aliases with type_params** — `alias` definitions with generic parameters
+- [x] **SPEC.md §16.5** — Generic type aliases formally specified
+
+## v0.8.0 (2026-02-25) — FC Standard ✅ COMPLETE
+- [x] **`nail_lang.fc_standard` module** — unified Function Calling standard library
+- [x] **to_openai_tool / to_anthropic_tool / to_gemini_tool** — NAIL → provider schema converters
+- [x] **from_openai_tool / from_anthropic_tool / from_gemini_tool** — provider schema → NAIL converters
+- [x] **`convert_tools()` batch utility** — bulk conversion between all formats
+- [x] **Round-trip tests** — NAIL ↔ OpenAI ↔ Anthropic ↔ Gemini verified
+- [x] **Playground examples** — MCP Bridge, Generic Type Aliases, FC Standard demo examples
+
+## v0.7 Original Goals — Developer Experience + Connectivity
 - [ ] **LSP Support** — Language Server Protocol for Nail-Lens integration. Hover types, error highlighting, go-to-definition for NAIL JSON.
 - [ ] **NAIL → WebAssembly** — Compile NAIL to Wasm for browser execution. Playground v2 with native performance.
 - [ ] **AI Agent Protocol (NATP)** — NAIL-format task delegation between agents. Agent A delegates to Agent B with formal effect constraints.
 
-## v0.8 Goals — Concurrency + Security
+## v0.8 Original Goals — Concurrency + Security
 - [ ] **Async / Concurrency** — Full design required simultaneously: cancellation, timeout, join/await types, determinism policy. Not just 'effects: [ASYNC]'.
 - [ ] **Effect Security Model** — Formal policy for FS/NET/TIME/RAND/ASYNC: audit log spec, permission boundary definitions.
 
@@ -226,6 +245,10 @@ v0.4:   ✅ Complete (2026-02-24) — 320 tests, type aliases, fine-grained effe
         FC Effect Annotations (integrations/), Python→NAIL transpiler (transpiler/), PyPI v0.4.0 published
 v0.5:   ✅ COMPLETE — Enum/ADT, Core StdLib, FC Annotations, Return-path exhaustiveness, CI canonical check
 v0.6:   ✅ COMPLETE — L3 Termination Proof (loop step validation + recursive decreasing measure annotation, 421 tests)
+v0.7.0: ✅ COMPLETE (2026-02-25) — Generics (TypeParam/type inference), MCP Bridge, JSON error format, Playground shareable links
+v0.7.1: ✅ COMPLETE (2026-02-25) — version bump, PyPI v0.7.1 published
+v0.7.2: ✅ COMPLETE (2026-02-25) — Generic type aliases, SPEC.md §16.5, PyPI v0.7.2 published
+v0.8.0: ✅ COMPLETE (2026-02-25) — FC Standard (nail_lang.fc_standard), OpenAI/Anthropic/Gemini converters, round-trip tests
 Phase 4: 🚀 Active
 ```
 
@@ -233,4 +256,4 @@ Move to Phase 4 vision (not numbered roadmap):
 - NAIL Package Manager (needs user base first)
 - NAIL in NAIL bootstrapping (post-v1.0 experiment)
 
-*Last updated: 2026-02-24 by Watari*
+*Last updated: 2026-02-25 by Watari*
