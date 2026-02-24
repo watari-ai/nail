@@ -1206,6 +1206,216 @@ class TestCanonicalForm(unittest.TestCase):
         self.assertEqual(r_err, -1)
 
 
+class TestV05EnumADT(unittest.TestCase):
+
+    def _color_type(self):
+        return {
+            "type": "enum",
+            "variants": [
+                {"tag": "Red"},
+                {"tag": "Green"},
+                {"tag": "Blue"},
+            ],
+        }
+
+    def _shape_type(self):
+        f64 = {"type": "float", "bits": 64}
+        return {
+            "type": "enum",
+            "variants": [
+                {"tag": "Circle", "fields": [{"name": "radius", "type": f64}]},
+                {"tag": "Rectangle", "fields": [{"name": "w", "type": f64}, {"name": "h", "type": f64}]},
+            ],
+        }
+
+    def test_enum_unit_construct_and_match(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Red", "fields": {}, "into": "c"},
+                        {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                            {"tag": "Red", "body": [{"op": "return", "val": {"lit": 1}}]},
+                            {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
+                            {"tag": "Blue", "body": [{"op": "return", "val": {"lit": 3}}]},
+                        ]},
+                    ],
+                )
+            ],
+            types={"Color": self._color_type()},
+        )
+        self.assertEqual(run_spec(spec, call_fn="main"), 1)
+
+    def test_enum_with_fields_construct_and_match(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    {"type": "float", "bits": 64},
+                    [
+                        {
+                            "op": "enum_make",
+                            "tag": "Circle",
+                            "fields": {"radius": {"lit": 3.5, "type": {"type": "float", "bits": 64}}},
+                            "into": "shape",
+                        },
+                        {"op": "match_enum", "val": {"ref": "shape"}, "cases": [
+                            {"tag": "Circle", "binds": {"radius": "r"}, "body": [{"op": "return", "val": {"ref": "r"}}]},
+                            {
+                                "tag": "Rectangle",
+                                "binds": {"w": "width", "h": "height"},
+                                "body": [{"op": "return", "val": {"op": "+", "l": {"ref": "width"}, "r": {"ref": "height"}}}],
+                            },
+                        ]},
+                    ],
+                )
+            ],
+            types={"Shape": self._shape_type()},
+        )
+        self.assertEqual(run_spec(spec, call_fn="main"), 3.5)
+
+    def test_match_enum_exhaustiveness_missing_tag_without_default_raises(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Red", "fields": {}, "into": "c"},
+                        {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                            {"tag": "Red", "body": [{"op": "return", "val": {"lit": 1}}]},
+                            {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
+                        ]},
+                    ],
+                )
+            ],
+            types={"Color": self._color_type()},
+        )
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_enum_make_wrong_tag_raises(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Purple", "fields": {}, "into": "c"},
+                        {"op": "return", "val": {"lit": 0}},
+                    ],
+                )
+            ],
+            types={"Color": self._color_type()},
+        )
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_enum_make_field_type_mismatch_raises(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Circle", "fields": {"radius": {"lit": True}}, "into": "shape"},
+                        {"op": "return", "val": {"lit": 0}},
+                    ],
+                )
+            ],
+            types={"Shape": self._shape_type()},
+        )
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_match_enum_binds_introduce_typed_vars(self):
+        int_enum = {
+            "type": "enum",
+            "variants": [
+                {"tag": "I", "fields": [{"name": "v", "type": INT64}]},
+                {"tag": "None"},
+            ],
+        }
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "I", "fields": {"v": {"lit": 41}}, "into": "x"},
+                        {"op": "match_enum", "val": {"ref": "x"}, "cases": [
+                            {
+                                "tag": "I",
+                                "binds": {"v": "n"},
+                                "body": [{"op": "return", "val": {"op": "+", "l": {"ref": "n"}, "r": {"lit": 1}}}],
+                            },
+                            {"tag": "None", "body": [{"op": "return", "val": {"lit": 0}}]},
+                        ]},
+                    ],
+                )
+            ],
+            types={"IntWrap": int_enum},
+        )
+        self.assertEqual(run_spec(spec, call_fn="main"), 42)
+
+    def test_match_enum_default_allows_non_exhaustive_cases(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Blue", "fields": {}, "into": "c"},
+                        {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                            {"tag": "Red", "body": [{"op": "return", "val": {"lit": 1}}]},
+                        ], "default": [{"op": "return", "val": {"lit": 9}}]},
+                    ],
+                )
+            ],
+            types={"Color": self._color_type()},
+        )
+        self.assertEqual(run_spec(spec, call_fn="main"), 9)
+
+    def test_match_enum_invalid_bind_field_raises(self):
+        spec = module_spec(
+            "enum_mod",
+            defs=[
+                fn_spec(
+                    "main",
+                    [],
+                    INT64,
+                    [
+                        {"op": "enum_make", "tag": "Red", "fields": {}, "into": "c"},
+                        {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                            {"tag": "Red", "binds": {"radius": "r"}, "body": [{"op": "return", "val": {"lit": 1}}]},
+                            {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
+                            {"tag": "Blue", "body": [{"op": "return", "val": {"lit": 3}}]},
+                        ]},
+                    ],
+                )
+            ],
+            types={"Color": self._color_type()},
+        )
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
 if __name__ == "__main__":
     loader = unittest.TestLoader()
     suite = loader.loadTestsFromModule(sys.modules[__name__])

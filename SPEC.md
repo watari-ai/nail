@@ -1,4 +1,4 @@
-# NAIL Language Specification v0.4
+# NAIL Language Specification v0.5
 
 > ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI
 
@@ -26,6 +26,7 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 { "type": "map",    "key": <type>, "value": <type> }
 { "type": "unit" }
 { "type": "alias",  "name": "<AliasName>" }
+{ "type": "enum",   "variants": [ { "tag": "<Tag>" }, { "tag": "<Tag>", "fields": [ { "name": "<field>", "type": <type> } ] } ] }
 ```
 
 **Design principles:**
@@ -56,6 +57,39 @@ Rules:
 - Alias lookup scope is the containing module's `types`.
 - Aliases may reference other aliases.
 - Circular aliases are a compile error.
+
+### Enum / ADT (v0.5)
+
+Enum definitions are declared under module-level `types` (same namespace as type aliases).
+
+```json
+"types": {
+  "Color": {
+    "type": "enum",
+    "variants": [
+      { "tag": "Red" },
+      { "tag": "Green" },
+      { "tag": "Blue" }
+    ]
+  },
+  "Shape": {
+    "type": "enum",
+    "variants": [
+      { "tag": "Circle", "fields": [ { "name": "radius", "type": { "type": "float", "bits": 64 } } ] },
+      { "tag": "Rectangle", "fields": [
+        { "name": "w", "type": { "type": "float", "bits": 64 } },
+        { "name": "h", "type": { "type": "float", "bits": 64 } }
+      ] }
+    ]
+  }
+}
+```
+
+Rules:
+- Each variant tag must be unique within the enum.
+- Variant field names must be unique within the variant.
+- Enum field types follow the normal type system and alias resolution rules.
+- `result<Ok, Err>` remains supported and can be seen as a specialized two-variant ADT.
 
 ---
 
@@ -226,6 +260,41 @@ Infinite loops do not exist. Termination condition is required (for termination 
 `let` declares a variable. Variables are immutable by default.
 Use `"mut": true` on `let` to declare a mutable variable.
 Use `assign` to update a previously declared mutable variable.
+
+### Enum Construction / Matching (v0.5)
+
+Construct an enum value:
+
+```json
+{
+  "op": "enum_make",
+  "tag": "Circle",
+  "fields": { "radius": { "lit": 3.14, "type": { "type": "float", "bits": 64 } } },
+  "into": "my_shape"
+}
+```
+
+Pattern match:
+
+```json
+{
+  "op": "match_enum",
+  "val": { "ref": "my_shape" },
+  "cases": [
+    { "tag": "Circle", "binds": { "radius": "r" }, "body": [ <statements> ] },
+    { "tag": "Rectangle", "binds": { "w": "width", "h": "height" }, "body": [ <statements> ] }
+  ],
+  "default": [ <statements> ]
+}
+```
+
+Rules:
+- `enum_make.tag` must exist on the target enum.
+- `enum_make.fields` must exactly match the selected variant fields (names and types).
+- `match_enum` requires either:
+  - exhaustive coverage of all variant tags, or
+  - a `default` branch.
+- `binds` introduces typed variables in each case body.
 
 ---
 
