@@ -29,7 +29,7 @@ NAIL removes that weight entirely.
 2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior. Enforced by JCS canonical form.
 3. **Effects as types** — All side effects (IO, network, filesystem) are declared in function signatures and enforced by the type system.
 4. **Verification layers (L0–L2)** — Every program passes schema, type, and effect checks before execution. No silent passes.
-5. **Formal verification (v0.3+)** — Full termination proofs and formal verification are a future milestone.
+5. **Formal verification (v0.4+)** — Full termination proofs and formal verification are a future milestone.
 6. **Self-evolving** — The language specification itself is developed and improved by AI, with humans providing intent and constraints.
 
 ## FAQ: Is NAIL just a JSON AST?
@@ -87,7 +87,7 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 
 ## Status
 
-🧪 **Experimental — v0.2** — `pip install nail-lang`
+🧪 **Experimental — v0.3** — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -101,10 +101,10 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 | Return-path exhaustiveness check | ✅ Implemented |
 | L0 JSON Schema + L1 Type + L2 Effect checks | ✅ Implemented |
 | `read_file` (FS) / `http_get` (NET) | ⚠️ Checker validates; runtime not yet executed |
-| Overflow modes: `wrap` / `sat` | 📅 Planned (v0.3) |
-| Result type (`ok`/`err`/`match_result`) | 📅 Planned (v0.3) |
-| Cross-module import | 📅 Planned (v0.3) |
-| Formal verification / termination proofs | 🔮 Future |
+| Overflow modes: `wrap` / `sat` / `panic` | ✅ Implemented (v0.3) |
+| Result type (`ok`/`err`/`match_result`) | ✅ Implemented (v0.3) |
+| Cross-module import + effect propagation | ✅ Implemented (v0.3) |
+| Formal verification / termination proofs | 🔮 Future (v0.4+) |
 
 ## Secondary Effects: Token Efficiency
 
