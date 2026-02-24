@@ -914,6 +914,90 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
 
+        elif op == "str_len":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_len' requires string, got {val_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "str_split":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            sep_type = self._check_expr(fn_id, expr.get("sep"), env)
+            if not isinstance(val_type, StringType) or not isinstance(sep_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_split' requires string val and sep, got {val_type} and {sep_type}")
+            return ListType(inner=StringType(), length="dynamic")
+
+        elif op == "str_trim":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_trim' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_upper":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_upper' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_lower":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_lower' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_contains":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            sub_type = self._check_expr(fn_id, expr.get("sub"), env)
+            if not isinstance(val_type, StringType) or not isinstance(sub_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_contains' requires string val and sub, got {val_type} and {sub_type}"
+                )
+            return BoolType()
+
+        elif op == "str_starts_with":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            prefix_type = self._check_expr(fn_id, expr.get("prefix"), env)
+            if not isinstance(val_type, StringType) or not isinstance(prefix_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_starts_with' requires string val and prefix, got {val_type} and {prefix_type}"
+                )
+            return BoolType()
+
+        elif op == "str_replace":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            from_type = self._check_expr(fn_id, expr.get("from"), env)
+            to_type = self._check_expr(fn_id, expr.get("to"), env)
+            if not isinstance(val_type, StringType) or not isinstance(from_type, StringType) or not isinstance(to_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_replace' requires string val/from/to, got {val_type}, {from_type}, {to_type}"
+                )
+            return StringType()
+
+        # Math ops (v0.5)
+        elif op == "abs":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'abs' requires numeric value, got {val_type}")
+            return val_type
+
+        elif op == "min2":
+            l_type = self._check_expr(fn_id, expr.get("l"), env)
+            r_type = self._check_expr(fn_id, expr.get("r"), env)
+            if not types_equal(l_type, r_type):
+                raise CheckError(f"[{fn_id}] 'min2' type mismatch: {l_type} vs {r_type}")
+            if not isinstance(l_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'min2' requires numeric operands, got {l_type}")
+            return l_type
+
+        elif op == "max2":
+            l_type = self._check_expr(fn_id, expr.get("l"), env)
+            r_type = self._check_expr(fn_id, expr.get("r"), env)
+            if not types_equal(l_type, r_type):
+                raise CheckError(f"[{fn_id}] 'max2' type mismatch: {l_type} vs {r_type}")
+            if not isinstance(l_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'max2' requires numeric operands, got {l_type}")
+            return l_type
+
         # Collection ops (v0.4)
         elif op == "list_get":
             list_expr = expr.get("list")
@@ -950,6 +1034,27 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'list_len' requires list, got {list_type}")
             return IntType(bits=64, overflow="panic")
 
+        elif op == "list_slice":
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_slice' requires list, got {list_type}")
+            from_type = self._check_expr(fn_id, expr.get("from"), env)
+            to_type = self._check_expr(fn_id, expr.get("to"), env)
+            if not isinstance(from_type, IntType) or not isinstance(to_type, IntType):
+                raise CheckError(f"[{fn_id}] 'list_slice.from/to' must be int, got {from_type} and {to_type}")
+            return ListType(inner=list_type.inner, length="dynamic")
+
+        elif op == "list_contains":
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_contains' requires list, got {list_type}")
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not types_equal(val_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_contains.val' type mismatch: expected {list_type.inner}, got {val_type}"
+                )
+            return BoolType()
+
         elif op == "map_get":
             map_expr = expr.get("map")
             if not isinstance(map_expr, dict) or "ref" not in map_expr:
@@ -963,6 +1068,23 @@ class Checker:
                     f"[{fn_id}] 'map_get.key' type mismatch: expected {map_type.key}, got {key_type}"
                 )
             return map_type.value
+
+        elif op == "map_has":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_has' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_has.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            return BoolType()
+
+        elif op == "map_keys":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_keys' requires map, got {map_type}")
+            return ListType(inner=map_type.key, length="dynamic")
 
         elif op == "ok":
             # Result::Ok constructor — returns _ResultOkIntermediate for return-site checking

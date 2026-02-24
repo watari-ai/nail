@@ -782,6 +782,128 @@ class TestCollectionOpsV04(unittest.TestCase):
 
 
 # ──────────────────────────────────────────────
+#  v0.5 Stdlib Ops Tests
+# ──────────────────────────────────────────────
+
+class TestStdlibStringOpsV05(unittest.TestCase):
+
+    def test_str_len_happy(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "str_len", "val": {"lit": "nail"}}}
+        ])
+        self.assertEqual(run_spec(spec), 4)
+
+    def test_str_split_happy(self):
+        list_str = {"type": "list", "inner": STR_T, "len": "dynamic"}
+        spec = fn_spec("f", [], list_str, [
+            {"op": "return", "val": {"op": "str_split", "val": {"lit": "a,b,c"}, "sep": {"lit": ","}}}
+        ])
+        self.assertEqual(run_spec(spec), ["a", "b", "c"])
+
+    def test_str_pipeline_happy(self):
+        spec = fn_spec("f", [], BOOL_T, [
+            {"op": "return", "val": {
+                "op": "str_contains",
+                "val": {"op": "str_upper", "val": {"op": "str_trim", "val": {"lit": "  nail lang  "}}},
+                "sub": {"lit": "NAIL"}
+            }}
+        ])
+        self.assertTrue(run_spec(spec))
+
+    def test_str_contains_type_error(self):
+        spec = fn_spec("f", [], BOOL_T, [
+            {"op": "return", "val": {"op": "str_contains", "val": {"lit": "abc"}, "sub": {"lit": 1}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestStdlibMathOpsV05(unittest.TestCase):
+
+    def test_abs_happy(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "abs", "val": {"lit": -42}}}
+        ])
+        self.assertEqual(run_spec(spec), 42)
+
+    def test_min2_happy(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "min2", "l": {"lit": 9}, "r": {"lit": 3}}}
+        ])
+        self.assertEqual(run_spec(spec), 3)
+
+    def test_max2_happy(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "max2", "l": {"lit": 9}, "r": {"lit": 3}}}
+        ])
+        self.assertEqual(run_spec(spec), 9)
+
+    def test_min2_type_error(self):
+        spec = fn_spec("f", [], INT64, [
+            {"op": "return", "val": {"op": "min2", "l": {"lit": 1}, "r": {"lit": 2.0}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestStdlibListOpsV05(unittest.TestCase):
+
+    def test_list_slice_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], LIST_INT, [
+            {"op": "return", "val": {"op": "list_slice", "list": {"ref": "xs"}, "from": {"lit": 1}, "to": {"lit": 3}}}
+        ])
+        self.assertEqual(run_spec(spec, args={"xs": [10, 20, 30, 40]}), [20, 30])
+
+    def test_list_contains_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], BOOL_T, [
+            {"op": "return", "val": {"op": "list_contains", "list": {"ref": "xs"}, "val": {"lit": 30}}}
+        ])
+        self.assertTrue(run_spec(spec, args={"xs": [10, 20, 30]}))
+
+    def test_list_contains_false_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], BOOL_T, [
+            {"op": "return", "val": {"op": "list_contains", "list": {"ref": "xs"}, "val": {"lit": 999}}}
+        ])
+        self.assertFalse(run_spec(spec, args={"xs": [10, 20, 30]}))
+
+    def test_list_slice_type_error(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], LIST_INT, [
+            {"op": "return", "val": {"op": "list_slice", "list": {"ref": "xs"}, "from": {"lit": True}, "to": {"lit": 2}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestStdlibMapOpsV05(unittest.TestCase):
+
+    def test_map_has_happy(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], BOOL_T, [
+            {"op": "return", "val": {"op": "map_has", "map": {"ref": "m"}, "key": {"lit": "a"}}}
+        ])
+        self.assertTrue(run_spec(spec, args={"m": {"a": 1, "b": 2}}))
+
+    def test_map_has_false_happy(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], BOOL_T, [
+            {"op": "return", "val": {"op": "map_has", "map": {"ref": "m"}, "key": {"lit": "x"}}}
+        ])
+        self.assertFalse(run_spec(spec, args={"m": {"a": 1, "b": 2}}))
+
+    def test_map_keys_happy(self):
+        list_str = {"type": "list", "inner": STR_T, "len": "dynamic"}
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], list_str, [
+            {"op": "return", "val": {"op": "map_keys", "map": {"ref": "m"}}}
+        ])
+        self.assertEqual(run_spec(spec, args={"m": {"a": 1, "b": 2}}), ["a", "b"])
+
+    def test_map_has_key_type_error(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], BOOL_T, [
+            {"op": "return", "val": {"op": "map_has", "map": {"ref": "m"}, "key": {"lit": 1}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+# ──────────────────────────────────────────────
 #  v0.2 Tests — Checker Fixes
 # ──────────────────────────────────────────────
 
