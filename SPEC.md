@@ -358,12 +358,19 @@ v0.4 implements L0–L2 (L3/L4 planned for future versions).
 
 ## 14. Implemented in v0.4
 
-The following features were added in v0.4:
+Cumulative: v0.4 includes all v0.3 features plus the following additions.
 
-- **Result type** (`result`, `ok`, `err`, `match_result`) — error handling without exceptions. See [designs/v0.3/result-type.md](designs/v0.3/result-type.md)
-- **Cross-module imports** — import and call functions from other NAIL modules. Circular import detection, effect propagation across boundaries. See [designs/v0.3/cross-module.md](designs/v0.3/cross-module.md)
-- **Expression-level overflow** (`wrap`/`sat`/`panic` per operation). See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)
+**v0.3 features (carried forward):**
+- Result type (`result`, `ok`, `err`, `match_result`) — see [designs/v0.3/result-type.md](designs/v0.3/result-type.md)
+- Cross-module imports — see [designs/v0.3/cross-module.md](designs/v0.3/cross-module.md)
+- Expression-level overflow (`wrap`/`sat`/`panic` per operation) — see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)
+
+**New in v0.4:**
 - **Type aliases** (`module.types`, `{ "type": "alias", "name": ... }`) — reusable module-local type definitions.
+- **Collection operations** — `list_get`, `list_push`, `list_len`, `map_get`, `map_set`, `map_has`, `list_make`, `map_make`.
+- **Granular effect capabilities** — structured `effects` objects with `kind`, `allow`, and `ops` for fine-grained access control.
+- **Effectful op contract** — `read_file` and `http_get` require an explicit `"effect"` field; bare declaration is a check-time error.
+- **URL scheme restriction** — `http_get` accepts only `http://` and `https://` schemes; `file://` and other schemes are rejected at both check and runtime.
 
 ## 15. Out of Scope (v0.4)
 
