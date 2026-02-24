@@ -35,6 +35,8 @@ class Runtime:
             self.module_fn_registry[mod_id] = {
                 fn["id"]: fn for fn in mod_spec.get("defs", []) if "id" in fn
             }
+        # Bug 3 fix: stack of currently-executing module IDs for local call resolution
+        self._module_id_stack: list[str | None] = []
 
     def run(self, args: dict | None = None):
         """Run the program. For kind:fn, executes it directly.
@@ -57,16 +59,20 @@ class Runtime:
             raise NailRuntimeError(f"Function '{fn_id}' not found in module. Available: {available}")
         return self._run_fn(self.fn_registry[fn_id], args or {})
 
-    def _run_fn(self, fn: dict, args: dict) -> Any:
-        env = dict(args)
-        # Bind params
-        for param in fn.get("params", []):
-            pid = param["id"]
-            if pid not in env:
-                raise NailRuntimeError(f"Missing argument: {pid}")
-        result = self._run_body(fn["body"], env)
-        # At the top-level function boundary, _CONTINUE means implicit unit return
-        return UNIT if result is _CONTINUE else result
+    def _run_fn(self, fn: dict, args: dict, module_id: str | None = None) -> Any:
+        self._module_id_stack.append(module_id)
+        try:
+            env = dict(args)
+            # Bind params
+            for param in fn.get("params", []):
+                pid = param["id"]
+                if pid not in env:
+                    raise NailRuntimeError(f"Missing argument: {pid}")
+            result = self._run_body(fn["body"], env)
+            # At the top-level function boundary, _CONTINUE means implicit unit return
+            return UNIT if result is _CONTINUE else result
+        finally:
+            self._module_id_stack.pop()
 
     def _run_body(self, body: list, env: dict) -> Any:
         """Execute a list of statements, mutating env in place.
@@ -288,10 +294,26 @@ class Runtime:
                 if callee_id not in mod_fns:
                     raise NailRuntimeError(f"Function '{callee_id}' not found in module '{cross_module}'")
                 callee = mod_fns[callee_id]
+                call_module_id = cross_module
             else:
-                if callee_id not in self.fn_registry:
-                    raise NailRuntimeError(f"Unknown function: {callee_id!r}")
-                callee = self.fn_registry[callee_id]
+                # Bug 3 fix: resolve local calls in the currently-executing module first,
+                # then fall back to the entry module's fn_registry.
+                current_mod = self._module_id_stack[-1] if self._module_id_stack else None
+                if current_mod and current_mod in self.module_fn_registry:
+                    mod_fns = self.module_fn_registry[current_mod]
+                    if callee_id in mod_fns:
+                        callee = mod_fns[callee_id]
+                        call_module_id = current_mod
+                    elif callee_id in self.fn_registry:
+                        callee = self.fn_registry[callee_id]
+                        call_module_id = None
+                    else:
+                        raise NailRuntimeError(f"Unknown function: {callee_id!r}")
+                else:
+                    if callee_id not in self.fn_registry:
+                        raise NailRuntimeError(f"Unknown function: {callee_id!r}")
+                    callee = self.fn_registry[callee_id]
+                    call_module_id = None
 
             args_expr = expr.get("args", [])
             params = callee.get("params", [])
@@ -302,7 +324,7 @@ class Runtime:
             call_args = {}
             for param, arg_expr in zip(params, args_expr):
                 call_args[param["id"]] = self._eval(arg_expr, env)
-            return self._run_fn(callee, call_args)
+            return self._run_fn(callee, call_args, module_id=call_module_id)
 
         else:
             raise NailRuntimeError(f"Unknown op: {op}")

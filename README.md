@@ -54,7 +54,7 @@ Layering is intentional: L0 is minimal by design, while L1/L2 enforce semantic c
 Every function declares its side effects (`io`, `net`, `fs`) in its signature. Calling an IO function from a pure context is a compile-time error — not a lint warning, not a runtime panic.
 
 ```json
-{"nail":"0.2","kind":"module","fns":[
+{"nail":"0.2","kind":"module","defs":[
   {"id":"log_it","effects":["IO"],"params":[{"id":"x","type":{"type":"int","bits":64,"overflow":"panic"}}],"returns":{"type":"unit"},"body":[]},
   {"id":"pure_fn","effects":[],"params":[],"returns":{"type":"unit"},"body":[
     {"op":"call","fn":"log_it","args":[{"lit":1}]}

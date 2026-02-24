@@ -45,9 +45,15 @@ class Checker:
         self.call_graph: dict[str, set[str]] = {}
         self.raw_text = raw_text
         self.strict = strict
-        self.modules: dict[str, dict] = modules or {}
+        self.modules: dict[str, dict] = dict(modules or {})
+        # Ensure the entry module itself is registered for circular import detection
+        _entry_id = spec.get("id")
+        if _entry_id and _entry_id not in self.modules:
+            self.modules[_entry_id] = spec
         # module_fn_registry: {module_id: {fn_id: fn_spec}}
         self.module_fn_registry: dict[str, dict[str, dict]] = {}
+        # Track which imported modules have already been body-checked (Bug 2 fix)
+        self._checked_module_ids: set[str] = set()
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -169,6 +175,24 @@ class Checker:
                         f"Function '{fn_id}' not found in module '{module_id}'"
                     )
             self.module_fn_registry[module_id] = imported_fns
+            # Bug 2 fix: also validate the body of the imported module, not just its signatures
+            self._check_imported_module_body(module_id)
+
+    def _check_imported_module_body(self, module_id: str):
+        """Recursively validate the body of an imported module (Bug 2 fix).
+
+        Uses _checked_module_ids to prevent infinite recursion on circular
+        structures (circular imports are caught first by _detect_circular_imports).
+        """
+        if module_id in self._checked_module_ids:
+            return
+        self._checked_module_ids.add(module_id)
+        imported_mod = self.modules.get(module_id)
+        if imported_mod is None:
+            return
+        sub = Checker(imported_mod, modules=self.modules)
+        sub._checked_module_ids = self._checked_module_ids  # share the visited set
+        sub.check()
 
     def _detect_circular_imports(self, module_id: str, visiting: set[str]):
         """DFS to detect import cycles."""
