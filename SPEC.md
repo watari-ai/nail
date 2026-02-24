@@ -1,6 +1,6 @@
 # NAIL Language Specification v0.5
 
-> ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI
+> ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI (v0.4 fine-grained effects + type aliases fully specified)
 
 ---
 
@@ -55,8 +55,10 @@ Alias usage:
 
 Rules:
 - Alias lookup scope is the containing module's `types`.
-- Aliases may reference other aliases.
-- Circular aliases are a compile error.
+- Aliases may reference other aliases (transitivity: chains of arbitrary depth are resolved).
+- Aliases may be used anywhere a type is valid: parameter types, return types, `let` binding type annotations, and nested within `option`, `list`, `map`, and `result` types.
+- Circular aliases (direct, indirect, or via nested types) are a compile error.
+- Referencing an undefined alias name is a compile error.
 
 ### Enum / ADT (v0.5)
 
@@ -121,10 +123,17 @@ Structured effect capabilities are also valid in `effects` (v0.4):
 Rules:
 - `effects` items may be string or object.
 - String effects are fully supported (`"FS"`, `"IO"`, `"NET"`). The runtime normalises kind strings to uppercase, so `"Net"` is accepted but `"NET"` is the canonical form.
-- Object effects must include `kind`.
-- `kind: "FS"` may constrain filesystem access via `allow` and optional operation filter `ops`.
-- `kind: "NET"` may constrain outbound domains via `allow` and optional operation filter `ops`.
+- Object effects must include `kind`. `kind` must be one of `"FS"`, `"NET"` (other values are a compile error).
+- Object effects must include `allow`. A missing or empty `allow` list is a compile error. All items in `allow` must be strings (non-string items are a compile error).
+- `kind: "FS"` constrains filesystem access via `allow` (list of allowed directory roots) and optional operation filter `ops`.
+  - A file path is allowed if it starts with any entry in `allow` (i.e. files inside subdirectories of an allowed root are permitted).
+  - Sibling directories outside the allowed roots are denied.
+- `kind: "NET"` constrains outbound domains via `allow` (list of exact hostnames) and optional operation filter `ops`.
+  - Domain matching is case-insensitive (RFC 4343): `"API.EXAMPLE.COM"` matches `"api.example.com"`.
+  - Matching is **exact hostname** — subdomains do **not** match the parent: `"sub.api.example.com"` does not match `"api.example.com"`.
+- `ops`, when present, must be a list of strings (not a plain string). If `ops` is absent, all operations of that kind are permitted.
 - If any structured capability for a kind exists, operations of that kind are allowed only when one declared capability matches.
+- Both check-time (L2) and runtime enforcement are required (defence-in-depth).
 
 ---
 
