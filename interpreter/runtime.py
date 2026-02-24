@@ -1,5 +1,5 @@
 """
-NAIL Runtime — v0.3
+NAIL Runtime — v0.4
 Executes validated NAIL programs.
 """
 
@@ -27,14 +27,20 @@ class Runtime:
         self.spec = spec
         self.declared_effects = set(spec.get("effects", []))
         self.fn_registry: dict[str, dict] = {}
+        self.type_aliases: dict[str, dict] = {}
+        self._alias_spec_cache: dict[str, dict] = {}
         if spec.get("kind") == "module":
             self.fn_registry = {fn["id"]: fn for fn in spec.get("defs", [])}
+            self.type_aliases = spec.get("types", {}) or {}
         # Build module_fn_registry for cross-module calls
         self.module_fn_registry: dict[str, dict[str, dict]] = {}
+        self.module_type_aliases: dict[str, dict[str, dict]] = {}
+        self._module_alias_spec_cache: dict[str, dict[str, dict]] = {}
         for mod_id, mod_spec in (modules or {}).items():
             self.module_fn_registry[mod_id] = {
                 fn["id"]: fn for fn in mod_spec.get("defs", []) if "id" in fn
             }
+            self.module_type_aliases[mod_id] = mod_spec.get("types", {}) or {}
         # Bug 3 fix: stack of currently-executing module IDs for local call resolution
         self._module_id_stack: list[str | None] = []
 
@@ -197,7 +203,8 @@ class Runtime:
         if "lit" in expr:
             val = expr["lit"]
             if val is None:
-                t = parse_type(expr.get("type", {"type": "unit"}))
+                current_module_id = self._module_id_stack[-1] if self._module_id_stack else None
+                t = self._parse_type(expr.get("type", {"type": "unit"}), module_id=current_module_id)
                 return None if isinstance(t, OptionType) else UNIT
             return val
 
@@ -358,6 +365,108 @@ class Runtime:
                     f"Use overflow:\"wrap\" or overflow:\"sat\" to suppress."
                 )
         return result
+
+    def _resolve_alias_spec(
+        self,
+        alias_name: str,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+    ) -> dict:
+        if alias_name in cache:
+            return cache[alias_name]
+        if alias_name in stack:
+            cycle = " -> ".join(stack + [alias_name])
+            raise NailRuntimeError(f"Circular type alias detected in module '{module_id}': {cycle}")
+        if alias_name not in aliases:
+            raise NailRuntimeError(f"Unknown type alias '{alias_name}' in module '{module_id}'")
+        alias_spec = aliases[alias_name]
+        if not isinstance(alias_spec, dict):
+            raise NailRuntimeError(f"Type alias '{alias_name}' in module '{module_id}' must be a type dict")
+        resolved = self._resolve_type_spec(
+            alias_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=stack + [alias_name],
+            module_id=module_id,
+        )
+        cache[alias_name] = resolved
+        return resolved
+
+    def _resolve_type_spec(
+        self,
+        type_spec: dict,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+    ) -> dict:
+        if not isinstance(type_spec, dict):
+            raise NailRuntimeError(f"Type spec must be a dict, got {type(type_spec)}")
+        t = type_spec.get("type")
+        if t == "alias":
+            alias_name = type_spec.get("name")
+            if not isinstance(alias_name, str) or not alias_name:
+                raise NailRuntimeError("Alias type requires non-empty string field 'name'")
+            return self._resolve_alias_spec(
+                alias_name,
+                aliases=aliases,
+                cache=cache,
+                stack=stack,
+                module_id=module_id,
+            )
+        if t == "option" and "inner" in type_spec:
+            resolved = dict(type_spec)
+            resolved["inner"] = self._resolve_type_spec(
+                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "list" and "inner" in type_spec:
+            resolved = dict(type_spec)
+            resolved["inner"] = self._resolve_type_spec(
+                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "map" and "key" in type_spec and "value" in type_spec:
+            resolved = dict(type_spec)
+            resolved["key"] = self._resolve_type_spec(
+                type_spec["key"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            resolved["value"] = self._resolve_type_spec(
+                type_spec["value"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "result" and "ok" in type_spec and "err" in type_spec:
+            resolved = dict(type_spec)
+            resolved["ok"] = self._resolve_type_spec(
+                type_spec["ok"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            resolved["err"] = self._resolve_type_spec(
+                type_spec["err"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        return dict(type_spec)
+
+    def _parse_type(self, type_spec: dict, module_id: str | None = None):
+        if module_id is None:
+            aliases = self.type_aliases
+            cache = self._alias_spec_cache
+            target_module_id = self.spec.get("id", "<module>")
+        else:
+            aliases = self.module_type_aliases.get(module_id, {})
+            cache = self._module_alias_spec_cache.setdefault(module_id, {})
+            target_module_id = module_id
+        resolved = self._resolve_type_spec(
+            type_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=[],
+            module_id=target_module_id,
+        )
+        return parse_type(resolved)
 
 
 class _Continue:
