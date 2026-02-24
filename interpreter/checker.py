@@ -1,11 +1,12 @@
 """
-NAIL Checker — v0.1
-L0: JSON schema validation
+NAIL Checker — v0.2
+L0: JSON schema validation (jsonschema + hand-rolled)
 L1: Type checking
 L2: Effect checking
 """
 
 import json
+from pathlib import Path
 from typing import Any
 from .types import (
     NailType, NailTypeError, NailEffectError,
@@ -34,12 +35,26 @@ class Checker:
     # -----------------------------------------------------------------------
 
     def check_l0(self):
-        """Validate basic required fields."""
+        """Validate basic required fields (jsonschema L0 + strict canonical check)."""
         # Strict mode: verify canonical form (JCS / RFC 8785 subset)
         if self.strict and self.raw_text is not None:
             canonical = json.dumps(self.spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
             if self.raw_text.strip() != canonical:
                 raise CheckError("Input is not in canonical form. Run 'nail canonicalize' to fix.")
+
+        # Real L0: JSON Schema validation via jsonschema
+        _schema_path = Path(__file__).resolve().parents[1] / "schema" / "nail-l0.json"
+        if _schema_path.exists():
+            try:
+                from jsonschema import validate as _jv, ValidationError as _VE
+                with open(_schema_path) as _f:
+                    _schema = json.load(_f)
+                try:
+                    _jv(instance=self.spec, schema=_schema)
+                except _VE as e:
+                    raise CheckError(f"L0 schema violation: {e.message}") from e
+            except ImportError:
+                pass  # jsonschema not installed; fall through to hand-rolled checks
 
         if "nail" not in self.spec:
             raise CheckError("Missing 'nail' version field")
@@ -218,6 +233,35 @@ class Checker:
                 # print accepts string only
                 if not isinstance(val_type, StringType):
                     raise CheckError(f"[{fn_id}] 'print' expects string, got {val_type}")
+
+            elif op == "read_file":
+                # L2: requires FS effect; "path" must be string; result stored via let
+                if "FS" not in self.declared_effects:
+                    raise NailEffectError(
+                        f"[{fn_id}] 'read_file' uses FS effect, but function does not declare it"
+                    )
+                if "path" not in stmt:
+                    raise CheckError(f"[{fn_id}] 'read_file' requires 'path'")
+                path_type = self._check_expr(fn_id, stmt["path"], local_env)
+                if not isinstance(path_type, StringType):
+                    raise CheckError(f"[{fn_id}] 'read_file' path must be string, got {path_type}")
+                # If result bound via 'into', add to env
+                if "into" in stmt:
+                    local_env[stmt["into"]] = StringType()
+
+            elif op == "http_get":
+                # L2: requires NET effect; "url" must be string; result stored via 'into'
+                if "NET" not in self.declared_effects:
+                    raise NailEffectError(
+                        f"[{fn_id}] 'http_get' uses NET effect, but function does not declare it"
+                    )
+                if "url" not in stmt:
+                    raise CheckError(f"[{fn_id}] 'http_get' requires 'url'")
+                url_type = self._check_expr(fn_id, stmt["url"], local_env)
+                if not isinstance(url_type, StringType):
+                    raise CheckError(f"[{fn_id}] 'http_get' url must be string, got {url_type}")
+                if "into" in stmt:
+                    local_env[stmt["into"]] = StringType()
 
             elif op == "call":
                 # Call can be used as a statement (discard return value)

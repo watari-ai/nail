@@ -99,6 +99,20 @@ class Runtime:
             print(val)
             return _CONTINUE
 
+        elif op == "read_file":
+            # v0.2 reference interpreter: FS ops not yet executed
+            raise NailRuntimeError(
+                "'read_file' is recognized by the checker but not yet executed "
+                "in the v0.2 reference interpreter (planned for v0.3+)"
+            )
+
+        elif op == "http_get":
+            # v0.2 reference interpreter: NET ops not yet executed
+            raise NailRuntimeError(
+                "'http_get' is recognized by the checker but not yet executed "
+                "in the v0.2 reference interpreter (planned for v0.3+)"
+            )
+
         elif op == "call":
             self._eval_op(stmt, env)
             return _CONTINUE
