@@ -284,6 +284,163 @@ const EXAMPLES = {
         { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
       ]
     }
+  },
+
+  // ── v0.5 examples ──────────────────────────────────────────────────────
+
+  enum_adt: {
+    label: "Enum / ADT (v0.5)",
+    group: "v0.5",
+    description: "Algebraic Data Types (v0.5). Defines a Shape enum with Circle and Rectangle variants. enum_make constructs a variant; match_enum dispatches exhaustively with field binding.",
+    args: {},
+    program: {
+      "nail": "0.5.0",
+      "kind": "module",
+      "id": "shape_demo",
+      "exports": ["main"],
+      "types": {
+        "Shape": {
+          "type": "enum",
+          "variants": [
+            { "tag": "Circle",    "fields": [{ "name": "radius", "type": { "type": "float", "bits": 64 } }] },
+            { "tag": "Rectangle", "fields": [{ "name": "w", "type": { "type": "float", "bits": 64 } },
+                                              { "name": "h", "type": { "type": "float", "bits": 64 } }] }
+          ]
+        }
+      },
+      "defs": [
+        {
+          "nail": "0.5.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            { "op": "enum_make", "tag": "Circle", "fields": { "radius": { "lit": 3.0 } }, "into": "shape" },
+            {
+              "op": "match_enum",
+              "val": { "ref": "shape" },
+              "cases": [
+                {
+                  "tag": "Circle",
+                  "bind": { "r": "radius" },
+                  "body": [
+                    { "op": "print", "effect": "IO",
+                      "val": { "op": "concat", "l": { "lit": "Circle: radius=" },
+                               "r": { "op": "int_to_str", "v": { "lit": 3 } } } },
+                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+                  ]
+                },
+                {
+                  "tag": "Rectangle",
+                  "bind": { "width": "w", "height": "h" },
+                  "body": [
+                    { "op": "print", "effect": "IO", "val": { "lit": "Rectangle" } },
+                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+
+  stdlib_math: {
+    label: "Core StdLib (v0.5)",
+    group: "v0.5",
+    description: "Core standard library math functions (v0.5): abs, clamp, min2, max2. Pass a negative number to see abs() at work.",
+    args: { n: -42 },
+    program: {
+      "nail": "0.5.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "let", "id": "a",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "abs", "val": { "ref": "n" } }
+        },
+        {
+          "op": "let", "id": "clamped",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "clamp", "val": { "ref": "a" }, "lo": { "lit": 0 }, "hi": { "lit": 100 } }
+        },
+        {
+          "op": "let", "id": "small",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "min2", "l": { "ref": "a" }, "r": { "lit": 50 } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "abs(" },
+                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
+                          "r": { "op": "concat", "l": { "lit": ") = " },
+                                 "r": { "op": "int_to_str", "v": { "ref": "a" } } } } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "clamp(a, 0, 100) = " },
+                   "r": { "op": "int_to_str", "v": { "ref": "clamped" } } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "min(a, 50) = " },
+                   "r": { "op": "int_to_str", "v": { "ref": "small" } } }
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  // ── v0.6 examples ──────────────────────────────────────────────────────
+
+  l3_termination: {
+    label: "L3 Termination Proof (v0.6)",
+    group: "v0.6",
+    description: "Level 3 Termination Proof (v0.6). This loop sums 1..n. At L3, NAIL proves the loop terminates because step=1 is a non-zero literal. Run `nail check --level 3` to see the termination certificate.",
+    args: { n: 10 },
+    program: {
+      "nail": "0.6.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "let", "id": "total",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "lit": 0 }, "mut": true
+        },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 1 },
+          "to": { "ref": "n" },
+          "step": { "lit": 1 },
+          "body": [
+            {
+              "op": "assign", "id": "total",
+              "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } }
+            }
+          ]
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "sum(1.." },
+                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
+                          "r": { "op": "concat", "l": { "lit": ") = " },
+                                 "r": { "op": "int_to_str", "v": { "ref": "total" } } } } }
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
   }
 };
 
