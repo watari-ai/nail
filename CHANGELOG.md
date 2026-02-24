@@ -2,6 +2,20 @@
 
 All notable changes to NAIL are documented here.
 
+## [Unreleased] — v0.7.0 development
+
+### Added
+
+- **Structured JSON Error Messages** (`interpreter/checker.py`, `interpreter/types.py`)
+  - `CheckError`, `NailRuntimeError`, `NailTypeError`, `NailEffectError` all gain `to_json()` method
+  - Machine-parseable error representation: `{error, code, message, location, ...extra}`
+  - Error codes: `EFFECT_VIOLATION`, `UNKNOWN_OP`, `NOT_CANONICAL`, `RUNTIME_ERROR`, `TYPE_ERROR`
+  - Backward compatible: `str(err)` and `err.args[0]` still return human-readable message
+  - 22 new tests in `tests/test_structured_errors.py`
+- **StrategyC FC Standard Proposal** (`docs/fc-standard-proposal.md`)
+  - Formal proposal for adding `effects` field to OpenAI/Anthropic Function Calling schemas
+  - LiteLLM integration guide (`integrations/litellm.md`)
+
 ## [v0.6.0] — 2026-02-24
 
 ### Added

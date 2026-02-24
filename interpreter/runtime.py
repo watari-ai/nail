@@ -199,7 +199,7 @@ class Runtime:
         elif op == "read_file":
             effect = self._normalize_effect_kind(stmt.get("effect"))
             if effect != "FS":
-                raise NailRuntimeError("'read_file' must declare effect: FS")
+                raise NailRuntimeError("'read_file' must declare effect: FS", code="EFFECT_VIOLATION", required=["FS"])
             self._require_effect("FS", "'read_file' uses FS effect, but function does not declare it")
             path = self._eval(stmt["path"], env)
             if not isinstance(path, str):
@@ -924,7 +924,7 @@ class Runtime:
     def _require_effect(self, effect_kind: str, message: str) -> None:
         kinds, _ = self._current_effect_policy()
         if effect_kind not in kinds:
-            raise NailRuntimeError(message)
+            raise NailRuntimeError(message, code="EFFECT_VIOLATION", required=[effect_kind])
 
     def _enforce_fs_boundary(self, path: str) -> None:
         _, caps = self._current_effect_policy()

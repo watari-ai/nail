@@ -19,15 +19,63 @@ VALID_EFFECTS = {"IO", "FS", "NET", "TIME", "RAND", "MUT"}
 
 
 class NailTypeError(Exception):
-    pass
+    """Type error with optional structured JSON representation."""
+    def __init__(self, message: str, code: str = "TYPE_ERROR", location: dict = None, **extra):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.location: dict = location or {}
+        self._extra = extra
+
+    def to_json(self) -> dict:
+        result = {
+            "error": "NailTypeError",
+            "code": self.code,
+            "message": self.message,
+            "location": self.location,
+        }
+        result.update(self._extra)
+        return result
 
 
 class NailEffectError(Exception):
-    pass
+    """Effect violation error with optional structured JSON representation."""
+    def __init__(self, message: str, code: str = "EFFECT_ERROR", location: dict = None, **extra):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.location: dict = location or {}
+        self._extra = extra
+
+    def to_json(self) -> dict:
+        result = {
+            "error": "NailEffectError",
+            "code": self.code,
+            "message": self.message,
+            "location": self.location,
+        }
+        result.update(self._extra)
+        return result
 
 
 class NailRuntimeError(Exception):
-    pass
+    """Runtime error with optional structured JSON representation."""
+    def __init__(self, message: str, code: str = "RUNTIME_ERROR", location: dict = None, **extra):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.location: dict = location or {}
+        self._extra = extra
+
+    def to_json(self) -> dict:
+        result = {
+            "error": "NailRuntimeError",
+            "code": self.code,
+            "message": self.message,
+            "location": self.location,
+        }
+        result.update(self._extra)
+        return result
 
 
 # ---------------------------------------------------------------------------

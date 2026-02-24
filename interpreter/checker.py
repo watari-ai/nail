@@ -18,7 +18,28 @@ from .types import (
 
 
 class CheckError(Exception):
-    pass
+    """Structured check-time error with JSON representation.
+
+    Backward compatible: str(err) and err.args[0] still return the human message.
+    New: err.to_json() returns a machine-parseable dict.
+    """
+    def __init__(self, message: str, code: str = "CHECK_ERROR", location: dict = None, **extra):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.location: dict = location or {}
+        self._extra = extra
+
+    def to_json(self) -> dict:
+        """Return a machine-parseable representation of this error."""
+        result = {
+            "error": "CheckError",
+            "code": self.code,
+            "message": self.message,
+            "location": self.location,
+        }
+        result.update(self._extra)
+        return result
 
 
 # Intermediate types used during Result construction (ok/err ops)
@@ -77,7 +98,10 @@ class Checker:
         if self.strict and self.raw_text is not None:
             canonical = json.dumps(self.spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
             if self.raw_text.strip() != canonical:
-                raise CheckError("Input is not in canonical form. Run 'nail canonicalize' to fix.")
+                raise CheckError(
+                    "Input is not in canonical form. Run 'nail canonicalize' to fix.",
+                    code="NOT_CANONICAL",
+                )
 
         # Real L0: JSON Schema validation via jsonschema
         _schema_path = Path(__file__).resolve().parents[1] / "schema" / "nail-l0.json"
@@ -857,7 +881,12 @@ class Checker:
                     self._termination_proofs.setdefault(fn_id, []).append(proof)
 
             else:
-                raise CheckError(f"[{fn_id}] Unknown op: '{op}'")
+                raise CheckError(
+                    f"[{fn_id}] Unknown op: '{op}'",
+                    code="UNKNOWN_OP",
+                    location={"fn": fn_id},
+                    op=op,
+                )
 
         return guaranteed_return
 
@@ -1405,7 +1434,12 @@ class Checker:
             return self._check_call_expr(fn_id, expr, env)
 
         else:
-            raise CheckError(f"[{fn_id}] Unknown op in expression: '{op}'")
+            raise CheckError(
+                f"[{fn_id}] Unknown op in expression: '{op}'",
+                code="UNKNOWN_OP",
+                location={"fn": fn_id},
+                op=op,
+            )
 
     def _check_call_expr(self, fn_id: str, expr: dict, env: dict) -> NailType:
         if self.spec.get("kind") != "module":
@@ -1466,7 +1500,12 @@ class Checker:
             declared_text = ", ".join(sorted(self.declared_effects))
             raise CheckError(
                 f"[{fn_id}] Calling '{callee_id}' requires effects {{{missing_text}}}, "
-                f"but '{fn_id}' declares {{{declared_text}}}"
+                f"but '{fn_id}' declares {{{declared_text}}}",
+                code="EFFECT_VIOLATION",
+                location={"fn": fn_id, "callee": callee_id},
+                missing=sorted(missing_effects),
+                declared=sorted(self.declared_effects),
+                required=sorted(callee_effects),
             )
 
         args = expr.get("args", [])
