@@ -625,7 +625,10 @@ def test_runtime_match_enum_missing_case_no_default_raises():
 # ===========================================================================
 
 def test_enum_make_inside_if_branch():
-    """enum_make can be used inside an if-else branch."""
+    """enum_make used and matched entirely within an if-else branch."""
+    # Note: NAIL if-branches have their own scoped env; variables introduced
+    # inside a branch are not visible after the branch.  So we perform both
+    # enum_make AND match_enum inside each branch.
     spec = module_spec(
         "m",
         defs=[fn_spec("main", [{"id": "flag", "type": BOOL_T}], INT64, [
@@ -633,15 +636,20 @@ def test_enum_make_inside_if_branch():
              "cond": {"ref": "flag"},
              "then": [
                  {"op": "enum_make", "tag": "Red", "fields": {}, "into": "c"},
+                 {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                     {"tag": "Red",   "body": [{"op": "return", "val": {"lit": 1}}]},
+                     {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
+                     {"tag": "Blue",  "body": [{"op": "return", "val": {"lit": 3}}]},
+                 ]},
              ],
              "else": [
                  {"op": "enum_make", "tag": "Blue", "fields": {}, "into": "c"},
+                 {"op": "match_enum", "val": {"ref": "c"}, "cases": [
+                     {"tag": "Red",   "body": [{"op": "return", "val": {"lit": 1}}]},
+                     {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
+                     {"tag": "Blue",  "body": [{"op": "return", "val": {"lit": 3}}]},
+                 ]},
              ]},
-            {"op": "match_enum", "val": {"ref": "c"}, "cases": [
-                {"tag": "Red",   "body": [{"op": "return", "val": {"lit": 1}}]},
-                {"tag": "Green", "body": [{"op": "return", "val": {"lit": 2}}]},
-                {"tag": "Blue",  "body": [{"op": "return", "val": {"lit": 3}}]},
-            ]},
         ])],
         types={"Color": COLOR_TYPE},
     )
