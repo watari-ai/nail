@@ -8,6 +8,7 @@ L2: Effect checking
 import json
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from .types import (
     NailType, NailTypeError, NailEffectError,
     parse_type, types_equal,
@@ -41,6 +42,7 @@ class Checker:
         self.spec = spec
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
+        self.declared_effect_caps: dict[str, list[dict]] = {}
         self.fn_registry: dict[str, dict] = {}
         self.call_graph: dict[str, set[str]] = {}
         self.raw_text = raw_text
@@ -108,8 +110,7 @@ class Checker:
         if not isinstance(fn["effects"], list):
             raise CheckError(f"'effects' must be a list")
         for eff in fn["effects"]:
-            if eff not in VALID_EFFECTS:
-                raise CheckError(f"Unknown effect: {eff}. Valid: {VALID_EFFECTS}")
+            self._validate_effect_decl(eff, fn.get("id", "?"))
         if not isinstance(fn["params"], list):
             raise CheckError(f"'params' must be a list")
         if not isinstance(fn["body"], list):
@@ -400,7 +401,9 @@ class Checker:
         self.call_graph.setdefault(fn_id, set())
 
         # L2: collect declared effects
-        self.declared_effects = set(fn["effects"])
+        self.declared_effects, self.declared_effect_caps = self._collect_declared_effects(
+            fn.get("effects", []), fn_id
+        )
 
         # L1: parse return type
         try:
@@ -493,7 +496,7 @@ class Checker:
 
             elif op == "print":
                 # L2: requires IO
-                eff = stmt.get("effect")
+                eff = self._normalize_effect_kind(stmt.get("effect"))
                 if eff != "IO":
                     raise CheckError(f"[{fn_id}] 'print' must declare effect: IO")
                 if "IO" not in self.declared_effects:
@@ -507,7 +510,7 @@ class Checker:
 
             elif op == "read_file":
                 # L2: requires FS effect; "path" must be string; result stored via let
-                eff = stmt.get("effect")
+                eff = self._normalize_effect_kind(stmt.get("effect"))
                 if eff != "FS":
                     raise CheckError(f"[{fn_id}] 'read_file' must declare effect: FS")
                 if "FS" not in self.declared_effects:
@@ -519,13 +522,14 @@ class Checker:
                 path_type = self._check_expr(fn_id, stmt["path"], local_env)
                 if not isinstance(path_type, StringType):
                     raise CheckError(f"[{fn_id}] 'read_file' path must be string, got {path_type}")
+                self._check_fs_constraints(fn_id, stmt["path"])
                 # If result bound via 'into', add to env
                 if "into" in stmt:
                     local_env[stmt["into"]] = StringType()
 
             elif op == "http_get":
                 # L2: requires NET effect; "url" must be string; result stored via 'into'
-                eff = stmt.get("effect")
+                eff = self._normalize_effect_kind(stmt.get("effect"))
                 if eff != "NET":
                     raise CheckError(f"[{fn_id}] 'http_get' must declare effect: NET")
                 if "NET" not in self.declared_effects:
@@ -537,6 +541,7 @@ class Checker:
                 url_type = self._check_expr(fn_id, stmt["url"], local_env)
                 if not isinstance(url_type, StringType):
                     raise CheckError(f"[{fn_id}] 'http_get' url must be string, got {url_type}")
+                self._check_net_constraints(fn_id, stmt["url"])
                 if "into" in stmt:
                     local_env[stmt["into"]] = StringType()
 
@@ -829,7 +834,9 @@ class Checker:
                 raise CheckError(f"[{fn_id}] Function '{callee_id}' not found in module '{cross_module}'")
             callee = mod_fns[callee_id]
             # Effect propagation across module boundary
-            callee_effects = set(callee.get("effects", []))
+            callee_effects, _ = self._collect_declared_effects(
+                callee.get("effects", []), f"{cross_module}.{callee_id}"
+            )
             missing_effects = callee_effects - self.declared_effects
             if missing_effects:
                 raise CheckError(
@@ -858,7 +865,7 @@ class Checker:
         callee = self.fn_registry[callee_id]
         self.call_graph.setdefault(fn_id, set()).add(callee_id)
 
-        callee_effects = set(callee.get("effects", []))
+        callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
         missing_effects = callee_effects - self.declared_effects
         if missing_effects:
             missing_text = ", ".join(sorted(missing_effects))
@@ -887,3 +894,106 @@ class Checker:
                 )
 
         return self._parse_type(callee["returns"])
+
+    def _normalize_effect_kind(self, kind: Any) -> str:
+        if not isinstance(kind, str):
+            return ""
+        if kind == "Net":
+            return "NET"
+        return kind
+
+    def _validate_effect_decl(self, effect_decl: Any, fn_id: str) -> None:
+        kind, cap = self._parse_effect_decl(effect_decl, fn_id)
+        if kind not in VALID_EFFECTS:
+            raise CheckError(f"[{fn_id}] Unknown effect kind: {kind}. Valid: {VALID_EFFECTS}")
+        if cap is None:
+            return
+        allow = cap.get("allow")
+        if "allow" not in cap or not isinstance(allow, list) or not allow:
+            raise CheckError(f"[{fn_id}] Structured effect '{kind}' requires non-empty 'allow' list")
+        if any(not isinstance(item, str) for item in allow):
+            raise CheckError(f"[{fn_id}] Structured effect '{kind}'.allow must be list[string]")
+        ops = cap.get("ops")
+        if ops is not None:
+            if not isinstance(ops, list) or any(not isinstance(op, str) for op in ops):
+                raise CheckError(f"[{fn_id}] Structured effect '{kind}'.ops must be list[string]")
+
+    def _parse_effect_decl(self, effect_decl: Any, fn_id: str) -> tuple[str, dict | None]:
+        if isinstance(effect_decl, str):
+            return self._normalize_effect_kind(effect_decl), None
+        if isinstance(effect_decl, dict):
+            kind = self._normalize_effect_kind(effect_decl.get("kind"))
+            if not kind:
+                raise CheckError(f"[{fn_id}] Structured effect requires string field 'kind'")
+            cap = dict(effect_decl)
+            cap["kind"] = kind
+            return kind, cap
+        raise CheckError(f"[{fn_id}] Effect declarations must be string or object, got {type(effect_decl)}")
+
+    def _collect_declared_effects(self, effect_decls: list[Any], fn_id: str) -> tuple[set[str], dict[str, list[dict]]]:
+        kinds: set[str] = set()
+        caps: dict[str, list[dict]] = {}
+        for effect_decl in effect_decls:
+            kind, cap = self._parse_effect_decl(effect_decl, fn_id)
+            if kind not in VALID_EFFECTS:
+                raise CheckError(f"[{fn_id}] Unknown effect kind: {kind}. Valid: {VALID_EFFECTS}")
+            kinds.add(kind)
+            if cap is not None:
+                caps.setdefault(kind, []).append(cap)
+        return kinds, caps
+
+    def _string_literal(self, expr: Any) -> str | None:
+        if isinstance(expr, dict) and isinstance(expr.get("lit"), str):
+            return expr["lit"]
+        return None
+
+    def _check_fs_constraints(self, fn_id: str, path_expr: Any) -> None:
+        caps = self.declared_effect_caps.get("FS", [])
+        if not caps:
+            return
+        path_value = self._string_literal(path_expr)
+        if path_value is None:
+            raise CheckError(f"[{fn_id}] 'read_file' path must be a string literal when granular FS constraints are declared")
+        for cap in caps:
+            if self._fs_capability_allows(cap, path_value):
+                return
+        raise CheckError(f"[{fn_id}] read_file path not allowed by declared FS capabilities: {path_value!r}")
+
+    def _check_net_constraints(self, fn_id: str, url_expr: Any) -> None:
+        caps = self.declared_effect_caps.get("NET", [])
+        if not caps:
+            return
+        url_value = self._string_literal(url_expr)
+        if url_value is None:
+            raise CheckError(f"[{fn_id}] 'http_get' url must be a string literal when granular NET constraints are declared")
+        for cap in caps:
+            if self._net_capability_allows(cap, url_value):
+                return
+        raise CheckError(f"[{fn_id}] http_get url not allowed by declared NET capabilities: {url_value!r}")
+
+    def _fs_capability_allows(self, cap: dict, path_value: str) -> bool:
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "read" not in ops:
+            return False
+        allow_entries = cap.get("allow", [])
+        target = (Path.cwd() / Path(path_value)).resolve(strict=False) if not Path(path_value).is_absolute() else Path(path_value).resolve(strict=False)
+        for allowed in allow_entries:
+            allowed_path = Path(allowed)
+            base = (Path.cwd() / allowed_path).resolve(strict=False) if not allowed_path.is_absolute() else allowed_path.resolve(strict=False)
+            try:
+                target.relative_to(base)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    def _net_capability_allows(self, cap: dict, url_value: str) -> bool:
+        parsed = urlparse(url_value)
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return False
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "get" not in ops:
+            return False
+        allow_domains = cap.get("allow", [])
+        return host in {str(domain).lower() for domain in allow_domains}

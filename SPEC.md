@@ -75,6 +75,23 @@ All side effects must be declared in the function signature. Any undeclared side
 
 Multiple effects are listed as an array: `["IO", "NET"]`, etc.
 
+Structured effect capabilities are also valid in `effects` (v0.4):
+
+```json
+"effects": [
+  { "kind": "FS",  "allow": ["/tmp/", "./data/"], "ops": ["read"] },
+  { "kind": "Net", "allow": ["api.example.com"] }
+]
+```
+
+Rules:
+- `effects` items may be string or object.
+- String effects remain fully supported for backward compatibility (`"FS"`, `"IO"`, `"NET"` and legacy `"Net"`).
+- Object effects must include `kind`.
+- `kind: "FS"` may constrain filesystem access via `allow` and optional operation filter `ops`.
+- `kind: "Net"` (normalized as `NET`) may constrain outbound domains via `allow` and optional operation filter `ops`.
+- If any structured capability for a kind exists, operations of that kind are allowed only when one declared capability matches.
+
 ---
 
 ## 4. Function Definition
@@ -226,6 +243,10 @@ Each effectful operation must include an explicit `effect` field with the canoni
 - `read_file` must declare `"effect": "FS"`
 - `http_get` must declare `"effect": "NET"`
 `print` expects a `String` argument.
+
+Capability enforcement:
+- `read_file` path must be inside an allowed FS path when FS capability objects are declared.
+- `http_get` URL host must match an allowed domain when NET capability objects are declared.
 
 ---
 
