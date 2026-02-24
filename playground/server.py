@@ -18,6 +18,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Any
 
+# ── Seed demo files for playground examples ───────────────────────────────
+_DEMO_FILE = Path("/tmp/nail_demo.txt")
+if not _DEMO_FILE.exists():
+    _DEMO_FILE.write_text(
+        "Hello from NAIL v0.4 fine-grained FS effect!\n"
+        "This file was created by the NAIL playground server.\n",
+        encoding="utf-8",
+    )
+
 # ── NAIL interpreter lives one directory up ───────────────────────────────
 NAIL_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(NAIL_ROOT))
