@@ -713,6 +713,61 @@ All container types support generic element types:
 
 ---
 
+## 16.5 Generic Type Aliases (v0.7.2)
+
+Module-level type aliases in the `types:` dict may be parameterized with `type_params`.
+
+### Definition
+
+```json
+{
+  "nail": "0.7.2",
+  "kind": "module",
+  "id": "collections",
+  "types": {
+    "Bag": {
+      "type_params": ["T"],
+      "type": "list",
+      "inner": {"type": "param", "name": "T"}
+    },
+    "Pair": {
+      "type_params": ["A", "B"],
+      "type": "map",
+      "key":   {"type": "param", "name": "A"},
+      "value": {"type": "param", "name": "B"}
+    }
+  }
+}
+```
+
+### Instantiation
+
+Use `"args": [...]` when referencing a generic alias:
+
+```json
+{"type": "alias", "name": "Bag", "args": [{"type": "int", "bits": 64, "overflow": "panic"}]}
+```
+
+This resolves to `{"type": "list", "inner": {"type": "int", "bits": 64, "overflow": "panic"}}`.
+
+### Rules
+
+- `"type_params"` must be a non-empty array of distinct string names.
+- The number of `"args"` must exactly match the number of `"type_params"`.
+- `{"type": "param", "name": "T"}` inside the alias body is replaced by the corresponding arg.
+- Generic aliases are resolved lazily (at each instantiation site). They are **not** cached — each instantiation is independent.
+- Non-generic aliases (no `"type_params"`) are unchanged; they resolve eagerly and are cached.
+
+### Error codes
+
+| Code | Meaning |
+|------|---------|
+| `GENERIC_ALIAS_ARITY` | Wrong number of type arguments (too few or too many) |
+
+### Non-generic aliases with spurious `args`
+
+If a non-generic alias (no `type_params`) is referenced with `"args": [...]`, the args are silently ignored. The alias resolves as a non-generic alias.
+
 ## 17. Out of Scope (v0.7)
 
 - Closures
@@ -720,7 +775,6 @@ All container types support generic element types:
 - Higher-kinded types (HKT)
 - Traits / Interfaces / Type classes
 - L4: Memory safety (buffer overflow proofs)
-- Generic type aliases (module-level `types:` with type params)
 - Higher-rank polymorphism
 
 These may be added in future versions based on AI-generated proposals accepted into the spec.
