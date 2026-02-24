@@ -137,14 +137,14 @@ class Runtime:
             # v0.2 reference interpreter: FS ops not yet executed
             raise NailRuntimeError(
                 "'read_file' is recognized by the checker but not yet executed "
-                "in the v0.2 reference interpreter (planned for v0.3+)"
+                "in the v0.3 reference interpreter (planned for v0.4+)"
             )
 
         elif op == "http_get":
             # v0.2 reference interpreter: NET ops not yet executed
             raise NailRuntimeError(
                 "'http_get' is recognized by the checker but not yet executed "
-                "in the v0.2 reference interpreter (planned for v0.3+)"
+                "in the v0.3 reference interpreter (planned for v0.4+)"
             )
 
         elif op == "call":

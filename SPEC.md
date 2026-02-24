@@ -216,7 +216,7 @@ Effectful operations are a compile error if the corresponding effect is not decl
   - `"wrap"`: Two's complement modular arithmetic
   - `"sat"`: Saturating arithmetic (clamp to min/max)
   - `"panic"`: Runtime panic on overflow (explicit, same as default)
-- Expression-level override syntax: `{"op": "+", "overflow": "wrap", "lhs": ..., "rhs": ...}`
+- Expression-level override syntax: `{"op": "+", "overflow": "wrap", "l": ..., "r": ...}`
 - See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md) for full specification.
 
 ---
