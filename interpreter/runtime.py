@@ -1,5 +1,5 @@
 """
-NAIL Runtime — v0.1
+NAIL Runtime — v0.3
 Executes validated NAIL programs.
 """
 

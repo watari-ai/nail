@@ -1,5 +1,5 @@
 """
-NAIL Checker — v0.2
+NAIL Checker — v0.3
 L0: JSON schema validation (jsonschema + hand-rolled)
 L1: Type checking
 L2: Effect checking

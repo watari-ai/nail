@@ -1,5 +1,5 @@
 """
-NAIL Type System — v0.1
+NAIL Type System — v0.3
 Represents and validates NAIL's type hierarchy.
 """
 
@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Any
 
 
-VALID_OVERFLOWS = {"panic"}  # v0.2: only "panic" supported; "wrap"/"sat" planned for v0.3
+VALID_OVERFLOWS = {"panic"}  # Type-level default. Expression-level overrides (wrap/sat) are in checker/runtime.
 VALID_EFFECTS = {"IO", "FS", "NET", "TIME", "RAND", "MUT"}
 
 
@@ -38,7 +38,7 @@ class IntType:
         if self.overflow not in VALID_OVERFLOWS:
             raise NailTypeError(
                 f"Invalid overflow mode: '{self.overflow}'. "
-                f"v0.2 only supports 'panic'; 'wrap'/'sat' are planned for v0.3."
+                f"Type-level overflow must be 'panic'. Use expression-level overflow (v0.3+) for 'wrap'/'sat'."
             )
 
     def __str__(self):
