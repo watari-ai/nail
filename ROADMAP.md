@@ -60,15 +60,26 @@
 
 73 tests passing.
 
-## v0.3 Goals (next)
+## v0.3 — Released ✅ (2026-02-24)
 
-Tracked in GitHub Milestone [v0.3](https://github.com/watari-ai/nail/milestone/1). Design documents in [`designs/v0.3/`](designs/v0.3/).
+Implemented autonomously via development cron agent. Design documents in [`designs/v0.3/`](designs/v0.3/). 94 tests passing.
 
-**Suggested implementation order:**
+- [x] **Overflow ops** — `wrap` / `sat` / `panic` at expression level · [Issue #2](https://github.com/watari-ai/nail/issues/2) · commit `ff881ab`
+- [x] **Result type** — `ok`/`err`/`match_result` ops · [Issue #3](https://github.com/watari-ai/nail/issues/3) · commit `91992df`
+- [x] **Cross-module import** — `modules` param, circular import detection, effect propagation · [Issue #4](https://github.com/watari-ai/nail/issues/4) · commit `2cbc84c`
+- [x] **CI matrix**: Python 3.11 + 3.12, jsonschema L0 validation, example schema checks
+- [x] **Verifiability demo**: negative examples showing what NAIL catches at check time
 
-- [ ] **Overflow ops** — `wrap` / `sat` at expression level · [Issue #2](https://github.com/watari-ai/nail/issues/2) · [Design](designs/v0.3/overflow-ops.md)
-- [ ] **Result type** — `Result<T, E>` + `ok`/`err`/`match_result` ops · [Issue #3](https://github.com/watari-ai/nail/issues/3) · [Design](designs/v0.3/result-type.md)
-- [ ] **Cross-module import** — `"imports"` field + `--modules` CLI flag · [Issue #4](https://github.com/watari-ai/nail/issues/4) · [Design](designs/v0.3/cross-module.md)
+---
+
+## v0.4 Goals (next)
+
+Informed by [Gemini 2.0 Flash strategic evaluation](https://github.com/watari-ai/nail/issues/15) (Issue #15).
+
+- [ ] **NAIL SDK** — Python package for generating/validating NAIL programs from host languages. Goal: `nail.call("fn_name", args)` returns a type-safe result.
+- [ ] **Nail-Lens** — Read-only pseudo-code renderer. Converts NAIL JSON → human-readable format without modifying the source of truth. Enables human audit for high-stakes deployments.
+- [ ] **Token efficiency benchmarks** — Focus on complex logic where NAIL's structural density outperforms Python+docstrings. Fix the "trivial function" benchmark bias.
+- [ ] **Formal verification** — Termination proofs for bounded loops (L3)
 
 ---
 
@@ -175,8 +186,9 @@ Phase 1: ✅ Complete (2026-02-22)
 Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
 Phase 3: 🚀 Active — repo public, Playground live, experimental work ongoing
 v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical form, 73 tests
-v0.3:   🔨 In Progress — overflow ops, Result type, cross-module import, reproducibility/verify-fix demos
-Phase 4: ⏸️ Waiting
+v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI release pending
+v0.4:   📅 Planned — SDK, Nail-Lens, benchmarks, formal verification
+Phase 4: 🚀 Active
 ```
 
 *Last updated: 2026-02-24 by Watari*
