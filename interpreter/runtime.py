@@ -180,7 +180,11 @@ class Runtime:
             r = self._eval(expr["r"], env)
             if r == 0:
                 raise NailRuntimeError("Division by zero")
-            return self._eval(expr["l"], env) // r
+            l = self._eval(expr["l"], env)
+            # Use true division for floats, floor division for integers
+            if isinstance(l, float) or isinstance(r, float):
+                return l / r
+            return l // r
         elif op == "%":
             r = self._eval(expr["r"], env)
             if r == 0:

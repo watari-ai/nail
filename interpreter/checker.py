@@ -165,12 +165,17 @@ class Checker:
             env[param["id"]] = t
 
         # Check body
-        actual_return = self._check_body(fn_id, fn["body"], env, set(), return_type)
+        guaranteed = self._check_body(fn_id, fn["body"], env, set(), return_type)
+        if not guaranteed and not isinstance(return_type, UnitType):
+            raise CheckError(
+                f"[{fn_id}] Not all code paths return a value (return type: {return_type})"
+            )
 
-    def _check_body(self, fn_id: str, body: list, env: dict, mut_set: set, expected_return: NailType) -> NailType:
+    def _check_body(self, fn_id: str, body: list, env: dict, mut_set: set, expected_return: NailType) -> bool:
+        """Check body statements; return True if all paths are guaranteed to return."""
         local_env = dict(env)
         local_mut = set(mut_set)
-        has_return = False
+        guaranteed_return = False
 
         for stmt in body:
             if "op" not in stmt:
@@ -183,7 +188,7 @@ class Checker:
                     raise CheckError(
                         f"[{fn_id}] Return type mismatch: expected {expected_return}, got {val_type}"
                     )
-                has_return = True
+                guaranteed_return = True
 
             elif op == "let":
                 if "id" not in stmt or "val" not in stmt:
@@ -226,8 +231,10 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'if' missing 'then'")
                 if "else" not in stmt:
                     raise CheckError(f"[{fn_id}] 'if' missing 'else' (required by NAIL spec)")
-                self._check_body(fn_id, stmt["then"], local_env, local_mut, expected_return)
-                self._check_body(fn_id, stmt["else"], local_env, local_mut, expected_return)
+                then_guaranteed = self._check_body(fn_id, stmt["then"], local_env, local_mut, expected_return)
+                else_guaranteed = self._check_body(fn_id, stmt["else"], local_env, local_mut, expected_return)
+                if then_guaranteed and else_guaranteed:
+                    guaranteed_return = True
 
             elif op == "assign":
                 if "id" not in stmt or "val" not in stmt:
@@ -265,7 +272,7 @@ class Checker:
             else:
                 raise CheckError(f"[{fn_id}] Unknown op: '{op}'")
 
-        return expected_return
+        return guaranteed_return
 
     def _check_expr(self, fn_id: str, expr: Any, env: dict) -> NailType:
         if expr is None:

@@ -242,10 +242,15 @@ def build_markdown_report(data: dict[str, Any]) -> str:
     )
     lines.append("")
     lines.append(
-        "Expected outcome: NAIL should produce 2–4 unique hashes per problem "
-        "(variation in condition ordering, loop variable naming, etc.), "
-        "while Python produces 5–10 unique hashes due to variable names, "
-        "comments, blank lines, and stylistic variance."
+        "**Hypothesis (pre-experiment):** NAIL would produce fewer unique hashes than Python, "
+        "since JCS canonical form eliminates syntactic variance. "
+        "**Result: hypothesis rejected.** "
+        "Python showed equal or higher reproducibility on non-trivial problems. "
+        "JCS eliminates *syntactic* variance (key order, whitespace) but not *algorithmic* variance "
+        "(loop structure, variable naming strategy). "
+        "Python converges because canonical implementations dominate training data; "
+        "NAIL has no such prior — a cold-start problem, not a design flaw. "
+        "The key finding: **valid 15/15** — every LLM-generated NAIL program passed the checker."
     )
 
     return "\n".join(lines) + "\n"

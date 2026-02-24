@@ -635,6 +635,73 @@ class TestCanonicalForm(unittest.TestCase):
         out = json.dumps(spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
         self.assertEqual(out, '{"a":2,"m":[3,1,2],"z":1}')
 
+    # ------------------------------------------------------------------
+    # Return guarantee (Codex/Opus High #1)
+    # ------------------------------------------------------------------
+
+    def test_missing_return_raises(self):
+        """Function with no return statement must raise CheckError."""
+        spec = {
+            "nail": "0.2", "kind": "fn", "id": "no_return",
+            "effects": [], "params": [],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [
+                {"op": "let", "id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}, "val": {"lit": 1}},
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_partial_return_in_if_raises(self):
+        """If only one branch returns, checker must raise."""
+        spec = {
+            "nail": "0.2", "kind": "fn", "id": "partial",
+            "effects": [],
+            "params": [{"id": "b", "type": {"type": "bool"}}],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [
+                {"op": "if",
+                 "cond": {"ref": "b"},
+                 "then": [{"op": "return", "val": {"lit": 1}}],
+                 "else": []},  # else doesn't return
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_both_branches_return_ok(self):
+        """If both then and else return, checker must pass."""
+        spec = {
+            "nail": "0.2", "kind": "fn", "id": "both_return",
+            "effects": [],
+            "params": [{"id": "b", "type": {"type": "bool"}}],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [
+                {"op": "if",
+                 "cond": {"ref": "b"},
+                 "then": [{"op": "return", "val": {"lit": 1}}],
+                 "else": [{"op": "return", "val": {"lit": 0}}]},
+            ],
+        }
+        Checker(spec).check()  # must not raise
+
+    # ------------------------------------------------------------------
+    # Overflow mode (Codex Medium #5)
+    # ------------------------------------------------------------------
+
+    def test_overflow_wrap_raises(self):
+        """v0.2: overflow:'wrap' must raise NailTypeError."""
+        from interpreter.types import NailTypeError
+        with self.assertRaises(NailTypeError):
+            from interpreter.types import IntType
+            IntType(bits=64, overflow="wrap")
+
+    def test_overflow_sat_raises(self):
+        """v0.2: overflow:'sat' must raise NailTypeError."""
+        from interpreter.types import NailTypeError, IntType
+        with self.assertRaises(NailTypeError):
+            IntType(bits=64, overflow="sat")
+
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()

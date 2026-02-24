@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Optional, Any
 
 
-VALID_OVERFLOWS = {"panic", "wrap", "sat"}
+VALID_OVERFLOWS = {"panic"}  # v0.2: only "panic" supported; "wrap"/"sat" planned for v0.3
 VALID_EFFECTS = {"IO", "FS", "NET", "TIME", "RAND", "MUT"}
 
 
@@ -33,8 +33,13 @@ class IntType:
     overflow: str  # panic | wrap | sat
 
     def __post_init__(self):
-        assert self.bits in (8, 16, 32, 64), f"Invalid int bits: {self.bits}"
-        assert self.overflow in VALID_OVERFLOWS, f"Invalid overflow: {self.overflow}"
+        if self.bits not in (8, 16, 32, 64):
+            raise NailTypeError(f"Invalid int bits: {self.bits}")
+        if self.overflow not in VALID_OVERFLOWS:
+            raise NailTypeError(
+                f"Invalid overflow mode: '{self.overflow}'. "
+                f"v0.2 only supports 'panic'; 'wrap'/'sat' are planned for v0.3."
+            )
 
     def __str__(self):
         return f"int{self.bits}({self.overflow})"

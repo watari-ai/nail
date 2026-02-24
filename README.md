@@ -57,7 +57,7 @@ Every function declares its side effects (`io`, `net`, `fs`) in its signature. C
 {"nail":"0.2","kind":"module","fns":[
   {"id":"log_it","effects":["IO"],"params":[{"id":"x","type":{"type":"int","bits":64,"overflow":"panic"}}],"returns":{"type":"unit"},"body":[]},
   {"id":"pure_fn","effects":[],"params":[],"returns":{"type":"unit"},"body":[
-    {"op":"call","fn":"log_it","args":[{"id":"x","val":{"lit":1}}]}
+    {"op":"call","fn":"log_it","args":[{"lit":1}]}
   ]}
 ]}
 ```
