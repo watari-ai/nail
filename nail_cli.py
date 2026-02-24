@@ -103,7 +103,7 @@ def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = 
             raw_text = f.read()
     modules = load_modules(module_paths or [])
     try:
-        checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules, level=level)
+        checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules, level=level, source_path=path)
         checker.check()
         if fmt == "json":
             result: dict = {
@@ -165,7 +165,7 @@ def cmd_run(path: str, call_fn: str | None, raw_args: list[str], module_paths: l
 
     # Check first
     try:
-        checker = Checker(spec, modules=modules, level=level)
+        checker = Checker(spec, modules=modules, level=level, source_path=path)
         checker.check()
     except (CheckError, NailTypeError, NailEffectError) as e:
         print(f"✗ Verification failed: {e}", file=sys.stderr)

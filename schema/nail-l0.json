@@ -118,8 +118,7 @@
               }
             },
             "required": [
-              "module",
-              "from"
+              "module"
             ],
             "type": "object"
           },

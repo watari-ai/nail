@@ -60,6 +60,7 @@ class Checker:
         strict: bool = False,
         modules: dict | None = None,   # {module_id: module_spec} for cross-module imports
         level: int = 2,
+        source_path: "Path | None" = None,  # file path of the spec, for resolving "from" imports
     ):
         self.spec = spec
         self.level = level
@@ -71,6 +72,7 @@ class Checker:
         self.call_graph: dict[str, set[str]] = {}
         self.raw_text = raw_text
         self.strict = strict
+        self.source_path: "Path | None" = Path(source_path) if source_path else None
         self.modules: dict[str, dict] = dict(modules or {})
         # Ensure the entry module itself is registered for circular import detection
         _entry_id = spec.get("id")
@@ -352,13 +354,33 @@ class Checker:
         for imp in imports:
             module_id = imp.get("module")
             fns = imp.get("fns", [])
+            from_path = imp.get("from")
             if not module_id:
                 raise CheckError("Import declaration missing 'module' field")
             if module_id not in self.modules:
-                raise CheckError(
-                    f"Imported module '{module_id}' not found. "
-                    f"Pass it via modules={{'{module_id}': ...}} or --modules CLI flag."
-                )
+                # Try loading from the "from" file path if provided
+                if from_path:
+                    resolved = self._resolve_module_path(from_path)
+                    if resolved is None or not resolved.exists():
+                        raise CheckError(
+                            f"Imported module '{module_id}' not found. "
+                            f"File '{from_path}' does not exist.",
+                            code="MODULE_NOT_FOUND",
+                        )
+                    try:
+                        loaded = json.loads(resolved.read_text(encoding="utf-8"))
+                    except (json.JSONDecodeError, OSError) as exc:
+                        raise CheckError(
+                            f"Failed to load module '{module_id}' from '{from_path}': {exc}",
+                            code="MODULE_LOAD_ERROR",
+                        )
+                    self.modules[module_id] = loaded
+                else:
+                    raise CheckError(
+                        f"Imported module '{module_id}' not found. "
+                        f"Pass it via modules={{'{module_id}': ...}}, --modules CLI flag, "
+                        f"or add a \"from\": \"path/to/module.nail\" field to the import declaration."
+                    )
             imported_mod = self.modules[module_id]
             imported_aliases = imported_mod.get("types", {})
             if imported_aliases is None:
@@ -393,6 +415,23 @@ class Checker:
             self.module_fn_registry[module_id] = imported_fns
             # Bug 2 fix: also validate the body of the imported module, not just its signatures
             self._check_imported_module_body(module_id)
+
+    def _resolve_module_path(self, from_path: str) -> "Path | None":
+        """Resolve a module "from" path.
+
+        Resolution order:
+        1. Absolute path → use as-is
+        2. Relative to source_path's parent (if source_path was provided)
+        3. Relative to CWD
+        """
+        p = Path(from_path)
+        if p.is_absolute():
+            return p
+        if self.source_path is not None:
+            candidate = self.source_path.parent / p
+            if candidate.exists():
+                return candidate
+        return Path.cwd() / p
 
     def _check_imported_module_body(self, module_id: str):
         """Recursively validate the body of an imported module (Bug 2 fix).
