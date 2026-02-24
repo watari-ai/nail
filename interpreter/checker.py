@@ -357,6 +357,9 @@ class Checker:
 
             elif op == "read_file":
                 # L2: requires FS effect; "path" must be string; result stored via let
+                eff = stmt.get("effect")
+                if eff != "FS":
+                    raise CheckError(f"[{fn_id}] 'read_file' must declare effect: FS")
                 if "FS" not in self.declared_effects:
                     raise NailEffectError(
                         f"[{fn_id}] 'read_file' uses FS effect, but function does not declare it"
@@ -372,6 +375,9 @@ class Checker:
 
             elif op == "http_get":
                 # L2: requires NET effect; "url" must be string; result stored via 'into'
+                eff = stmt.get("effect")
+                if eff != "NET":
+                    raise CheckError(f"[{fn_id}] 'http_get' must declare effect: NET")
                 if "NET" not in self.declared_effects:
                     raise NailEffectError(
                         f"[{fn_id}] 'http_get' uses NET effect, but function does not declare it"

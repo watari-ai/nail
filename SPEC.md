@@ -198,6 +198,10 @@ Use `assign` to update a previously declared mutable variable.
 ```
 
 Effectful operations are a compile error if the corresponding effect is not declared in the function's `effects` list.
+Each effectful operation must include an explicit `effect` field with the canonical value:
+- `print` must declare `"effect": "IO"`
+- `read_file` must declare `"effect": "FS"`
+- `http_get` must declare `"effect": "NET"`
 `print` expects a `String` argument.
 
 ---
