@@ -11,13 +11,23 @@ from typing import Any
 from .types import (
     NailType, NailTypeError, NailEffectError,
     parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType,
     VALID_EFFECTS,
 )
 
 
 class CheckError(Exception):
     pass
+
+
+# Intermediate types used during Result construction (ok/err ops)
+class _ResultOkIntermediate:
+    def __init__(self, ok_type): self.ok_type = ok_type
+    def __repr__(self): return f"<ok({self.ok_type})>"
+
+class _ResultErrIntermediate:
+    def __init__(self, err_type): self.err_type = err_type
+    def __repr__(self): return f"<err({self.err_type})>"
 
 
 class Checker:
@@ -199,7 +209,25 @@ class Checker:
 
             if op == "return":
                 val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
-                if not types_equal(val_type, expected_return):
+                # Handle Result construction (ok/err ops)
+                if isinstance(expected_return, ResultType):
+                    if isinstance(val_type, _ResultOkIntermediate):
+                        if not types_equal(val_type.ok_type, expected_return.ok):
+                            raise CheckError(
+                                f"[{fn_id}] ok() value type {val_type.ok_type} does not match "
+                                f"result<ok={expected_return.ok}, err={expected_return.err}>"
+                            )
+                    elif isinstance(val_type, _ResultErrIntermediate):
+                        if not types_equal(val_type.err_type, expected_return.err):
+                            raise CheckError(
+                                f"[{fn_id}] err() value type {val_type.err_type} does not match "
+                                f"result<ok={expected_return.ok}, err={expected_return.err}>"
+                            )
+                    elif not types_equal(val_type, expected_return):
+                        raise CheckError(
+                            f"[{fn_id}] Return type mismatch: expected {expected_return}, got {val_type}"
+                        )
+                elif not types_equal(val_type, expected_return):
                     raise CheckError(
                         f"[{fn_id}] Return type mismatch: expected {expected_return}, got {val_type}"
                     )
@@ -211,7 +239,20 @@ class Checker:
                 val_type = self._check_expr(fn_id, stmt["val"], local_env)
                 if "type" in stmt:
                     declared = parse_type(stmt["type"])
-                    if not types_equal(val_type, declared):
+                    # Handle Result construction in let bindings
+                    if isinstance(declared, ResultType) and isinstance(val_type, _ResultOkIntermediate):
+                        if not types_equal(val_type.ok_type, declared.ok):
+                            raise CheckError(
+                                f"[{fn_id}] Let '{stmt['id']}': ok() value {val_type.ok_type} != result.ok {declared.ok}"
+                            )
+                        val_type = declared
+                    elif isinstance(declared, ResultType) and isinstance(val_type, _ResultErrIntermediate):
+                        if not types_equal(val_type.err_type, declared.err):
+                            raise CheckError(
+                                f"[{fn_id}] Let '{stmt['id']}': err() value {val_type.err_type} != result.err {declared.err}"
+                            )
+                        val_type = declared
+                    elif not types_equal(val_type, declared):
                         raise CheckError(
                             f"[{fn_id}] Let '{stmt['id']}' type mismatch: declared {declared}, got {val_type}"
                         )
@@ -262,6 +303,28 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'http_get' url must be string, got {url_type}")
                 if "into" in stmt:
                     local_env[stmt["into"]] = StringType()
+
+            elif op == "match_result":
+                # L1: exhaustive pattern match on result<Ok, Err>
+                val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
+                if not isinstance(val_type, ResultType):
+                    raise CheckError(
+                        f"[{fn_id}] 'match_result' expects result<Ok, Err>, got {val_type}"
+                    )
+                ok_bind = stmt.get("ok_bind")
+                err_bind = stmt.get("err_bind")
+                # ok branch
+                ok_env = dict(local_env)
+                if ok_bind:
+                    ok_env[ok_bind] = val_type.ok
+                ok_guaranteed = self._check_body(fn_id, stmt.get("ok_body", []), ok_env, local_mut, expected_return)
+                # err branch
+                err_env = dict(local_env)
+                if err_bind:
+                    err_env[err_bind] = val_type.err
+                err_guaranteed = self._check_body(fn_id, stmt.get("err_body", []), err_env, local_mut, expected_return)
+                if ok_guaranteed and err_guaranteed:
+                    guaranteed_return = True
 
             elif op == "call":
                 # Call can be used as a statement (discard return value)
@@ -438,6 +501,16 @@ class Checker:
             if not isinstance(l_type, StringType) or not isinstance(r_type, StringType):
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
+
+        elif op == "ok":
+            # Result::Ok constructor — returns _ResultOkIntermediate for return-site checking
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            return _ResultOkIntermediate(val_type)
+
+        elif op == "err":
+            # Result::Err constructor — returns _ResultErrIntermediate for return-site checking
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            return _ResultErrIntermediate(val_type)
 
         elif op == "call":
             return self._check_call_expr(fn_id, expr, env)

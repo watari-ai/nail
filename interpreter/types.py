@@ -102,7 +102,16 @@ class MapType:
     def __str__(self): return f"map<{self.key}, {self.value}>"
 
 
-NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType
+@dataclass(frozen=True)
+class ResultType:
+    """Result<Ok, Err> — explicit success/failure type. Added in v0.3."""
+    ok: Any   # NailType for the success path
+    err: Any  # NailType for the error path
+
+    def __str__(self): return f"result<{self.ok}, {self.err}>"
+
+
+NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType
 
 
 def parse_type(spec: dict) -> NailType:
@@ -143,6 +152,12 @@ def parse_type(spec: dict) -> NailType:
         if key_spec is None or val_spec is None:
             raise NailTypeError("map type requires 'key' and 'value'")
         return MapType(key=parse_type(key_spec), value=parse_type(val_spec))
+    elif t == "result":
+        ok_spec = spec.get("ok")
+        err_spec = spec.get("err")
+        if ok_spec is None or err_spec is None:
+            raise NailTypeError("result type requires both 'ok' and 'err' sub-types")
+        return ResultType(ok=parse_type(ok_spec), err=parse_type(err_spec))
     else:
         raise NailTypeError(f"Unknown type: {t}")
 

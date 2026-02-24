@@ -775,6 +775,87 @@ class TestCanonicalForm(unittest.TestCase):
         with self.assertRaises(CheckError):
             Checker(spec).check()
 
+    # ------------------------------------------------------------------
+    # Result type (v0.3 feature, Issue #3)
+    # ------------------------------------------------------------------
+
+    def _safe_div_spec(self) -> dict:
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        STR   = {"type": "string", "encoding": "utf8"}
+        return {
+            "nail": "0.3", "kind": "fn", "id": "safe_div",
+            "effects": [], "params": [
+                {"id": "a", "type": INT64},
+                {"id": "b", "type": INT64},
+            ],
+            "returns": {"type": "result", "ok": INT64, "err": STR},
+            "body": [
+                {"op": "if",
+                 "cond": {"op": "eq", "l": {"ref": "b"}, "r": {"lit": 0}},
+                 "then": [{"op": "return", "val": {"op": "err", "val": {"lit": "division by zero"}}}],
+                 "else": [{"op": "return", "val": {"op": "ok",  "val": {"op": "/", "l": {"ref": "a"}, "r": {"ref": "b"}}}}]},
+            ],
+        }
+
+    def test_result_checker_passes(self):
+        """safe_div must pass checker."""
+        Checker(self._safe_div_spec()).check()
+
+    def test_result_ok_path(self):
+        """safe_div(10, 2) → ok(5)."""
+        from interpreter.runtime import NailResult
+        r = Runtime(self._safe_div_spec()).run({"a": 10, "b": 2})
+        self.assertIsInstance(r, NailResult)
+        self.assertTrue(r.is_ok)
+        self.assertEqual(r._val, 5)
+
+    def test_result_err_path(self):
+        """safe_div(5, 0) → err('division by zero')."""
+        from interpreter.runtime import NailResult
+        r = Runtime(self._safe_div_spec()).run({"a": 5, "b": 0})
+        self.assertIsInstance(r, NailResult)
+        self.assertTrue(r.is_err)
+        self.assertEqual(r._val, "division by zero")
+
+    def test_result_type_mismatch_raises(self):
+        """Returning wrong ok type should raise CheckError."""
+        spec = {
+            "nail": "0.3", "kind": "fn", "id": "bad_result",
+            "effects": [], "params": [],
+            "returns": {"type": "result",
+                        "ok": {"type": "int", "bits": 64, "overflow": "panic"},
+                        "err": {"type": "string", "encoding": "utf8"}},
+            "body": [
+                # ok() with a bool — mismatch: declared ok is int
+                {"op": "return", "val": {"op": "ok", "val": {"lit": True}}},
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_match_result_both_branches_required(self):
+        """match_result guarantees return if both branches return."""
+        INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
+        STR   = {"type": "string", "encoding": "utf8"}
+        spec = {
+            "nail": "0.3", "kind": "fn", "id": "unwrap_or",
+            "effects": [], "params": [
+                {"id": "res", "type": {"type": "result", "ok": INT64, "err": STR}},
+            ],
+            "returns": INT64,
+            "body": [
+                {"op": "match_result", "val": {"ref": "res"},
+                 "ok_bind": "v",   "ok_body":  [{"op": "return", "val": {"ref": "v"}}],
+                 "err_bind": "_e", "err_body": [{"op": "return", "val": {"lit": -1}}]},
+            ],
+        }
+        Checker(spec).check()  # must not raise
+        from interpreter.runtime import NailResult
+        r_ok  = Runtime(spec).run({"res": NailResult("ok",  42)})
+        r_err = Runtime(spec).run({"res": NailResult("err", "oops")})
+        self.assertEqual(r_ok,  42)
+        self.assertEqual(r_err, -1)
+
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()

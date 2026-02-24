@@ -99,6 +99,24 @@ class Runtime:
             print(val)
             return _CONTINUE
 
+        elif op == "match_result":
+            result_val = self._eval(stmt["val"], env)
+            if not isinstance(result_val, NailResult):
+                raise NailRuntimeError(f"'match_result' expects NailResult, got {type(result_val).__name__}")
+            if result_val.is_ok:
+                ok_bind = stmt.get("ok_bind")
+                if ok_bind:
+                    env[ok_bind] = result_val._val
+                ret = self._run_body(stmt.get("ok_body", []), env)
+            else:
+                err_bind = stmt.get("err_bind")
+                if err_bind:
+                    env[err_bind] = result_val._val
+                ret = self._run_body(stmt.get("err_body", []), env)
+            if ret is not _CONTINUE:
+                return ret
+            return _CONTINUE
+
         elif op == "read_file":
             # v0.2 reference interpreter: FS ops not yet executed
             raise NailRuntimeError(
@@ -237,6 +255,12 @@ class Runtime:
                 raise NailRuntimeError(f"'concat' requires two strings, got {type(l)}, {type(r)}")
             return l + r
 
+        elif op == "ok":
+            return NailResult("ok", self._eval(expr["val"], env))
+
+        elif op == "err":
+            return NailResult("err", self._eval(expr["val"], env))
+
         elif op == "call":
             if self.spec.get("kind") != "module":
                 raise NailRuntimeError("Function call is only supported for kind:module")
@@ -294,3 +318,27 @@ class _Continue:
     pass
 
 _CONTINUE = _Continue()
+
+
+# ---------------------------------------------------------------------------
+# Result type runtime representation
+# ---------------------------------------------------------------------------
+
+class NailResult:
+    """Runtime value for result<Ok, Err>."""
+    def __init__(self, tag: str, val):
+        assert tag in ("ok", "err"), f"Invalid result tag: {tag}"
+        self._tag = tag
+        self._val = val
+
+    @property
+    def is_ok(self): return self._tag == "ok"
+
+    @property
+    def is_err(self): return self._tag == "err"
+
+    def __repr__(self):
+        return f"NailResult({self._tag!r}, {self._val!r})"
+
+    def __eq__(self, other):
+        return isinstance(other, NailResult) and self._tag == other._tag and self._val == other._val
