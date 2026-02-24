@@ -135,6 +135,43 @@ Rules:
 - If any structured capability for a kind exists, operations of that kind are allowed only when one declared capability matches.
 - Both check-time (L2) and runtime enforcement are required (defence-in-depth).
 
+### 3.1 Effect Model: Static vs Runtime (v0.5)
+
+NAIL's effect system has two complementary enforcement layers. Understanding their respective roles is essential for building correct AI agent sandboxes.
+
+#### What the Checker (L2) Guarantees
+
+The checker performs **static analysis** at load time (before execution):
+
+- Every function with a side-effect operation (`print`, `read_file`, `http_get`, etc.) must declare the corresponding effect in its signature.
+- Functions calling other functions cannot "hide" effects: if `helper` declares `[IO]`, then `main` must also declare `[IO]` (or be rejected by the checker).
+- For structured capabilities (`{"kind":"FS","allow":["/tmp/"]}"`), the checker verifies that the declared paths/hosts are syntactically valid. It **cannot** verify at compile time that the actual values passed at runtime fall within bounds — that is the runtime's job.
+
+**Checker guarantee:** _If a function declares `effects: []`, it contains no calls to effectful operations. This is a structural guarantee enforced by the verifier, not a promise._
+
+#### What the Runtime (L2.5) Enforces
+
+The runtime performs **dynamic enforcement** at execution time:
+
+- Structured FS capabilities: each `read_file`/`write_file` call is checked against the `allow` paths. A path outside the declared roots raises `RuntimeError`.
+- Structured NET capabilities: each `http_get` call is checked against the `allow` hostnames. An unexpected host raises `RuntimeError`. URL schemes are also validated — only `http://` and `https://` are permitted.
+- Unstructured effects (`"FS"`, `"NET"` without `allow`): no path/host restriction at runtime; the declaration is purely informational at this level.
+
+**Runtime guarantee:** _For structured capabilities, the actual runtime values are constrained to the declared allowlist. This is defence-in-depth against checker escape vectors._
+
+#### User Responsibility
+
+- The user (or AI agent) is responsible for declaring effects accurately. The checker catches undeclared effects, but cannot validate that effect declarations are _complete_ (e.g. you could declare `["FS"]` but only use NET — the checker does not warn).
+- For sandboxing AI-generated code, prefer structured capabilities (`{"kind":"NET","allow":["..."]}`). Bare effect strings (`"NET"`) declare intent but do not constrain values.
+
+#### Three-Tier Error Model
+
+| Tier | Type | Example | Recovery |
+|------|------|---------|----------|
+| Recoverable | `Result` type (`ok`/`err`) | File not found, parse error | Handled in code via `unwrap_ok`/`unwrap_err` |
+| Unrecoverable | `panic` overflow policy | Integer overflow | Program terminates |
+| Runtime error | `RuntimeError` | FS path outside `allow` | Sandbox catches and logs |
+
 ---
 
 ## 4. Function Definition
