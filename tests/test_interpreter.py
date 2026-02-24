@@ -43,6 +43,8 @@ INT64 = {"type": "int", "bits": 64, "overflow": "panic"}
 BOOL_T = {"type": "bool"}
 STR_T = {"type": "string"}
 UNIT_T = {"type": "unit"}
+LIST_INT = {"type": "list", "inner": INT64, "len": "dynamic"}
+MAP_STR_INT = {"type": "map", "key": STR_T, "value": INT64}
 
 
 def fn_spec(fn_id, params, returns, body, effects=None):
@@ -615,6 +617,85 @@ class TestStringOps(unittest.TestCase):
         ])
         result = run_spec(spec)
         self.assertEqual(result, "false")
+
+
+class TestCollectionOpsV04(unittest.TestCase):
+
+    def test_list_get_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "return", "val": {"op": "list_get", "list": {"ref": "xs"}, "index": {"lit": 1}}}
+        ])
+        result = run_spec(spec, args={"xs": [10, 20, 30]})
+        self.assertEqual(result, 20)
+
+    def test_list_push_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "list_push", "list": {"ref": "xs"}, "value": {"lit": 7}},
+            {"op": "return", "val": {"op": "list_len", "list": {"ref": "xs"}}},
+        ])
+        result = run_spec(spec, args={"xs": [1, 2]})
+        self.assertEqual(result, 3)
+
+    def test_list_len_happy(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "return", "val": {"op": "list_len", "list": {"ref": "xs"}}}
+        ])
+        result = run_spec(spec, args={"xs": [1, 2, 3, 4]})
+        self.assertEqual(result, 4)
+
+    def test_map_get_happy(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], INT64, [
+            {"op": "return", "val": {"op": "map_get", "map": {"ref": "m"}, "key": {"lit": "answer"}}}
+        ])
+        result = run_spec(spec, args={"m": {"answer": 42}})
+        self.assertEqual(result, 42)
+
+    def test_list_get_empty_list_raises(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "return", "val": {"op": "list_get", "list": {"ref": "xs"}, "index": {"lit": 0}}}
+        ])
+        Checker(spec).check()
+        with self.assertRaises(NailRuntimeError):
+            Runtime(spec).run({"xs": []})
+
+    def test_list_get_out_of_bounds_raises(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "return", "val": {"op": "list_get", "list": {"ref": "xs"}, "index": {"lit": 2}}}
+        ])
+        Checker(spec).check()
+        with self.assertRaises(NailRuntimeError):
+            Runtime(spec).run({"xs": [1]})
+
+    def test_list_push_type_mismatch_checker_raises(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], UNIT_T, [
+            {"op": "list_push", "list": {"ref": "xs"}, "value": {"lit": "bad"}},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_map_get_key_type_mismatch_checker_raises(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], INT64, [
+            {"op": "return", "val": {"op": "map_get", "map": {"ref": "m"}, "key": {"lit": 1}}}
+        ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_list_len_runtime_type_mismatch_raises_nail_type_error(self):
+        spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
+            {"op": "return", "val": {"op": "list_len", "list": {"ref": "xs"}}}
+        ])
+        Checker(spec).check()
+        with self.assertRaises(NailTypeError):
+            Runtime(spec).run({"xs": "not-a-list"})
+
+    def test_map_get_runtime_key_type_mismatch_raises_nail_type_error(self):
+        spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], INT64, [
+            {"op": "return", "val": {"op": "map_get", "map": {"ref": "m"}, "key": {"lit": "x"}}}
+        ])
+        Checker(spec).check()
+        with self.assertRaises(NailTypeError):
+            Runtime(spec).run({"m": {1: 100}})
 
 
 # ──────────────────────────────────────────────
