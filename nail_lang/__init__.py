@@ -87,6 +87,11 @@ from nail_lang._effects import (
     validate_effects,
     VALID_EFFECTS,
 )
+from nail_lang._mcp import (
+    from_mcp,
+    to_mcp,
+    infer_effects,
+)
 
 __version__ = "0.7.0"
 
@@ -120,6 +125,10 @@ __all__ = [
     "annotate_tool_effects",
     "validate_effects",
     "VALID_EFFECTS",
+    # MCP bridge
+    "from_mcp",
+    "to_mcp",
+    "infer_effects",
     # Meta
     "__version__",
 ]
