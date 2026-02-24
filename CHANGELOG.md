@@ -2,6 +2,17 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.7.1] — 2026-02-25
+
+### Added
+
+- **MCP Bridge** (`nail_lang/_mcp.py`, `integrations/mcp.md`, closes #61)
+  - `from_mcp(mcp_tools)`: MCP tool format → OpenAI FC + NAIL effect annotations
+  - `infer_effects(name, desc)`: heuristic effect inference (FS/NET/PROC/TIME/RAND/IO)
+  - `to_mcp(openai_tools)`: OpenAI FC → MCP format (strips NAIL extension)
+  - Full integration guide in `integrations/mcp.md`
+  - 26 new tests in `tests/test_mcp_bridge.py`
+
 ## [v0.7.0] — 2026-02-25
 
 ### Added
