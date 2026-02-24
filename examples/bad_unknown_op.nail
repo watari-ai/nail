@@ -1,0 +1,1 @@
+{"body":[{"op":"yield","val":{"lit":42}}],"effects":[],"id":"bad_unknown_op","kind":"fn","nail":"0.2","params":[],"returns":{"bits":64,"overflow":"panic","type":"int"}}
