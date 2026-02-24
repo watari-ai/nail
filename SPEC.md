@@ -1,4 +1,4 @@
-# NAIL Language Specification v0.3
+# NAIL Language Specification v0.4
 
 > ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI
 
@@ -25,6 +25,7 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 { "type": "list",   "inner": <type>, "len": <n> }
 { "type": "map",    "key": <type>, "value": <type> }
 { "type": "unit" }
+{ "type": "alias",  "name": "<AliasName>" }
 ```
 
 **Design principles:**
@@ -33,6 +34,28 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 - At the **type level**, only `"overflow": "panic"` is supported (type default).
 - At the **expression level** (v0.3+), `"overflow": "wrap"` and `"overflow": "sat"` are supported per-operation. See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md).
 - No implicit type conversions of any kind.
+
+### Type Aliases (v0.4)
+
+Type aliases are declared at module top-level and can be used from function signatures and type annotations.
+
+```json
+"types": {
+  "UserId": { "type": "int", "bits": 64, "overflow": "panic" },
+  "MaybeUserId": { "type": "option", "inner": { "type": "alias", "name": "UserId" } }
+}
+```
+
+Alias usage:
+
+```json
+{ "type": "alias", "name": "UserId" }
+```
+
+Rules:
+- Alias lookup scope is the containing module's `types`.
+- Aliases may reference other aliases.
+- Circular aliases are a compile error.
 
 ---
 
@@ -228,6 +251,9 @@ Effectful operations are a compile error if the corresponding effect is not decl
   "nail": "0.1.0",
   "kind": "module",
   "id": "math",
+  "types": {
+    "UserId": { "type": "int", "bits": 64, "overflow": "panic" }
+  },
   "exports": ["add", "multiply"],
   "defs": [
     { ... },
@@ -239,6 +265,8 @@ Effectful operations are a compile error if the corresponding effect is not decl
 `defs` are checked in 2 passes:
 1. Collect all function signatures (for forward references)
 2. Type/effect-check all bodies
+
+Type aliases in `types` are resolved before function checking.
 
 ---
 
@@ -284,19 +312,20 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 **JCS Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) form: `json.dumps(sort_keys=True, separators=(',',':'))`. One program = one representation. Non-canonical input is rejected at L0. Use `nail canonicalize` to convert.
 
-v0.3 implements L0–L2 (L3/L4 planned for future versions).
+v0.4 implements L0–L2 (L3/L4 planned for future versions).
 
 ---
 
-## 14. Implemented in v0.3
+## 14. Implemented in v0.4
 
-The following features were added in v0.3:
+The following features were added in v0.4:
 
 - **Result type** (`result`, `ok`, `err`, `match_result`) — error handling without exceptions. See [designs/v0.3/result-type.md](designs/v0.3/result-type.md)
 - **Cross-module imports** — import and call functions from other NAIL modules. Circular import detection, effect propagation across boundaries. See [designs/v0.3/cross-module.md](designs/v0.3/cross-module.md)
 - **Expression-level overflow** (`wrap`/`sat`/`panic` per operation). See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)
+- **Type aliases** (`module.types`, `{ "type": "alias", "name": ... }`) — reusable module-local type definitions.
 
-## 15. Out of Scope (v0.3)
+## 15. Out of Scope (v0.4)
 
 - Algebraic data types (Enum)
 - Closures
@@ -304,4 +333,4 @@ The following features were added in v0.3:
 - Generics
 - Traits / Interfaces
 
-These may be added in v0.4+ based on AI-generated proposals accepted into the spec.
+These may be added in v0.5+ based on AI-generated proposals accepted into the spec.

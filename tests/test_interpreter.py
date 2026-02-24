@@ -57,14 +57,17 @@ def fn_spec(fn_id, params, returns, body, effects=None):
     }
 
 
-def module_spec(module_id, defs, exports=None):
-    return {
+def module_spec(module_id, defs, exports=None, types=None):
+    spec = {
         "nail": "0.1.0",
         "kind": "module",
         "id": module_id,
         "exports": exports or [],
         "defs": defs,
     }
+    if types is not None:
+        spec["types"] = types
+    return spec
 
 
 # ──────────────────────────────────────────────
@@ -156,6 +159,40 @@ class TestL1Types(unittest.TestCase):
         spec = fn_spec("f", [], STR_T, [
             {"op": "return", "val": {"op": "concat", "l": {"lit": "hello "}, "r": {"lit": 42}}}
         ])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+
+class TestTypeAliasesV04(unittest.TestCase):
+
+    def test_alias_in_function_signature(self):
+        spec = module_spec(
+            "m",
+            defs=[
+                fn_spec(
+                    "identity",
+                    [{"id": "user_id", "type": {"type": "alias", "name": "UserId"}}],
+                    {"type": "alias", "name": "UserId"},
+                    [{"op": "return", "val": {"ref": "user_id"}}],
+                ),
+            ],
+            exports=["identity"],
+            types={
+                "UserId": {"type": "int", "bits": 64, "overflow": "panic"},
+            },
+        )
+        result = run_spec(spec, args={"user_id": 42}, call_fn="identity")
+        self.assertEqual(result, 42)
+
+    def test_circular_alias_detection_raises(self):
+        spec = module_spec(
+            "m",
+            defs=[],
+            types={
+                "A": {"type": "alias", "name": "B"},
+                "B": {"type": "alias", "name": "A"},
+            },
+        )
         with self.assertRaises(CheckError):
             Checker(spec).check()
 

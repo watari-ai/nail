@@ -1,5 +1,5 @@
 """
-NAIL Checker — v0.3
+NAIL Checker — v0.4
 L0: JSON schema validation (jsonschema + hand-rolled)
 L1: Type checking
 L2: Effect checking
@@ -52,6 +52,11 @@ class Checker:
             self.modules[_entry_id] = spec
         # module_fn_registry: {module_id: {fn_id: fn_spec}}
         self.module_fn_registry: dict[str, dict[str, dict]] = {}
+        # Type aliases for the current module and imported modules
+        self.type_aliases: dict[str, dict] = {}
+        self._alias_spec_cache: dict[str, dict] = {}
+        self.module_type_aliases: dict[str, dict[str, dict]] = {}
+        self._module_alias_spec_cache: dict[str, dict[str, dict]] = {}
         # Track which imported modules have already been body-checked (Bug 2 fix)
         self._checked_module_ids: set[str] = set()
 
@@ -110,6 +115,131 @@ class Checker:
         if not isinstance(fn["body"], list):
             raise CheckError(f"'body' must be a list")
 
+    def _set_module_type_aliases(self, mod: dict):
+        raw_types = mod.get("types", {})
+        if raw_types is None:
+            raw_types = {}
+        if not isinstance(raw_types, dict):
+            raise CheckError("Module 'types' must be a dict")
+        for alias_name, alias_spec in raw_types.items():
+            if not isinstance(alias_name, str) or not alias_name:
+                raise CheckError("Type alias names must be non-empty strings")
+            if not isinstance(alias_spec, dict):
+                raise CheckError(f"Type alias '{alias_name}' must map to a type dict")
+        self.type_aliases = raw_types
+        self._alias_spec_cache = {}
+        module_id = mod.get("id", "<module>")
+        for alias_name in self.type_aliases:
+            self._resolve_alias_spec(
+                alias_name,
+                aliases=self.type_aliases,
+                cache=self._alias_spec_cache,
+                stack=[],
+                module_id=module_id,
+            )
+
+    def _resolve_alias_spec(
+        self,
+        alias_name: str,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+    ) -> dict:
+        if alias_name in cache:
+            return cache[alias_name]
+        if alias_name in stack:
+            cycle = " -> ".join(stack + [alias_name])
+            raise CheckError(f"Circular type alias detected in module '{module_id}': {cycle}")
+        if alias_name not in aliases:
+            raise CheckError(f"Unknown type alias '{alias_name}' in module '{module_id}'")
+        alias_spec = aliases[alias_name]
+        if not isinstance(alias_spec, dict):
+            raise CheckError(f"Type alias '{alias_name}' must map to a type dict")
+        resolved = self._resolve_type_spec(
+            alias_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=stack + [alias_name],
+            module_id=module_id,
+        )
+        cache[alias_name] = resolved
+        return resolved
+
+    def _resolve_type_spec(
+        self,
+        type_spec: dict,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+    ) -> dict:
+        if not isinstance(type_spec, dict):
+            raise CheckError(f"Type spec must be a dict, got {type(type_spec)}")
+        t = type_spec.get("type")
+        if t == "alias":
+            alias_name = type_spec.get("name")
+            if not isinstance(alias_name, str) or not alias_name:
+                raise CheckError("Alias type requires non-empty string field 'name'")
+            return self._resolve_alias_spec(
+                alias_name,
+                aliases=aliases,
+                cache=cache,
+                stack=stack,
+                module_id=module_id,
+            )
+        if t == "option" and "inner" in type_spec:
+            resolved = dict(type_spec)
+            resolved["inner"] = self._resolve_type_spec(
+                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "list" and "inner" in type_spec:
+            resolved = dict(type_spec)
+            resolved["inner"] = self._resolve_type_spec(
+                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "map" and "key" in type_spec and "value" in type_spec:
+            resolved = dict(type_spec)
+            resolved["key"] = self._resolve_type_spec(
+                type_spec["key"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            resolved["value"] = self._resolve_type_spec(
+                type_spec["value"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        if t == "result" and "ok" in type_spec and "err" in type_spec:
+            resolved = dict(type_spec)
+            resolved["ok"] = self._resolve_type_spec(
+                type_spec["ok"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            resolved["err"] = self._resolve_type_spec(
+                type_spec["err"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
+            )
+            return resolved
+        return dict(type_spec)
+
+    def _parse_type(self, type_spec: dict, module_id: str | None = None) -> NailType:
+        if module_id is None:
+            aliases = self.type_aliases
+            cache = self._alias_spec_cache
+            target_module_id = self.spec.get("id", "<module>")
+        else:
+            aliases = self.module_type_aliases.get(module_id, {})
+            cache = self._module_alias_spec_cache.setdefault(module_id, {})
+            target_module_id = module_id
+        resolved = self._resolve_type_spec(
+            type_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=[],
+            module_id=target_module_id,
+        )
+        return parse_type(resolved)
+
     # -----------------------------------------------------------------------
     # L1 + L2: Type and effect checking
     # -----------------------------------------------------------------------
@@ -130,6 +260,7 @@ class Checker:
             raise CheckError("Module 'defs' must be a list")
         self.fn_registry = {}
         self.call_graph = {}
+        self._set_module_type_aliases(mod)
 
         # Process imports: validate and build module_fn_registry
         self._process_imports(mod)
@@ -167,6 +298,25 @@ class Checker:
                     f"Pass it via modules={{'{module_id}': ...}} or --modules CLI flag."
                 )
             imported_mod = self.modules[module_id]
+            imported_aliases = imported_mod.get("types", {})
+            if imported_aliases is None:
+                imported_aliases = {}
+            if not isinstance(imported_aliases, dict):
+                raise CheckError(f"Module '{module_id}' has invalid 'types' field (must be dict)")
+            self.module_type_aliases[module_id] = imported_aliases
+            self._module_alias_spec_cache[module_id] = {}
+            for alias_name, alias_spec in imported_aliases.items():
+                if not isinstance(alias_name, str) or not alias_name:
+                    raise CheckError(f"Module '{module_id}' has invalid type alias name")
+                if not isinstance(alias_spec, dict):
+                    raise CheckError(f"Module '{module_id}' type alias '{alias_name}' must be a type dict")
+                self._resolve_alias_spec(
+                    alias_name,
+                    aliases=imported_aliases,
+                    cache=self._module_alias_spec_cache[module_id],
+                    stack=[],
+                    module_id=module_id,
+                )
             # Build fn lookup for the imported module
             imported_fns = {fn["id"]: fn for fn in imported_mod.get("defs", []) if "id" in fn}
             for fn_id in fns:
@@ -254,7 +404,7 @@ class Checker:
 
         # L1: parse return type
         try:
-            return_type = parse_type(fn["returns"])
+            return_type = self._parse_type(fn["returns"])
         except Exception as e:
             raise CheckError(f"[{fn_id}] Invalid return type: {e}")
 
@@ -264,7 +414,7 @@ class Checker:
             if "id" not in param or "type" not in param:
                 raise CheckError(f"[{fn_id}] Param must have 'id' and 'type'")
             try:
-                t = parse_type(param["type"])
+                t = self._parse_type(param["type"])
             except Exception as e:
                 raise CheckError(f"[{fn_id}] Param '{param['id']}' invalid type: {e}")
             env[param["id"]] = t
@@ -318,7 +468,7 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'let' requires 'id' and 'val'")
                 val_type = self._check_expr(fn_id, stmt["val"], local_env)
                 if "type" in stmt:
-                    declared = parse_type(stmt["type"])
+                    declared = self._parse_type(stmt["type"])
                     # Handle Result construction in let bindings
                     if isinstance(declared, ResultType) and isinstance(val_type, _ResultOkIntermediate):
                         if not types_equal(val_type.ok_type, declared.ok):
@@ -491,7 +641,7 @@ class Checker:
             # Typed null — must have type annotation
             if "type" not in expr:
                 raise CheckError(f"[{fn_id}] null literal requires 'type' annotation")
-            t = parse_type(expr["type"])
+            t = self._parse_type(expr["type"])
             if not isinstance(t, (UnitType, OptionType)):
                 raise CheckError(f"[{fn_id}] null can only be unit or option type")
             return t
@@ -635,12 +785,12 @@ class Checker:
                 )
             for i, (arg_expr, param) in enumerate(zip(args, params)):
                 arg_type = self._check_expr(fn_id, arg_expr, env)
-                param_type = parse_type(param["type"])
+                param_type = self._parse_type(param["type"], module_id=cross_module)
                 if not types_equal(arg_type, param_type):
                     raise CheckError(
                         f"[{fn_id}] Arg {i} to '{cross_module}.{callee_id}': expected {param_type}, got {arg_type}"
                     )
-            return parse_type(callee["returns"])
+            return self._parse_type(callee["returns"], module_id=cross_module)
 
         if callee_id not in self.fn_registry:
             raise CheckError(f"[{fn_id}] Unknown function: '{callee_id}'")
@@ -670,10 +820,10 @@ class Checker:
 
         for i, (arg_expr, param) in enumerate(zip(args, params)):
             arg_type = self._check_expr(fn_id, arg_expr, env)
-            param_type = parse_type(param["type"])
+            param_type = self._parse_type(param["type"])
             if not types_equal(arg_type, param_type):
                 raise CheckError(
                     f"[{fn_id}] Arg {i} to '{callee_id}' type mismatch: expected {param_type}, got {arg_type}"
                 )
 
-        return parse_type(callee["returns"])
+        return self._parse_type(callee["returns"])
