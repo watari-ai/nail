@@ -2,6 +2,30 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.6] — 2026-02-24
+
+### Added
+
+- **L3 Termination Proof** (`interpreter/checker.py`)
+  - `Checker` now accepts `level` parameter (1, 2, or 3; default 2)
+  - **Loop termination**: `loop` ops at L3 require `step` to be a literal non-zero integer; variable steps and zero steps raise `CheckError`
+  - **Recursive termination**: direct/mutual recursion is permitted at L3 when every function in the cycle declares `"termination": {"measure": "<param>"}` annotation; measure parameter must exist
+  - **Termination certificate**: `get_termination_certificate()` returns a JSON-serializable proof object with verdicts for every verified loop and recursion site
+  - L2 and below: no behavior change — all existing tests continue to pass
+
+- **CLI `--level` flag** (`nail_cli.py`)
+  - `nail check <file> --level 3` — run L0+L1+L2+L3 checks and print termination summary
+  - `nail run <file> --level 3` — verify through L3 before executing
+  - Default remains `--level 2` for backward compatibility
+
+- **Test suite** (`tests/test_l3_termination.py`)
+  - 26 new tests covering: pass cases (literal step, variable bounds, recursive with annotation), fail cases (zero step, variable step, unannotated recursion, bad measure), and certificate content validation
+
+### Changed
+
+- SPEC.md: updated version line (`v0.6 implements L0–L3`), added Section 15 "L3 Termination Proof"
+- ROADMAP.md: v0.6 marked ✅ COMPLETE
+
 ## [v0.5] — 2026-02-24
 
 ### Added

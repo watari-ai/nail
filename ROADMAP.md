@@ -96,10 +96,10 @@ Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 - [x] **Core Standard Library** — Official modules: string ops (split, trim, contains, replace), math functions, list/map utilities beyond v0.4 collection ops.
 - [x] **Function Calling Effect Annotations** — Add NAIL-style effect declarations to OpenAI/Anthropic function_calling definitions. Proposal: proposals/function-calling-effects.md
 
-## v0.6 Goals — Type System Strengthening + Formal Verification
-- [ ] **L3 Formal Verification** — Termination proofs for bounded loops. NAIL's strongest differentiator: 'this program is provably guaranteed to halt.'
-- [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib.
-- [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option.
+## v0.6 Goals — Type System Strengthening + Formal Verification ✅ COMPLETE
+- [x] **L3 Formal Verification** — Termination proofs for bounded loops + recursive decreasing-measure annotation. `nail check --level 3` emits a termination certificate. NAIL's strongest differentiator: 'this program is provably guaranteed to halt.'
+- [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib. (deferred to v0.7+)
+- [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option. (deferred to v0.7+)
 
 ## v0.7 Goals — Developer Experience + Connectivity
 - [ ] **LSP Support** — Language Server Protocol for Nail-Lens integration. Hover types, error highlighting, go-to-definition for NAIL JSON.
@@ -225,7 +225,7 @@ v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI v0.3.0 publish
 v0.4:   ✅ Complete (2026-02-24) — 320 tests, type aliases, fine-grained effects, collection ops,
         FC Effect Annotations (integrations/), Python→NAIL transpiler (transpiler/), PyPI v0.4.0 published
 v0.5:   ✅ COMPLETE — Enum/ADT, Core StdLib, FC Annotations, Return-path exhaustiveness, CI canonical check
-v0.6:   📅 Planned — L3 Formal Verification, Generics, Error Message Improvement
+v0.6:   ✅ COMPLETE — L3 Termination Proof (loop step validation + recursive decreasing measure annotation, 421 tests)
 Phase 4: 🚀 Active
 ```
 

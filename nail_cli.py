@@ -93,7 +93,7 @@ def load_modules(module_paths: list[str]) -> dict:
     return modules
 
 
-def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = None):
+def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = None, level: int = 2):
     spec = load(path)
     raw_text = None
     if strict:
@@ -101,7 +101,7 @@ def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = 
             raw_text = f.read()
     modules = load_modules(module_paths or [])
     try:
-        checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules)
+        checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules, level=level)
         checker.check()
         kind = spec.get("kind", "?")
         prog_id = spec.get("id", "?")
@@ -111,6 +111,10 @@ def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = 
         print(f"  L0: JSON schema  — OK" + (" (canonical form verified)" if strict else ""))
         print(f"  L1: Type check   — OK")
         print(f"  L2: Effect check — OK")
+        if level >= 3:
+            cert = checker.get_termination_certificate()
+            fns_verified = cert["functions_verified"]
+            print(f"  L3: Termination  — OK ({fns_verified} function(s) verified)")
     except CheckError as e:
         print(f"✗ Schema error: {e}", file=sys.stderr)
         sys.exit(1)
@@ -122,7 +126,7 @@ def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = 
         sys.exit(1)
 
 
-def cmd_run(path: str, call_fn: str | None, raw_args: list[str], module_paths: list[str] | None = None):
+def cmd_run(path: str, call_fn: str | None, raw_args: list[str], module_paths: list[str] | None = None, level: int = 2):
     spec = load(path)
     modules = load_modules(module_paths or [])
 
@@ -131,7 +135,7 @@ def cmd_run(path: str, call_fn: str | None, raw_args: list[str], module_paths: l
 
     # Check first
     try:
-        checker = Checker(spec, modules=modules)
+        checker = Checker(spec, modules=modules, level=level)
         checker.check()
     except (CheckError, NailTypeError, NailEffectError) as e:
         print(f"✗ Verification failed: {e}", file=sys.stderr)
@@ -175,12 +179,20 @@ def main():
 
     elif cmd == "check":
         if len(args) < 2:
-            print("Usage: nail check <file.nail> [--strict]", file=sys.stderr)
+            print("Usage: nail check <file.nail> [--strict] [--level N]", file=sys.stderr)
             sys.exit(1)
         file_path = args[1]
         strict = "--strict" in args[2:]
         module_paths = [args[i+1] for i in range(2, len(args)-1) if args[i] == "--modules"]
-        cmd_check(file_path, strict=strict, module_paths=module_paths)
+        level = 2
+        for i in range(2, len(args) - 1):
+            if args[i] == "--level":
+                try:
+                    level = int(args[i + 1])
+                except (ValueError, IndexError):
+                    print("✗ --level requires an integer (1, 2, or 3)", file=sys.stderr)
+                    sys.exit(1)
+        cmd_check(file_path, strict=strict, module_paths=module_paths, level=level)
 
     elif cmd == "canonicalize":
         file_path = args[1] if len(args) > 1 else None
@@ -194,6 +206,7 @@ def main():
         file_path = args[1]
         call_fn = None
         raw_args = []
+        run_level = 2
 
         module_paths = []
         i = 2
@@ -207,11 +220,18 @@ def main():
             elif args[i] == "--modules" and i + 1 < len(args):
                 module_paths.append(args[i + 1])
                 i += 2
+            elif args[i] == "--level" and i + 1 < len(args):
+                try:
+                    run_level = int(args[i + 1])
+                except ValueError:
+                    print("✗ --level requires an integer (1, 2, or 3)", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
             else:
                 print(f"Unknown option: {args[i]}", file=sys.stderr)
                 sys.exit(1)
 
-        cmd_run(file_path, call_fn, raw_args, module_paths=module_paths)
+        cmd_run(file_path, call_fn, raw_args, module_paths=module_paths, level=run_level)
 
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)

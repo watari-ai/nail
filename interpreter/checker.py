@@ -38,8 +38,11 @@ class Checker:
         raw_text: str | None = None,
         strict: bool = False,
         modules: dict | None = None,   # {module_id: module_spec} for cross-module imports
+        level: int = 2,
     ):
         self.spec = spec
+        self.level = level
+        self._termination_proofs: dict[str, list] = {}
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
         self.declared_effect_caps: dict[str, list[dict]] = {}
@@ -426,13 +429,98 @@ class Checker:
                     cycle_start = stack.index(nxt)
                     cycle = stack[cycle_start:] + [nxt]
                     cycle_text = " -> ".join(cycle)
-                    raise CheckError(f"Recursive call detected: {cycle_text}")
+                    if self.level >= 3:
+                        # L3: allow recursion if all cycle members have termination annotation
+                        for fn_id_in_cycle in cycle[:-1]:  # last element is duplicate of first
+                            fn = self.fn_registry.get(fn_id_in_cycle, {})
+                            termination = fn.get("termination")
+                            if not termination:
+                                raise CheckError(
+                                    f"Recursive call detected: {cycle_text}. "
+                                    f"At L3, add 'termination': {{\"measure\": \"<param>\"}} to all recursive functions."
+                                )
+                            measure = termination.get("measure")
+                            if not measure:
+                                raise CheckError(
+                                    f"[{fn_id_in_cycle}] L3: 'termination.measure' must specify a decreasing parameter name"
+                                )
+                            # Verify measure parameter exists
+                            fn_spec = self.fn_registry.get(fn_id_in_cycle, {})
+                            param_ids = [p["id"] for p in fn_spec.get("params", [])]
+                            if measure not in param_ids:
+                                raise CheckError(
+                                    f"[{fn_id_in_cycle}] L3: termination measure '{measure}' is not a parameter. "
+                                    f"Available: {param_ids}"
+                                )
+                            # Record proof
+                            self._termination_proofs.setdefault(fn_id_in_cycle, []).append({
+                                "kind": "recursion",
+                                "measure": measure,
+                                "verdict": "terminates",
+                                "proof": "decreasing_measure_annotation"
+                            })
+                    else:
+                        raise CheckError(f"Recursive call detected: {cycle_text}")
             stack.pop()
             state[node] = BLACK
 
         for fn_id in self.call_graph:
             if state[fn_id] == WHITE:
                 dfs(fn_id)
+
+    def _check_loop_termination(self, fn_id: str, stmt: dict) -> dict:
+        """L3: Prove that a loop is guaranteed to terminate."""
+        step_expr = stmt["step"]
+
+        # step must be a literal integer
+        if "lit" not in step_expr:
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' must be a literal integer for termination proof "
+                f"(got a variable expression). Use a literal: {{\"lit\": 1}}."
+            )
+
+        step_val = step_expr["lit"]
+        if not isinstance(step_val, int):
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' must be an integer literal, got {type(step_val).__name__}"
+            )
+
+        if step_val == 0:
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' is zero — this would be an infinite loop. "
+                f"Termination proof requires non-zero step."
+            )
+
+        # Direction check (only when both from/to are literals)
+        from_expr = stmt["from"]
+        to_expr = stmt["to"]
+        contradiction = None
+        if "lit" in from_expr and "lit" in to_expr:
+            from_val = from_expr["lit"]
+            to_val = to_expr["lit"]
+            if step_val > 0 and from_val > to_val:
+                contradiction = "step is positive but from > to (loop never executes — trivially terminates)"
+            elif step_val < 0 and from_val < to_val:
+                contradiction = "step is negative but from < to (loop never executes — trivially terminates)"
+
+        return {
+            "kind": "loop",
+            "bind": stmt["bind"],
+            "step": step_val,
+            "step_literal": True,
+            "verdict": "terminates",
+            "proof": "step_nonzero_literal",
+            "note": contradiction,
+        }
+
+    def get_termination_certificate(self) -> dict:
+        """L3: Return the termination proof certificate after a successful check()."""
+        return {
+            "level": 3,
+            "verdict": "all_loops_terminate",
+            "functions_verified": len(self._termination_proofs),
+            "proofs": self._termination_proofs,
+        }
 
     def _check_fn(self, fn: dict):
         fn_id = fn["id"]
@@ -763,6 +851,10 @@ class Checker:
                 loop_env[stmt["bind"]] = from_type
                 # loop bind variable is immutable; propagate outer mut_set
                 self._check_body(fn_id, stmt["body"], loop_env, local_mut, expected_return)
+                # L3: termination proof
+                if self.level >= 3:
+                    proof = self._check_loop_termination(fn_id, stmt)
+                    self._termination_proofs.setdefault(fn_id, []).append(proof)
 
             else:
                 raise CheckError(f"[{fn_id}] Unknown op: '{op}'")

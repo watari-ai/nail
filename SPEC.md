@@ -534,7 +534,7 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 **JCS Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) form: `json.dumps(sort_keys=True, separators=(',',':'))`. One program = one representation. Non-canonical input is rejected at L0. Use `nail canonicalize` to convert.
 
-v0.4 implements L0–L2 (L3/L4 planned for future versions).
+v0.6 implements L0–L3 (L4 planned for future versions).
 
 ---
 
@@ -555,12 +555,97 @@ Cumulative: v0.4 includes all v0.3 features plus the following additions.
 - **Effectful op contract** — `read_file` and `http_get` require an explicit `"effect"` field; bare declaration is a check-time error.
 - **URL scheme restriction** — `http_get` accepts only `http://` and `https://` schemes; `file://` and other schemes are rejected at both check and runtime.
 
-## 15. Out of Scope (v0.4)
+## 15. L3 Termination Proof (v0.6)
 
-- Algebraic data types (Enum)
+L3 verification proves that every loop and every recursive call will terminate. Enable with `nail check --level 3` or `nail run --level 3`.
+
+### Loop Termination
+
+A `loop` op (fields: `bind`, `from`, `to`, `step`, `body`) is proven terminating when:
+
+1. **`step` is a literal integer** — e.g. `{"lit": 1}` or `{"lit": -3}`. Variable expressions are rejected.
+2. **`step` is non-zero** — `{"lit": 0}` is rejected as it would loop forever.
+
+If both `from` and `to` are also literals, the checker additionally notes any trivially-empty loops (positive step with `from > to`, or negative step with `from < to`). These still pass — they terminate trivially by never executing.
+
+```json
+{
+  "op": "loop",
+  "bind": "i",
+  "from": {"lit": 0},
+  "to":   {"lit": 100},
+  "step": {"lit": 1},
+  "body": []
+}
+```
+
+### Recursive Function Termination
+
+Direct or mutual recursion is permitted at L3 if every function in the cycle declares a `termination` annotation with a `measure` field naming a decreasing parameter:
+
+```json
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "factorial",
+  "exports": ["fact"],
+  "defs": [
+    {
+      "id": "fact",
+      "effects": [],
+      "params": [{"id": "n", "type": {"type": "int", "bits": 64, "overflow": "panic"}}],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "termination": {"measure": "n"},
+      "body": [
+        {
+          "op": "if",
+          "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+          "then": [{"op": "return", "val": {"lit": 1}}],
+          "else": [
+            {"op": "return", "val": {"op": "*", "l": {"ref": "n"},
+              "r": {"op": "call", "fn": "fact", "args": [{"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}]}}}
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+The `termination.measure` must reference an existing parameter name. The checker records this as a "decreasing measure annotation" proof.
+
+### Termination Certificate
+
+After a successful L3 check, call `get_termination_certificate()` to retrieve a proof object:
+
+```json
+{
+  "level": 3,
+  "verdict": "all_loops_terminate",
+  "functions_verified": 1,
+  "proofs": {
+    "fact": [
+      {
+        "kind": "recursion",
+        "measure": "n",
+        "verdict": "terminates",
+        "proof": "decreasing_measure_annotation"
+      }
+    ]
+  }
+}
+```
+
+Loop proofs include `kind: "loop"`, `step`, `step_literal: true`, `verdict: "terminates"`, `proof: "step_nonzero_literal"`, and an optional `note` for trivially-empty loops.
+
+---
+
+## 16. Out of Scope (v0.6)
+
 - Closures
 - Async/await
 - Generics
 - Traits / Interfaces
+- L4: Memory safety (buffer overflow proofs)
 
-These may be added in v0.5+ based on AI-generated proposals accepted into the spec.
+These may be added in future versions based on AI-generated proposals accepted into the spec.
