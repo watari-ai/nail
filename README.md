@@ -85,9 +85,35 @@ Modern LLMs have JSON structured output modes built in (OpenAI, Anthropic, Googl
 
 JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonicalize`) is only possible because JSON has well-defined serialization semantics (RFC 8785 / JCS). S-expressions have no such standard.
 
+## Python API — Effect-Safe Tool Routing
+
+NAIL's effect system can be used directly in Python to sandbox AI agent tool lists:
+
+```python
+from nail_lang import filter_by_effects
+
+tools = [
+    {"type": "function", "function": {"name": "read_file",  "effects": ["FS"]}},
+    {"type": "function", "function": {"name": "http_get",   "effects": ["NET"]}},
+    {"type": "function", "function": {"name": "exec_script","effects": ["PROC"]}},
+    {"type": "function", "function": {"name": "log",        "effects": ["IO"]}},
+]
+
+# Restrict agent to read-only: no network, no process execution
+safe_tools = filter_by_effects(tools, allowed=["FS", "IO"])
+# → [read_file, log]
+
+# Pass to LiteLLM, OpenAI, or any provider
+response = litellm.completion(model="gpt-4o", tools=safe_tools, ...)
+```
+
+This is the NAIL effect system applied to Function Calling. Add `"effects": [...]` to your tool definitions; `filter_by_effects` handles the rest. Unannotated tools are excluded by default (production-safe).
+
+See [`integrations/litellm.md`](integrations/litellm.md) for the full integration guide.
+
 ## Status
 
-🧪 **Experimental — v0.4** — `pip install nail-lang`
+🧪 **Experimental — v0.7.0** — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -107,7 +133,17 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 | **Fine-grained Effect capabilities** (path/op allow-lists) | ✅ Implemented (v0.4) |
 | **Collection type operations** (`list_get/push/len`, `map_get`) | ✅ Implemented (v0.4) |
 | `read_file` (FS) / `http_get` (NET) | ✅ Fully implemented (v0.4) |
-| Formal verification / termination proofs | 🔮 Future (v0.6+) |
+| Enum / ADT (`enum_make` / `match_enum`) | ✅ Implemented (v0.5) |
+| Core StdLib (`abs`/`clamp`/`min2`/`max2`/`str_len`) | ✅ Implemented (v0.5) |
+| FC effect annotations (tool sandbox metadata) | ✅ Implemented (v0.5) |
+| **L3 Termination Proofs** (`nail check --level 3`) | ✅ Implemented (v0.6) |
+| **`nail check --format json`** (machine-parseable output) | ✅ Implemented (v0.7) |
+| **Generics** (`type_params` + `{"type": "param", "name": "T"}`) | ✅ Implemented (v0.7) |
+| **Python API** (`nail_lang.filter_by_effects`) | ✅ Implemented (v0.7) |
+| **import `"from"` file resolution** | ✅ Implemented (v0.7) |
+| Structured JSON errors (`to_json()` / error codes) | ✅ Implemented (v0.7) |
+| Traits / Interfaces / Higher-kinded types | 🔮 Future |
+| L4: Memory safety (buffer overflow proofs) | 🔮 Future |
 
 ### v0.4 New Features
 
