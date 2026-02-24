@@ -46,6 +46,8 @@ jobs:
           else:
               print(f"\nAll examples passed schema validation.")
           EOF
+      - name: Check canonical form of examples
+        run: python tools/check-canonical.py
       - name: Check examples (type + effect check)
         run: |
           for f in examples/*.nail; do
