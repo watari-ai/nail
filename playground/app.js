@@ -10,7 +10,7 @@ const EXAMPLES = {
     description: "Prints a greeting. No arguments.",
     args: {},
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -28,7 +28,7 @@ const EXAMPLES = {
     description: "Computes the Nth Fibonacci number. Pass arg n (e.g. 10).",
     args: { n: 10 },
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "fibonacci",
       "effects": [],
@@ -62,7 +62,7 @@ const EXAMPLES = {
     description: "Computes n! iteratively. Pass arg n (e.g. 10).",
     args: { n: 10 },
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "factorial",
       "effects": [],
@@ -92,7 +92,7 @@ const EXAMPLES = {
     description: "Counts down from 5 to 1, then prints Liftoff!",
     args: {},
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -125,7 +125,7 @@ const EXAMPLES = {
     description: "Sums integers from 1 to 10 using a loop.",
     args: {},
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -158,7 +158,7 @@ const EXAMPLES = {
     description: "Returns true if n is even. Pass arg n (e.g. 42).",
     args: { n: 42 },
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "is_even",
       "effects": [],
@@ -183,7 +183,7 @@ const EXAMPLES = {
     description: "Demonstrates module-level type aliases (v0.4). UserId, Score, and Username are aliases. The rank_label function accepts a Score alias and returns a Username alias.",
     args: {},
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "module",
       "id": "type_aliases_demo",
       "types": {
@@ -194,7 +194,7 @@ const EXAMPLES = {
       "exports": ["main"],
       "defs": [
         {
-          "nail": "0.1.0",
+          "nail": "0.4.0",
           "kind": "fn",
           "id": "rank_label",
           "effects": [],
@@ -219,7 +219,7 @@ const EXAMPLES = {
           ]
         },
         {
-          "nail": "0.1.0",
+          "nail": "0.4.0",
           "kind": "fn",
           "id": "main",
           "effects": ["IO"],
@@ -260,7 +260,7 @@ const EXAMPLES = {
     description: "Demonstrates structured effect capabilities (v0.4). The function declares { kind: 'FS', allow: ['/tmp/'], ops: ['read'] } — read-only access restricted to /tmp/. Reads /tmp/nail_demo.txt from the server.",
     args: {},
     program: {
-      "nail": "0.1.0",
+      "nail": "0.4.0",
       "kind": "fn",
       "id": "read_demo",
       "effects": [

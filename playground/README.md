@@ -52,7 +52,7 @@ Error response:
 
 ### `GET /health`
 
-Returns `{ "status": "ok", "interpreter": "NAIL v0.1" }`.
+Returns `{ "status": "ok", "interpreter": "NAIL v0.4" }`.
 
 ## Project Structure
 
