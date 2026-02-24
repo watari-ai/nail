@@ -240,6 +240,15 @@ class Runtime:
             self._eval_op(stmt, env)
             return _CONTINUE
 
+        elif op == "map_set":
+            self._eval_op(stmt, env)
+            return _CONTINUE
+
+        elif op in ("list_map", "list_filter", "list_fold", "map_values"):
+            # Higher-order collection ops may appear as statements (result discarded)
+            self._eval_op(stmt, env)
+            return _CONTINUE
+
         elif op == "if":
             cond = self._eval(stmt["cond"], env)
             branch = stmt["then"] if cond else stmt["else"]
@@ -548,6 +557,97 @@ class Runtime:
             if not isinstance(map_val, dict):
                 raise NailTypeError(f"'map_keys' requires map value, got {type(map_val).__name__}")
             return list(map_val.keys())
+
+        # ── v0.4 collection ops ──────────────────────────────────────────────
+
+        elif op == "map_values":
+            map_val = self._eval(expr.get("map"), env)
+            if not isinstance(map_val, dict):
+                raise NailTypeError(f"'map_values' requires map value, got {type(map_val).__name__}")
+            return list(map_val.values())
+
+        elif op == "map_set":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise NailTypeError("'map_set.map' must be a variable reference")
+            map_name = map_expr["ref"]
+            if map_name not in env:
+                raise NailRuntimeError(f"'map_set' undefined variable: {map_name!r}")
+            map_val = env[map_name]
+            if not isinstance(map_val, dict):
+                raise NailTypeError(f"'map_set' requires map value, got {type(map_val).__name__}")
+            key = self._eval(expr.get("key"), env)
+            value = self._eval(expr.get("value"), env)
+            map_val[key] = value
+            return UNIT
+
+        elif op == "list_map":
+            # Apply a named function to every element, return a new list.
+            if self.spec.get("kind") != "module":
+                raise NailRuntimeError("'list_map' is only supported for kind:module")
+            list_val = self._eval(expr.get("list"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_map' requires list value, got {type(list_val).__name__}")
+            callee_id = expr.get("fn")
+            if callee_id not in self.fn_registry:
+                raise NailRuntimeError(f"'list_map' unknown function: {callee_id!r}")
+            callee = self.fn_registry[callee_id]
+            params = callee.get("params", [])
+            if len(params) != 1:
+                raise NailRuntimeError(
+                    f"'list_map' fn '{callee_id}' must take 1 parameter, got {len(params)}"
+                )
+            result = []
+            for item in list_val:
+                call_args = {params[0]["id"]: item}
+                result.append(self._run_fn(callee, call_args))
+            return result
+
+        elif op == "list_filter":
+            # Keep elements for which the predicate fn returns True.
+            if self.spec.get("kind") != "module":
+                raise NailRuntimeError("'list_filter' is only supported for kind:module")
+            list_val = self._eval(expr.get("list"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_filter' requires list value, got {type(list_val).__name__}")
+            callee_id = expr.get("fn")
+            if callee_id not in self.fn_registry:
+                raise NailRuntimeError(f"'list_filter' unknown function: {callee_id!r}")
+            callee = self.fn_registry[callee_id]
+            params = callee.get("params", [])
+            if len(params) != 1:
+                raise NailRuntimeError(
+                    f"'list_filter' fn '{callee_id}' must take 1 parameter, got {len(params)}"
+                )
+            result = []
+            for item in list_val:
+                call_args = {params[0]["id"]: item}
+                keep = self._run_fn(callee, call_args)
+                if keep:
+                    result.append(item)
+            return result
+
+        elif op == "list_fold":
+            # Left-fold a list into a single value.
+            if self.spec.get("kind") != "module":
+                raise NailRuntimeError("'list_fold' is only supported for kind:module")
+            list_val = self._eval(expr.get("list"), env)
+            if not isinstance(list_val, list):
+                raise NailTypeError(f"'list_fold' requires list value, got {type(list_val).__name__}")
+            accum = self._eval(expr.get("init"), env)
+            callee_id = expr.get("fn")
+            if callee_id not in self.fn_registry:
+                raise NailRuntimeError(f"'list_fold' unknown function: {callee_id!r}")
+            callee = self.fn_registry[callee_id]
+            params = callee.get("params", [])
+            if len(params) != 2:
+                raise NailRuntimeError(
+                    f"'list_fold' fn '{callee_id}' must take 2 parameters, got {len(params)}"
+                )
+            for item in list_val:
+                call_args = {params[0]["id"]: accum, params[1]["id"]: item}
+                accum = self._run_fn(callee, call_args)
+            return accum
 
         elif op == "ok":
             return NailResult("ok", self._eval(expr["val"], env))
