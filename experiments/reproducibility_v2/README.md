@@ -1,6 +1,7 @@
 # Reproducibility Experiment v2
 
-> **Goal:** Quantitatively demonstrate that NAIL's canonical form improves structural reproducibility compared to Python for non-trivial functions.
+> **Goal:** Quantitatively measure whether NAIL's canonical form improves structural reproducibility compared to Python for non-trivial functions.  
+> **Result:** Hypothesis rejected — see [Actual Results](#actual-results-2026-02-24-n5-per-language-per-problem).
 
 ---
 
@@ -119,11 +120,45 @@ Python variance comes from variable names, docstrings, comments, blank lines, an
 
 ---
 
+## Metric Definitions
+
+**`match_rate`** (reported as `MatchRate` in `analyze.py`):  
+The fraction of runs whose output matches the single most-common output hash.  
+Formula: `count_of_most_frequent_hash / total_runs`.  
+Example: if 10 runs produce hashes `[A, A, A, B, C]`, match_rate = 3/5 = 60%.  
+Interpretation: 100% = fully deterministic; 20% (1-of-5) ≈ random for the problem size.
+
+**`unique`**: Number of distinct output hashes across all runs for that problem+language.  
+Lower = more reproducible.
+
+**`valid`** (NAIL only): Number of runs where the output passed the NAIL checker (L0–L2).  
+Python validity is not checked (no static guarantees).
+
+---
+
 ## Methodology Notes
 
 - NAIL outputs are **normalized to JCS canonical form** (`json.dumps(sort_keys=True, separators=(',', ':'))`) before hashing — this removes key-order variance, which is not semantically meaningful.
 - NAIL outputs are also **type-checked** using the NAIL interpreter's `Checker`. Invalid outputs are flagged but still counted in hash diversity.
 - Python outputs are hashed as-is (raw text). No normalization is applied, which makes the comparison conservative (favoring Python).
+
+---
+
+## Actual Results (2026-02-24, n=5 per language per problem)
+
+| Problem | NAIL unique/runs | NAIL valid | NAIL match_rate | Python unique/runs | Python match_rate |
+|---------|-----------------|-----------|-----------------|-------------------|-------------------|
+| `clamp` | 1/5 | 5/5 | **100%** | 1/5 | **100%** |
+| `fibonacci` | 5/5 | 5/5 | 20% | 3/5 | 60% |
+| `fizzbuzz_count` | 2/5 | 5/5 | 60% | 1/5 | **100%** |
+
+**Key finding:** The hypothesis was **rejected**. Python shows higher overall reproducibility (5 unique/15 total) than NAIL (8 unique/15 total).
+
+**Interpretation:**  
+- `clamp` (single algorithmic path): both converge to 100% — expected.  
+- `fibonacci` / `fizzbuzz_count` (multiple valid implementations): Python converges because the canonical implementation exists in abundant training data. NAIL has no such prior — but all 15/15 NAIL outputs passed the checker.  
+- JCS eliminates **syntactic** variance (key ordering, whitespace). It does not eliminate **algorithmic** variance (loop structure, variable naming). This is the cold-start limitation of a new language.  
+- **valid 15/15 is the real result**: NAIL's verifiability guarantee holds regardless of convergence.
 
 ---
 

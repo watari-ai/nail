@@ -52,6 +52,22 @@ Layering is intentional: L0 is minimal by design, while L1/L2 enforce semantic c
 **2. Effects as first-class types.**
 Every function declares its side effects (`io`, `net`, `fs`) in its signature. Calling an IO function from a pure context is a compile-time error — not a lint warning, not a runtime panic.
 
+```json
+{"nail":"0.2","kind":"module","fns":[
+  {"id":"log_it","effects":["IO"],"params":[{"id":"x","type":{"type":"int","bits":64,"overflow":"panic"}}],"returns":{"type":"unit"},"body":[]},
+  {"id":"pure_fn","effects":[],"params":[],"returns":{"type":"unit"},"body":[
+    {"op":"call","fn":"log_it","args":[{"id":"x","val":{"lit":1}}]}
+  ]}
+]}
+```
+
+```
+$ nail check above.nail
+CheckError: call to 'log_it' requires effects [IO], but 'pure_fn' only has []
+```
+
+No runtime needed. The effect contract is violated at check time.
+
 **3. Canonical form.**
 There is exactly one valid JSON representation for any given program. No formatting choices, no style variants. An LLM generating the same logic twice will produce token-for-token identical output.
 
@@ -70,9 +86,9 @@ JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonical
 
 ## Status
 
-🧪 **Experimental — v0.1 draft**
+🧪 **Experimental — v0.2**
 
-This project is in early design phase. The specification is a living document.
+Core language (types, effects, modules, canonical form) is implemented and tested. The specification is stable but evolving.
 
 ## Secondary Effects: Token Efficiency
 
