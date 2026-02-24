@@ -2,6 +2,20 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.7.2] — 2026-02-25
+
+### Added
+
+- **Generic Type Aliases** (`interpreter/checker.py`, closes #62)
+  - Module-level `types:` dict entries can now have `type_params: ["T", "U", ...]`
+  - Instantiation syntax: `{"type": "alias", "name": "Bag", "args": [<type>, ...]}`
+  - `_substitute_params_in_spec`: dict-level type-param substitution (pre-resolution)
+  - `_resolve_alias_spec`: handles generic vs non-generic paths + arity validation
+  - Error code: `GENERIC_ALIAS_ARITY` (wrong number of args)
+  - Generic aliases are resolved lazily (not cached, each instantiation is unique)
+  - Non-generic aliases unaffected — backward compatible
+  - 11 new tests in `tests/test_generic_aliases.py`
+
 ## [v0.7.1] — 2026-02-25
 
 ### Added

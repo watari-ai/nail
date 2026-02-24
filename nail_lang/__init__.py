@@ -93,7 +93,7 @@ from nail_lang._mcp import (
     infer_effects,
 )
 
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 
 __all__ = [
     # Core
