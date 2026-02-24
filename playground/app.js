@@ -502,6 +502,96 @@ const EXAMPLES = {
         { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
       ]
     }
+  },
+
+  // ── v0.7 new feature examples ──────────────────────────────────────────────
+
+  mcp_bridge: {
+    label: "MCP Bridge (v0.7)",
+    group: "v0.7",
+    description: "MCP Bridge (v0.7). from_mcp() converts MCP tool definitions to NAIL effect-annotated format; to_mcp() strips NAIL extensions back to MCP format. Enables seamless interop between MCP servers and NAIL-verified agents.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "module",
+      "id": "mcp_bridge_demo",
+      "fns": {
+        "demo": {
+          "params": [],
+          "returns": { "type": "unit" },
+          "effects": ["IO"],
+          "body": [
+            { "op": "print", "val": { "lit": "MCP Bridge: from_mcp() converts MCP tools to NAIL effect-annotated format" }, "effect": "IO" },
+            { "op": "print", "val": { "lit": "to_mcp() strips NAIL extensions back to MCP format" }, "effect": "IO" },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      }
+    }
+  },
+
+  generic_aliases: {
+    label: "Generic Type Aliases (v0.7)",
+    group: "v0.7",
+    description: "Generic type aliases (v0.7). Defines a Pair[A, B] tuple alias with type parameters. make_pair[A, B] constructs a Pair from any two types — fully type-checked with NAIL's generics system.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "module",
+      "id": "generic_aliases",
+      "types": {
+        "Pair": {
+          "type": "tuple",
+          "type_params": ["A", "B"],
+          "first": { "type": "param", "name": "A" },
+          "second": { "type": "param", "name": "B" }
+        }
+      },
+      "fns": {
+        "make_pair": {
+          "type_params": ["A", "B"],
+          "params": [
+            { "name": "first", "type": { "type": "param", "name": "A" } },
+            { "name": "second", "type": { "type": "param", "name": "B" } }
+          ],
+          "returns": {
+            "type": "alias",
+            "name": "Pair",
+            "args": [{ "type": "param", "name": "A" }, { "type": "param", "name": "B" }]
+          },
+          "effects": [],
+          "body": [
+            { "op": "return", "val": { "op": "tuple", "vals": [{ "var": "first" }, { "var": "second" }] } }
+          ]
+        }
+      }
+    }
+  },
+
+  // ── v0.8 examples ──────────────────────────────────────────────────────────
+
+  fc_standard: {
+    label: "FC Standard (v0.8)",
+    group: "v0.8",
+    description: "FC Standard (v0.8). convert_tools() converts tool definitions between OpenAI, Anthropic, and Gemini formats. Effects are preserved as NAIL annotations across all providers — enabling portable, verifiable AI tool calls.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "module",
+      "id": "fc_standard_demo",
+      "fns": {
+        "demo": {
+          "params": [],
+          "returns": { "type": "unit" },
+          "effects": ["IO"],
+          "body": [
+            { "op": "print", "val": { "lit": "FC Standard: convert_tools() converts between OpenAI/Anthropic/Gemini formats" }, "effect": "IO" },
+            { "op": "print", "val": { "lit": "Effects are preserved as NAIL annotations across all providers" }, "effect": "IO" },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      }
+    }
   }
 };
 
