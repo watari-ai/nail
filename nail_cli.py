@@ -93,7 +93,9 @@ def load_modules(module_paths: list[str]) -> dict:
     return modules
 
 
-def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = None, level: int = 2):
+def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = None,
+               level: int = 2, fmt: str = "human"):
+    """Check a NAIL program. fmt='human' (default) or 'json' for machine-parseable output."""
     spec = load(path)
     raw_text = None
     if strict:
@@ -103,26 +105,54 @@ def cmd_check(path: str, strict: bool = False, module_paths: list[str] | None = 
     try:
         checker = Checker(spec, raw_text=raw_text, strict=strict, modules=modules, level=level)
         checker.check()
-        kind = spec.get("kind", "?")
-        prog_id = spec.get("id", "?")
-        fn_count = len(spec.get("defs", [])) if kind == "module" else 1
-        strict_label = " [strict]" if strict else ""
-        print(f"✓ {path}  [{kind}:{prog_id}]  {fn_count} fn(s){strict_label}")
-        print(f"  L0: JSON schema  — OK" + (" (canonical form verified)" if strict else ""))
-        print(f"  L1: Type check   — OK")
-        print(f"  L2: Effect check — OK")
-        if level >= 3:
-            cert = checker.get_termination_certificate()
-            fns_verified = cert["functions_verified"]
-            print(f"  L3: Termination  — OK ({fns_verified} function(s) verified)")
+        if fmt == "json":
+            result: dict = {
+                "ok": True,
+                "file": path,
+                "kind": spec.get("kind", "?"),
+                "id": spec.get("id", "?"),
+                "level": level,
+                "checks": {
+                    "L0": "ok",
+                    "L1": "ok",
+                    "L2": "ok",
+                },
+            }
+            if level >= 3:
+                cert = checker.get_termination_certificate()
+                result["checks"]["L3"] = "ok"
+                result["termination"] = cert
+            print(json.dumps(result, indent=2))
+        else:
+            kind = spec.get("kind", "?")
+            prog_id = spec.get("id", "?")
+            fn_count = len(spec.get("defs", [])) if kind == "module" else 1
+            strict_label = " [strict]" if strict else ""
+            print(f"✓ {path}  [{kind}:{prog_id}]  {fn_count} fn(s){strict_label}")
+            print(f"  L0: JSON schema  — OK" + (" (canonical form verified)" if strict else ""))
+            print(f"  L1: Type check   — OK")
+            print(f"  L2: Effect check — OK")
+            if level >= 3:
+                cert = checker.get_termination_certificate()
+                fns_verified = cert["functions_verified"]
+                print(f"  L3: Termination  — OK ({fns_verified} function(s) verified)")
     except CheckError as e:
-        print(f"✗ Schema error: {e}", file=sys.stderr)
+        if fmt == "json":
+            print(json.dumps(e.to_json()), file=sys.stderr)
+        else:
+            print(f"✗ Schema error: {e}", file=sys.stderr)
         sys.exit(1)
     except NailTypeError as e:
-        print(f"✗ Type error: {e}", file=sys.stderr)
+        if fmt == "json":
+            print(json.dumps(e.to_json()), file=sys.stderr)
+        else:
+            print(f"✗ Type error: {e}", file=sys.stderr)
         sys.exit(1)
     except NailEffectError as e:
-        print(f"✗ Effect error: {e}", file=sys.stderr)
+        if fmt == "json":
+            print(json.dumps(e.to_json()), file=sys.stderr)
+        else:
+            print(f"✗ Effect error: {e}", file=sys.stderr)
         sys.exit(1)
 
 
@@ -179,12 +209,13 @@ def main():
 
     elif cmd == "check":
         if len(args) < 2:
-            print("Usage: nail check <file.nail> [--strict] [--level N]", file=sys.stderr)
+            print("Usage: nail check <file.nail> [--strict] [--level N] [--format human|json]", file=sys.stderr)
             sys.exit(1)
         file_path = args[1]
         strict = "--strict" in args[2:]
         module_paths = [args[i+1] for i in range(2, len(args)-1) if args[i] == "--modules"]
         level = 2
+        fmt = "human"
         for i in range(2, len(args) - 1):
             if args[i] == "--level":
                 try:
@@ -192,7 +223,12 @@ def main():
                 except (ValueError, IndexError):
                     print("✗ --level requires an integer (1, 2, or 3)", file=sys.stderr)
                     sys.exit(1)
-        cmd_check(file_path, strict=strict, module_paths=module_paths, level=level)
+            elif args[i] == "--format":
+                fmt = args[i + 1] if i + 1 < len(args) else "human"
+                if fmt not in ("human", "json"):
+                    print(f"✗ --format must be 'human' or 'json', got: {fmt!r}", file=sys.stderr)
+                    sys.exit(1)
+        cmd_check(file_path, strict=strict, module_paths=module_paths, level=level, fmt=fmt)
 
     elif cmd == "canonicalize":
         file_path = args[1] if len(args) > 1 else None
