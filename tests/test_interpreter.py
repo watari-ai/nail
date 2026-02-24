@@ -190,6 +190,73 @@ class TestL2Effects(unittest.TestCase):
             Checker(spec).check()
 
 
+class TestEffectfulOpContract(unittest.TestCase):
+
+    def test_read_file_with_effect_declared_happy_path(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "read_file", "path": {"lit": "/tmp/demo.txt"}, "effect": "FS", "into": "contents"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["FS"])
+        Checker(spec).check()
+
+    def test_http_get_with_effect_declared_happy_path(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "http_get", "url": {"lit": "https://example.com"}, "effect": "NET", "into": "body"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["NET"])
+        Checker(spec).check()
+
+    def test_read_file_without_effect_field_fails(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "read_file", "path": {"lit": "/tmp/demo.txt"}},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["FS"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_http_get_without_effect_field_fails(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "http_get", "url": {"lit": "https://example.com"}},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["NET"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_read_file_operand_type_validation(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "read_file", "path": {"lit": 123}, "effect": "FS"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["FS"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_http_get_operand_type_validation(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "http_get", "url": {"lit": True}, "effect": "NET"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["NET"])
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_read_file_deferred_runtime_error_is_stable(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "read_file", "path": {"lit": "/tmp/demo.txt"}, "effect": "FS"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["FS"])
+        Checker(spec).check()
+        with self.assertRaisesRegex(NailRuntimeError, r"'read_file' is recognized by the checker but not yet executed"):
+            Runtime(spec).run()
+
+    def test_http_get_deferred_runtime_error_is_stable(self):
+        spec = fn_spec("f", [], UNIT_T, [
+            {"op": "http_get", "url": {"lit": "https://example.com"}, "effect": "NET"},
+            {"op": "return", "val": {"lit": None, "type": UNIT_T}},
+        ], effects=["NET"])
+        Checker(spec).check()
+        with self.assertRaisesRegex(NailRuntimeError, r"'http_get' is recognized by the checker but not yet executed"):
+            Runtime(spec).run()
+
+
 class TestFunctionCalls(unittest.TestCase):
 
     def test_pure_calls_pure_ok(self):
