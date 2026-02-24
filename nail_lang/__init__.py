@@ -92,8 +92,17 @@ from nail_lang._mcp import (
     to_mcp,
     infer_effects,
 )
+from nail_lang._fc_standard import (
+    to_openai_tool,
+    to_anthropic_tool,
+    to_gemini_tool,
+    from_openai_tool,
+    from_anthropic_tool,
+    from_gemini_tool,
+    convert_tools,
+)
 
-__version__ = "0.7.2"
+__version__ = "0.8.0"
 
 __all__ = [
     # Core
@@ -129,6 +138,14 @@ __all__ = [
     "from_mcp",
     "to_mcp",
     "infer_effects",
+    # FC Standard (Issue #64)
+    "to_openai_tool",
+    "to_anthropic_tool",
+    "to_gemini_tool",
+    "from_openai_tool",
+    "from_anthropic_tool",
+    "from_gemini_tool",
+    "convert_tools",
     # Meta
     "__version__",
 ]
