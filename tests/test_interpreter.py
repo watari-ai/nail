@@ -702,6 +702,79 @@ class TestCanonicalForm(unittest.TestCase):
         with self.assertRaises(NailTypeError):
             IntType(bits=64, overflow="sat")
 
+    # ------------------------------------------------------------------
+    # Expression-level overflow (v0.3 feature, Issue #2)
+    # ------------------------------------------------------------------
+
+    def _make_overflow_fn(self, overflow_mode: str) -> dict:
+        """Helper: fn that does INT64_MAX + 1 with given overflow mode."""
+        INT64_MAX = (1 << 63) - 1
+        return {
+            "nail": "0.3", "kind": "fn", "id": "overflow_test",
+            "effects": [], "params": [],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [
+                {"op": "return", "val": {
+                    "op": "+", "overflow": overflow_mode,
+                    "l": {"lit": INT64_MAX}, "r": {"lit": 1},
+                }},
+            ],
+        }
+
+    def test_overflow_wrap(self):
+        """overflow:wrap on INT64_MAX+1 should give INT64_MIN."""
+        spec = self._make_overflow_fn("wrap")
+        Checker(spec).check()
+        result = Runtime(spec).run({})
+        self.assertEqual(result, -(1 << 63))  # INT64_MIN
+
+    def test_overflow_sat(self):
+        """overflow:sat on INT64_MAX+1 should give INT64_MAX (clamped)."""
+        spec = self._make_overflow_fn("sat")
+        Checker(spec).check()
+        result = Runtime(spec).run({})
+        self.assertEqual(result, (1 << 63) - 1)  # INT64_MAX
+
+    def test_overflow_panic_raises(self):
+        """overflow:panic (default) on INT64_MAX+1 should raise NailOverflowError."""
+        from interpreter.runtime import NailOverflowError
+        spec = self._make_overflow_fn("panic")
+        Checker(spec).check()
+        with self.assertRaises(NailOverflowError):
+            Runtime(spec).run({})
+
+    def test_overflow_invalid_mode_raises(self):
+        """Invalid overflow mode on expression should raise CheckError."""
+        spec = {
+            "nail": "0.3", "kind": "fn", "id": "bad_overflow_mode",
+            "effects": [], "params": [],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [
+                {"op": "return", "val": {
+                    "op": "+", "overflow": "truncate",  # invalid
+                    "l": {"lit": 1}, "r": {"lit": 1},
+                }},
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
+    def test_overflow_on_float_raises(self):
+        """overflow mode on float arithmetic should raise CheckError."""
+        spec = {
+            "nail": "0.3", "kind": "fn", "id": "float_overflow",
+            "effects": [], "params": [],
+            "returns": {"type": "float", "bits": 64},
+            "body": [
+                {"op": "return", "val": {
+                    "op": "+", "overflow": "sat",  # invalid on float
+                    "l": {"lit": 1.0}, "r": {"lit": 2.0},
+                }},
+            ],
+        }
+        with self.assertRaises(CheckError):
+            Checker(spec).check()
+
 
 if __name__ == "__main__":
     loader = unittest.TestLoader()

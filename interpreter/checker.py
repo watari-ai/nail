@@ -377,6 +377,19 @@ class Checker:
                 raise CheckError(f"[{fn_id}] Op '{op}' type mismatch: {l_type} vs {r_type}")
             if not isinstance(l_type, (IntType, FloatType)):
                 raise CheckError(f"[{fn_id}] Op '{op}' requires numeric type, got {l_type}")
+            # v0.3: expression-level overflow override
+            expr_overflow = expr.get("overflow")
+            if expr_overflow is not None:
+                VALID_EXPR_OVERFLOWS = {"panic", "wrap", "sat"}
+                if expr_overflow not in VALID_EXPR_OVERFLOWS:
+                    raise CheckError(
+                        f"[{fn_id}] Invalid overflow mode '{expr_overflow}' on op '{op}'. "
+                        f"Must be one of: {sorted(VALID_EXPR_OVERFLOWS)}"
+                    )
+                if not isinstance(l_type, IntType):
+                    raise CheckError(
+                        f"[{fn_id}] overflow mode '{expr_overflow}' is only valid for integer types, got {l_type}"
+                    )
             return l_type
 
         elif op in COMPARE_OPS:

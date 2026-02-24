@@ -183,13 +183,13 @@ class Runtime:
     def _eval_op(self, expr: dict, env: dict) -> Any:
         op = expr["op"]
 
-        # Arithmetic
+        # Arithmetic (supports expression-level overflow override via "overflow" key)
         if op == "+":
-            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a + b, "+")
+            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a + b, "+", expr.get("overflow"))
         elif op == "-":
-            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a - b, "-")
+            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a - b, "-", expr.get("overflow"))
         elif op == "*":
-            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a * b, "*")
+            return self._int_op(self._eval(expr["l"], env), self._eval(expr["r"], env), lambda a, b: a * b, "*", expr.get("overflow"))
         elif op == "/":
             r = self._eval(expr["r"], env)
             if r == 0:
@@ -258,16 +258,33 @@ class Runtime:
         else:
             raise NailRuntimeError(f"Unknown op: {op}")
 
-    def _int_op(self, l: Any, r: Any, fn, op_name: str) -> Any:
+    def _int_op(self, l: Any, r: Any, fn, op_name: str, overflow: str | None = None) -> Any:
+        """Perform integer arithmetic with explicit overflow handling.
+
+        overflow=None or "panic": raise on overflow (default)
+        overflow="wrap":          two's-complement wrapping (signed int64)
+        overflow="sat":           clamp to [INT64_MIN, INT64_MAX]
+        """
         result = fn(l, r)
-        # Basic overflow check for 64-bit signed integers
-        # In a full implementation, this would use the declared overflow behavior
+        if not (isinstance(l, int) and isinstance(r, int)):
+            return result  # float arithmetic — no overflow semantics
+
         MAX64 = (1 << 63) - 1
         MIN64 = -(1 << 63)
-        if isinstance(l, int) and isinstance(r, int):
+        RANGE = 1 << 64
+
+        mode = overflow or "panic"
+        if mode == "wrap":
+            # Signed 64-bit two's-complement wrapping
+            result = ((result - MIN64) % RANGE) + MIN64
+        elif mode == "sat":
+            # Saturating: clamp to [INT64_MIN, INT64_MAX]
+            result = max(MIN64, min(MAX64, result))
+        else:  # "panic"
             if result > MAX64 or result < MIN64:
                 raise NailOverflowError(
-                    f"Integer overflow in '{op_name}': {l} {op_name} {r} = {result} (out of int64 range)"
+                    f"Integer overflow in '{op_name}': result {result} out of int64 range. "
+                    f"Use overflow:\"wrap\" or overflow:\"sat\" to suppress."
                 )
         return result
 
