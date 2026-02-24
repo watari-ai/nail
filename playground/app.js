@@ -515,6 +515,7 @@ const exampleSel = document.getElementById("example-select");
 const descEl     = document.getElementById("example-desc");
 const statusEl   = document.getElementById("status-bar");
 const formatBtn  = document.getElementById("format-btn");
+const shareBtn   = document.getElementById("share-btn");
 const copyBtn    = document.getElementById("copy-btn");
 const clearBtn   = document.getElementById("clear-btn");
 
@@ -650,6 +651,62 @@ function clearOutput() {
   setStatus("Output cleared", "info");
 }
 
+// ── Share / URL ──────────────────────────────────────────────────────────────
+
+function getShareUrl() {
+  const program = editorEl.value.trim();
+  const args    = argsEl.value.trim();
+  if (!program) return null;
+  try {
+    // Validate JSON before encoding
+    JSON.parse(program);
+  } catch (_) {
+    return null;
+  }
+  let hash = "program=" + btoa(unescape(encodeURIComponent(program)));
+  if (args) hash += "&args=" + encodeURIComponent(args);
+  return window.location.origin + window.location.pathname + "#" + hash;
+}
+
+function shareProgram() {
+  const url = getShareUrl();
+  if (!url) {
+    setStatus("Cannot share: invalid JSON in editor", "error");
+    return;
+  }
+  navigator.clipboard.writeText(url).then(() => {
+    setStatus("Share link copied to clipboard!", "ok");
+    shareBtn.textContent = "✓ Copied!";
+    setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
+  }).catch(() => {
+    // Fallback: update URL bar
+    window.history.replaceState(null, "", "#" + url.split("#")[1]);
+    setStatus("URL updated — copy it from the address bar", "info");
+  });
+}
+
+function loadFromUrl() {
+  const hash = window.location.hash.slice(1); // remove leading #
+  if (!hash) return false;
+  const params = new URLSearchParams(hash);
+  const encoded = params.get("program");
+  if (!encoded) return false;
+  try {
+    const program = decodeURIComponent(escape(atob(encoded)));
+    JSON.parse(program); // Validate
+    editorEl.value = program;
+    const args = params.get("args");
+    if (args) argsEl.value = decodeURIComponent(args);
+    descEl.textContent = "Loaded from shared link.";
+    showOutput("", false);
+    setStatus("Program loaded from shared link", "info");
+    return true;
+  } catch (_) {
+    // Malformed URL — silently ignore, fall back to default example
+    return false;
+  }
+}
+
 // ── Keyboard Shortcut ─────────────────────────────────────────────────────────
 
 document.addEventListener("keydown", (e) => {
@@ -663,6 +720,7 @@ document.addEventListener("keydown", (e) => {
 
 runBtn.addEventListener("click", runProgram);
 formatBtn.addEventListener("click", formatJSON);
+shareBtn.addEventListener("click", shareProgram);
 copyBtn.addEventListener("click", copyOutput);
 clearBtn.addEventListener("click", clearOutput);
 exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
@@ -690,8 +748,10 @@ exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
     exampleSel.appendChild(grp);
   }
 
-  // Load first example
-  const firstKey = Object.keys(EXAMPLES)[0];
-  exampleSel.value = firstKey;
-  loadExample(firstKey);
+  // Load from URL hash (shareable link) or fall back to first example
+  if (!loadFromUrl()) {
+    const firstKey = Object.keys(EXAMPLES)[0];
+    exampleSel.value = firstKey;
+    loadExample(firstKey);
+  }
 })();
