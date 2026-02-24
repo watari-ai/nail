@@ -83,6 +83,36 @@ Informed by [Gemini 2.0 Flash strategic evaluation](https://github.com/watari-ai
 
 ---
 
+## v0.5 Goals — Proof of Utility
+Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
+
+- [ ] **Enum / Algebraic Data Types (ADT)** — Natural extension of Result type. Required for state machines and complex data representation in real demos.
+- [ ] **Python (typed subset) → NAIL transpiler** — Convert type-annotated Python to NAIL for type+effect verification. Scope: functions with full type annotations only (no dynamic typing).
+- [ ] **Core Standard Library** — Official modules: string ops (split, trim, contains, replace), math functions, list/map utilities beyond v0.4 collection ops.
+- [ ] **Function Calling Effect Annotations** — Add NAIL-style effect declarations to OpenAI/Anthropic function_calling definitions. Proposal: proposals/function-calling-effects.md
+
+## v0.6 Goals — Type System Strengthening + Formal Verification
+- [ ] **L3 Formal Verification** — Termination proofs for bounded loops. NAIL's strongest differentiator: 'this program is provably guaranteed to halt.'
+- [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib.
+- [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option.
+
+## v0.7 Goals — Developer Experience + Connectivity
+- [ ] **LSP Support** — Language Server Protocol for Nail-Lens integration. Hover types, error highlighting, go-to-definition for NAIL JSON.
+- [ ] **NAIL → WebAssembly** — Compile NAIL to Wasm for browser execution. Playground v2 with native performance.
+- [ ] **AI Agent Protocol (NATP)** — NAIL-format task delegation between agents. Agent A delegates to Agent B with formal effect constraints.
+
+## v0.8 Goals — Concurrency + Security
+- [ ] **Async / Concurrency** — Full design required simultaneously: cancellation, timeout, join/await types, determinism policy. Not just 'effects: [ASYNC]'.
+- [ ] **Effect Security Model** — Formal policy for FS/NET/TIME/RAND/ASYNC: audit log spec, permission boundary definitions.
+
+## v0.9 Goals — v1.0 RC Preparation
+- [ ] **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules.
+- [ ] **Conformance Test Suite** — Canonical test set for alternative NAIL implementations to validate spec compliance.
+- [ ] **Spec Freeze** — NAIL JSON format frozen. No breaking changes after this point.
+- [ ] **Documentation complete** — SPEC.md, PHILOSOPHY.md, ROADMAP.md, all examples updated and reviewed.
+
+---
+
 ## Phase 3: OSS Development & Experimentation (~1 month)
 
 **Goal:** Public repository, working playground, and technical experimentation
@@ -187,8 +217,12 @@ Phase 2: ✅ Complete (2026-02-22) — NAIL 5/5 spec checks, 18/21 tests
 Phase 3: 🚀 Active — repo public, Playground live, experimental work ongoing
 v0.2:   ✅ Complete (2026-02-23) — call op, effect propagation, JCS canonical form, 73 tests
 v0.3:   ✅ Complete (2026-02-24) — 94/94 tests, CI green, PyPI release pending
-v0.4:   📅 Planned — SDK, Nail-Lens, benchmarks, formal verification
+v0.4:   📅 In Progress — Granular Effects, Collection Ops, Type Aliases, SDK, Nail-Lens, Benchmarks
 Phase 4: 🚀 Active
 ```
+
+Move to Phase 4 vision (not numbered roadmap):
+- NAIL Package Manager (needs user base first)
+- NAIL in NAIL bootstrapping (post-v1.0 experiment)
 
 *Last updated: 2026-02-24 by Watari*
