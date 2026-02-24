@@ -1,6 +1,6 @@
-# NAIL Language Specification v0.2
+# NAIL Language Specification v0.3
 
-> ⚠️ Draft. This specification evolves. Last updated: 2026-02-23 by Watari AI
+> ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI
 
 ---
 
@@ -30,8 +30,8 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 **Design principles:**
 - `null` does not exist. Use `option` type instead.
 - Integer overflow behavior must be declared.
-- In v0.1 and v0.2, only `"overflow": "panic"` is supported at the type level.
-- `"overflow": "wrap"` and `"overflow": "sat"` at the expression level are planned for v0.3 (see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)).
+- At the **type level**, only `"overflow": "panic"` is supported (type default).
+- At the **expression level** (v0.3+), `"overflow": "wrap"` and `"overflow": "sat"` are supported per-operation. See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md).
 - No implicit type conversions of any kind.
 
 ---
@@ -210,10 +210,14 @@ Effectful operations are a compile error if the corresponding effect is not decl
 - `float_to_str(Float) -> String` — Convert float to string
 - `bool_to_str(Bool) -> String` — Convert boolean to string
 
-### Overflow Policy (v0.1 / v0.2)
-- v0.1 and v0.2 support only `"overflow": "panic"` at the **type declaration** level.
-- `"overflow": "wrap"` and `"overflow": "sat"` at the **expression** level are planned for v0.3.
-- `wrap` and `sat` behavior: see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md).
+### Overflow Policy (v0.3)
+- **Type-level**: Only `"overflow": "panic"` is valid in type declarations. This is the default.
+- **Expression-level** (v0.3): Per-operation `"overflow"` field overrides the type default:
+  - `"wrap"`: Two's complement modular arithmetic
+  - `"sat"`: Saturating arithmetic (clamp to min/max)
+  - `"panic"`: Runtime panic on overflow (explicit, same as default)
+- Expression-level override syntax: `{"op": "+", "overflow": "wrap", "lhs": ..., "rhs": ...}`
+- See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md) for full specification.
 
 ---
 
@@ -280,19 +284,24 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 **JCS Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) form: `json.dumps(sort_keys=True, separators=(',',':'))`. One program = one representation. Non-canonical input is rejected at L0. Use `nail canonicalize` to convert.
 
-v0.2 implements L0–L2.
+v0.3 implements L0–L2 (L3/L4 planned for future versions).
 
 ---
 
-## 14. Out of Scope for v0.2
+## 14. Implemented in v0.3
+
+The following features were added in v0.3:
+
+- **Result type** (`result`, `ok`, `err`, `match_result`) — error handling without exceptions. See [designs/v0.3/result-type.md](designs/v0.3/result-type.md)
+- **Cross-module imports** — import and call functions from other NAIL modules. Circular import detection, effect propagation across boundaries. See [designs/v0.3/cross-module.md](designs/v0.3/cross-module.md)
+- **Expression-level overflow** (`wrap`/`sat`/`panic` per operation). See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)
+
+## 15. Out of Scope (v0.3)
 
 - Algebraic data types (Enum)
 - Closures
 - Async/await
-- Error handling (Result type) → **planned v0.3** ([design](designs/v0.3/result-type.md))
 - Generics
 - Traits / Interfaces
-- Cross-module imports (module linking) → **planned v0.3** ([design](designs/v0.3/cross-module.md))
-- Expression-level `overflow: wrap/sat` → **planned v0.3** ([design](designs/v0.3/overflow-ops.md))
 
-These will be added in v0.3+ based on AI-generated proposals that are accepted into the spec.
+These may be added in v0.4+ based on AI-generated proposals accepted into the spec.
