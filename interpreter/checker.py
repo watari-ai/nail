@@ -11,8 +11,8 @@ from typing import Any
 from urllib.parse import urlparse
 from .types import (
     NailType, NailTypeError, NailEffectError,
-    parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType, FnType,
+    parse_type, types_equal, substitute_type, unify_types,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType, FnType, TypeParam,
     VALID_EFFECTS,
 )
 
@@ -89,6 +89,8 @@ class Checker:
         self._module_enum_type_cache: dict[str, dict[str, EnumType]] = {}
         # Track which imported modules have already been body-checked (Bug 2 fix)
         self._checked_module_ids: set[str] = set()
+        # Current function's in-scope type parameters (for generics support, v0.7)
+        self._current_type_params: frozenset[str] = frozenset()
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -302,7 +304,8 @@ class Checker:
             stack=[],
             module_id=target_module_id,
         )
-        return parse_type(resolved)
+        tp = self._current_type_params if self._current_type_params else None
+        return parse_type(resolved, type_params=tp)
 
     # -----------------------------------------------------------------------
     # L1 + L2: Type and effect checking
@@ -589,34 +592,51 @@ class Checker:
         fn_id = fn["id"]
         self.call_graph.setdefault(fn_id, set())
 
-        # L2: collect declared effects
-        self.declared_effects, self.declared_effect_caps = self._collect_declared_effects(
-            fn.get("effects", []), fn_id
-        )
+        # v0.7: Set up type parameters for generics support
+        raw_type_params = fn.get("type_params", [])
+        if not isinstance(raw_type_params, list):
+            raise CheckError(f"[{fn_id}] 'type_params' must be a list of strings")
+        for tp in raw_type_params:
+            if not isinstance(tp, str) or not tp:
+                raise CheckError(f"[{fn_id}] Each type_param must be a non-empty string")
+        prev_type_params = self._current_type_params
+        self._current_type_params = frozenset(raw_type_params)
 
-        # L1: parse return type
         try:
-            return_type = self._parse_type(fn["returns"])
-        except Exception as e:
-            raise CheckError(f"[{fn_id}] Invalid return type: {e}")
-
-        # L1: parse param types and build env
-        env = {}
-        for param in fn["params"]:
-            if "id" not in param or "type" not in param:
-                raise CheckError(f"[{fn_id}] Param must have 'id' and 'type'")
-            try:
-                t = self._parse_type(param["type"])
-            except Exception as e:
-                raise CheckError(f"[{fn_id}] Param '{param['id']}' invalid type: {e}")
-            env[param["id"]] = t
-
-        # Check body
-        guaranteed = self._check_body(fn_id, fn["body"], env, set(), return_type)
-        if not guaranteed and not isinstance(return_type, UnitType):
-            raise CheckError(
-                f"[{fn_id}] Not all code paths return a value (return type: {return_type})"
+            # L2: collect declared effects
+            self.declared_effects, self.declared_effect_caps = self._collect_declared_effects(
+                fn.get("effects", []), fn_id
             )
+
+            # L1: parse return type
+            try:
+                return_type = self._parse_type(fn["returns"])
+            except Exception as e:
+                raise CheckError(f"[{fn_id}] Invalid return type: {e}")
+
+            # L1: parse param types and build env
+            env = {}
+            for param in fn["params"]:
+                if "id" not in param or "type" not in param:
+                    raise CheckError(f"[{fn_id}] Param must have 'id' and 'type'")
+                try:
+                    t = self._parse_type(param["type"])
+                except Exception as e:
+                    raise CheckError(f"[{fn_id}] Param '{param['id']}' invalid type: {e}")
+                env[param["id"]] = t
+
+            # Register fn signature (enables generic callees to be validated)
+            self.fn_registry[fn_id] = fn
+
+            # Check body
+            guaranteed = self._check_body(fn_id, fn["body"], env, set(), return_type)
+            if not guaranteed and not isinstance(return_type, UnitType):
+                raise CheckError(
+                    f"[{fn_id}] Not all code paths return a value (return type: {return_type})"
+                )
+        finally:
+            # Restore previous type param scope
+            self._current_type_params = prev_type_params
 
     def _check_body(self, fn_id: str, body: list, env: dict, mut_set: set, expected_return: NailType) -> bool:
         """Check body statements; return True if all paths are guaranteed to return."""
@@ -1557,6 +1577,11 @@ class Checker:
                 f"[{fn_id}] '{callee_id}' expects {len(params)} args, got {len(args)}"
             )
 
+        # v0.7: Generic function instantiation
+        callee_type_params = callee.get("type_params", [])
+        if callee_type_params:
+            return self._check_generic_call(fn_id, callee_id, callee, args, env)
+
         for i, (arg_expr, param) in enumerate(zip(args, params)):
             arg_type = self._check_expr(fn_id, arg_expr, env)
             param_type = self._parse_type(param["type"])
@@ -1566,6 +1591,72 @@ class Checker:
                 )
 
         return self._parse_type(callee["returns"])
+
+    def _check_generic_call(
+        self,
+        fn_id: str,
+        callee_id: str,
+        callee: dict,
+        args: list,
+        env: dict,
+    ) -> NailType:
+        """Type-check a call to a generic function (one with 'type_params').
+
+        Infers a concrete type substitution from the argument types, then returns
+        the substituted return type.
+
+        Example:
+            generic fn:  identity[T](x: T) -> T
+            call:        identity(42)         (arg type: int64)
+            inference:   T ← int64
+            result type: int64
+        """
+        callee_type_params = frozenset(callee.get("type_params", []))
+        params = callee.get("params", [])
+        args_list = args if isinstance(args, list) else []
+
+        if len(args_list) != len(params):
+            raise CheckError(
+                f"[{fn_id}] '{callee_id}' expects {len(params)} args, got {len(args_list)}"
+            )
+
+        # Temporarily enter callee's type param scope for parsing callee's types
+        prev_tp = self._current_type_params
+        self._current_type_params = callee_type_params
+        try:
+            subst: dict[str, NailType] = {}
+            for i, (arg_expr, param) in enumerate(zip(args_list, params)):
+                arg_type = self._check_expr(fn_id, arg_expr, env)
+                # Restore caller scope temporarily to parse the arg expression
+                # (already done by _check_expr using caller scope above)
+
+                # Parse param type with callee's type params in scope
+                param_type = self._parse_type(param["type"])
+
+                # Unify to build substitution
+                try:
+                    unify_types(param_type, arg_type, subst)
+                except NailTypeError as e:
+                    raise CheckError(
+                        f"[{fn_id}] Generic arg {i} to '{callee_id}': {e}",
+                        code="GENERIC_TYPE_MISMATCH",
+                    )
+
+            # Check all type params were resolved
+            for tp_name in callee_type_params:
+                if tp_name not in subst:
+                    raise CheckError(
+                        f"[{fn_id}] Could not infer type for '{tp_name}' in generic call to '{callee_id}'. "
+                        f"All type params must appear in the parameter list.",
+                        code="TYPE_PARAM_UNRESOLVED",
+                    )
+
+            # Get concrete return type via substitution
+            raw_return_type = self._parse_type(callee["returns"])
+            return substitute_type(raw_return_type, subst)
+
+        finally:
+            self._current_type_params = prev_tp
 
     def _normalize_effect_kind(self, kind: Any) -> str:
         if not isinstance(kind, str):

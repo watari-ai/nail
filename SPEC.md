@@ -640,12 +640,87 @@ Loop proofs include `kind: "loop"`, `step`, `step_literal: true`, `verdict: "ter
 
 ---
 
-## 16. Out of Scope (v0.6)
+## 16. Generics / Parametric Types (v0.7)
+
+NAIL supports generic function declarations via `type_params`. Type variables are resolved at call sites through type inference (unification).
+
+### 16.1 Syntax
+
+```json
+{
+  "nail": "0.7.0",
+  "kind": "fn",
+  "id": "identity",
+  "type_params": ["T"],
+  "effects": [],
+  "params": [
+    {"id": "x", "type": {"type": "param", "name": "T"}}
+  ],
+  "returns": {"type": "param", "name": "T"},
+  "body": [
+    {"op": "return", "val": {"ref": "x"}}
+  ]
+}
+```
+
+- `"type_params"`: Array of type variable names (strings). E.g. `["T"]`, `["T", "E"]`.
+- `{"type": "param", "name": "T"}`: A type variable reference. Valid only inside a function that declares `"T"` in its `type_params`.
+- Type params may appear anywhere a concrete type may appear: in parameter types, return types, and nested inside `list`, `option`, `map`, `result` type specs.
+
+### 16.2 Type Inference at Call Sites
+
+When calling a generic function, the checker infers the type substitution automatically:
+
+```json
+{"op": "call", "fn": "identity", "args": [{"lit": 42}]}
+```
+→ arg type is `int64(panic)` → checker infers `T ← int64(panic)` → return type is `int64(panic)`.
+
+Multi-param inference:
+```json
+{
+  "nail": "0.7.0",
+  "kind": "fn",
+  "id": "pair",
+  "type_params": ["T", "U"],
+  "params": [
+    {"id": "a", "type": {"type": "param", "name": "T"}},
+    {"id": "b", "type": {"type": "param", "name": "U"}}
+  ],
+  "returns": {"type": "param", "name": "T"},
+  ...
+}
+```
+Calling `pair(7, true)` → `T ← int64`, `U ← bool` → return type `int64`.
+
+### 16.3 Checker Rules
+
+1. **Scope**: A `{"type": "param", "name": "T"}` is valid only inside a function that declares `"T"` in `type_params`.
+2. **Consistency**: If `T` is inferred as `int64` at arg position 0, it must also be `int64` at arg position 1 (if it appears there too). Conflicts raise a `GENERIC_TYPE_MISMATCH` error.
+3. **Completeness**: All declared type params must be inferrable from the argument types. A type param that appears only in the return type (not in any param) raises `TYPE_PARAM_UNRESOLVED`.
+4. **Effect inference**: Effect checking for generic calls is identical to monomorphic calls — callee effects must be a subset of the caller's declared effects.
+
+### 16.4 Supported Generic Containers
+
+All container types support generic element types:
+
+| Type spec | Example |
+|-----------|---------|
+| `list<T>` | `{"type": "list", "inner": {"type": "param", "name": "T"}}` |
+| `option<T>` | `{"type": "option", "inner": {"type": "param", "name": "T"}}` |
+| `map<K, V>` | `{"type": "map", "key": {"type": "param", "name": "K"}, "value": {"type": "param", "name": "V"}}` |
+| `result<T, E>` | `{"type": "result", "ok": {"type": "param", "name": "T"}, "err": {"type": "param", "name": "E"}}` |
+
+---
+
+## 17. Out of Scope (v0.7)
 
 - Closures
 - Async/await
-- Generics
-- Traits / Interfaces
+- Higher-kinded types (HKT)
+- Traits / Interfaces / Type classes
 - L4: Memory safety (buffer overflow proofs)
+- Generic type aliases (module-level `types:` with type params)
+- Higher-rank polymorphism
 
 These may be added in future versions based on AI-generated proposals accepted into the spec.

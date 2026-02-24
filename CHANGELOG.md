@@ -15,6 +15,28 @@ All notable changes to NAIL are documented here.
 - **StrategyC FC Standard Proposal** (`docs/fc-standard-proposal.md`)
   - Formal proposal for adding `effects` field to OpenAI/Anthropic Function Calling schemas
   - LiteLLM integration guide (`integrations/litellm.md`)
+- **`nail check --format json`** (`nail_cli.py`)
+  - Machine-parseable check output: `{"ok": true, "checks": {"L0": "ok", "L1": "ok", ...}}`
+  - On error: structured JSON on stderr (uses `CheckError.to_json()`)
+  - Level 3 includes inline termination certificate
+- **Generics / Parametric Types** (`interpreter/types.py`, `interpreter/checker.py`, SPEC.md §16)
+  - `TypeParam` class: `{"type": "param", "name": "T"}` in type specs
+  - Generic function declarations: `"type_params": ["T", "U"]` in fn spec
+  - Type inference at call sites via unification (`unify_types`)
+  - `substitute_type`: applies type substitution after inference
+  - All container types support type params: `list<T>`, `option<T>`, `map<K,V>`, `result<T,E>`
+  - Error codes: `GENERIC_TYPE_MISMATCH`, `TYPE_PARAM_CONFLICT`, `TYPE_PARAM_UNRESOLVED`
+  - 35 new tests in `tests/test_generics.py`
+
+### Fixed
+
+- **Import `"from"` field** (`schema/nail-l0.json`, `interpreter/checker.py`, closes #40)
+  - `"from"` is now optional in the L0 schema (removed from `required[]`)
+  - Checker automatically loads modules from disk when `"from"` path is specified
+  - Resolution order: absolute path → source-relative → CWD
+  - Error codes: `MODULE_NOT_FOUND`, `MODULE_LOAD_ERROR`
+  - `Checker.__init__` gains `source_path` param; CLI passes it automatically
+  - 9 new tests in `tests/test_imports_from.py`
 
 ## [v0.6.0] — 2026-02-24
 

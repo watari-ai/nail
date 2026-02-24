@@ -216,16 +216,51 @@ class FnType:
         return f"fn({params}) -> {self.return_type}"
 
 
-NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType
+@dataclass(frozen=True)
+class TypeParam:
+    """A type variable introduced by a generic function declaration.
+
+    Example JSON: {"type": "param", "name": "T"}
+
+    TypeParam is resolved at call sites via type inference (unify_types).
+    It is a first-class NailType so that function signatures can be
+    expressed generically before substitution is applied.
+    """
+    name: str
+
+    def __str__(self) -> str:
+        return self.name
+
+
+NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType | TypeParam
 # NOTE: FnType is intentionally excluded from NailType — it is an internal
 # checker representation only, not a first-class NAIL value type.
 
 
-def parse_type(spec: dict) -> NailType:
-    """Parse a JSON type spec into a NailType."""
+def parse_type(spec: dict, type_params: "frozenset[str] | None" = None) -> NailType:
+    """Parse a JSON type spec into a NailType.
+
+    Args:
+        spec: The JSON type specification dict.
+        type_params: Optional set of in-scope type parameter names (e.g. {"T", "U"}).
+            When provided, {"type": "param", "name": "T"} resolves to TypeParam("T").
+            When None (default), type params are not allowed (backward compatible).
+    """
     t = spec.get("type")
     if t is None:
         raise NailTypeError(f"Missing 'type' field in: {spec}")
+
+    if t == "param":
+        name = spec.get("name")
+        if not isinstance(name, str) or not name:
+            raise NailTypeError("type param requires non-empty string 'name'")
+        if type_params is None or name not in type_params:
+            scope_hint = f" (in scope: {sorted(type_params)})" if type_params else " (no type params in scope)"
+            raise NailTypeError(
+                f"Unknown type parameter '{name}'{scope_hint}. "
+                f"Declare it in the function's 'type_params' array."
+            )
+        return TypeParam(name=name)
 
     if t == "int":
         return IntType(
@@ -246,25 +281,25 @@ def parse_type(spec: dict) -> NailType:
         inner_spec = spec.get("inner")
         if inner_spec is None:
             raise NailTypeError("option type requires 'inner'")
-        return OptionType(inner=parse_type(inner_spec))
+        return OptionType(inner=parse_type(inner_spec, type_params))
     elif t == "list":
         inner_spec = spec.get("inner")
         if inner_spec is None:
             raise NailTypeError("list type requires 'inner'")
         length = spec.get("len", "dynamic")
-        return ListType(inner=parse_type(inner_spec), length=length)
+        return ListType(inner=parse_type(inner_spec, type_params), length=length)
     elif t == "map":
         key_spec = spec.get("key")
         val_spec = spec.get("value")
         if key_spec is None or val_spec is None:
             raise NailTypeError("map type requires 'key' and 'value'")
-        return MapType(key=parse_type(key_spec), value=parse_type(val_spec))
+        return MapType(key=parse_type(key_spec, type_params), value=parse_type(val_spec, type_params))
     elif t == "result":
         ok_spec = spec.get("ok")
         err_spec = spec.get("err")
         if ok_spec is None or err_spec is None:
             raise NailTypeError("result type requires both 'ok' and 'err' sub-types")
-        return ResultType(ok=parse_type(ok_spec), err=parse_type(err_spec))
+        return ResultType(ok=parse_type(ok_spec, type_params), err=parse_type(err_spec, type_params))
     elif t == "enum":
         variants_spec = spec.get("variants")
         if not isinstance(variants_spec, list) or not variants_spec:
@@ -300,7 +335,7 @@ def parse_type(spec: dict) -> NailType:
                 if not isinstance(field_type_spec, dict):
                     raise NailTypeError(f"enum variant '{tag}' field '{field_name}' requires object 'type'")
                 seen_field_names.add(field_name)
-                fields.append(EnumField(name=field_name, type=parse_type(field_type_spec)))
+                fields.append(EnumField(name=field_name, type=parse_type(field_type_spec, type_params)))
             variants.append(EnumVariant(tag=tag, fields=tuple(fields)))
         return EnumType(variants=tuple(variants))
     else:
@@ -309,3 +344,96 @@ def parse_type(spec: dict) -> NailType:
 
 def types_equal(a: NailType, b: NailType) -> bool:
     return a == b
+
+
+def substitute_type(t: "NailType", subst: "dict[str, NailType]") -> "NailType":
+    """Apply a type substitution to a NailType, replacing TypeParams with concrete types.
+
+    Args:
+        t: The type to substitute into (may contain TypeParam nodes).
+        subst: Mapping from type-param name to concrete NailType.
+
+    Returns:
+        A new NailType with all TypeParams in subst replaced.
+    """
+    if isinstance(t, TypeParam):
+        return subst.get(t.name, t)
+    elif isinstance(t, OptionType):
+        return OptionType(inner=substitute_type(t.inner, subst))
+    elif isinstance(t, ListType):
+        return ListType(inner=substitute_type(t.inner, subst), length=t.length)
+    elif isinstance(t, MapType):
+        return MapType(
+            key=substitute_type(t.key, subst),
+            value=substitute_type(t.value, subst),
+        )
+    elif isinstance(t, ResultType):
+        return ResultType(
+            ok=substitute_type(t.ok, subst),
+            err=substitute_type(t.err, subst),
+        )
+    elif isinstance(t, EnumType):
+        # Enums with generic fields are unusual; substitute through them
+        new_variants = []
+        for variant in t.variants:
+            new_fields = tuple(
+                EnumField(name=f.name, type=substitute_type(f.type, subst))
+                for f in variant.fields
+            )
+            new_variants.append(EnumVariant(tag=variant.tag, fields=new_fields))
+        return EnumType(variants=tuple(new_variants))
+    else:
+        # Leaf types (int, float, bool, string, bytes, unit) — no type params
+        return t
+
+
+def unify_types(
+    generic: "NailType",
+    concrete: "NailType",
+    subst: "dict[str, NailType]",
+) -> "dict[str, NailType]":
+    """Unify *generic* (possibly containing TypeParams) against *concrete*.
+
+    Mutates and returns *subst* with new bindings.  Raises NailTypeError on
+    conflicts (e.g. T already bound to int64 but encountering T ~ float64).
+
+    Args:
+        generic: The type from the callee signature (may have TypeParams).
+        concrete: The type inferred from the call-site argument.
+        subst: Current substitution (modified in-place).
+
+    Returns:
+        The (potentially extended) substitution.
+    """
+    if isinstance(generic, TypeParam):
+        name = generic.name
+        if name in subst:
+            # Already bound — check consistency
+            if not types_equal(subst[name], concrete):
+                raise NailTypeError(
+                    f"Type parameter '{name}' inferred as both {subst[name]} and {concrete}",
+                    code="TYPE_PARAM_CONFLICT",
+                )
+        else:
+            subst[name] = concrete
+        return subst
+
+    # Both sides must be structurally equal; recurse into containers
+    if isinstance(generic, OptionType) and isinstance(concrete, OptionType):
+        return unify_types(generic.inner, concrete.inner, subst)
+    if isinstance(generic, ListType) and isinstance(concrete, ListType):
+        return unify_types(generic.inner, concrete.inner, subst)
+    if isinstance(generic, MapType) and isinstance(concrete, MapType):
+        unify_types(generic.key, concrete.key, subst)
+        return unify_types(generic.value, concrete.value, subst)
+    if isinstance(generic, ResultType) and isinstance(concrete, ResultType):
+        unify_types(generic.ok, concrete.ok, subst)
+        return unify_types(generic.err, concrete.err, subst)
+
+    # Leaf types (or structural mismatch) — just check equality
+    if not types_equal(generic, concrete):
+        raise NailTypeError(
+            f"Type mismatch during generic instantiation: expected {generic}, got {concrete}",
+            code="TYPE_MISMATCH",
+        )
+    return subst
