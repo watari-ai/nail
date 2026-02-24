@@ -20,10 +20,15 @@ All notable changes to NAIL are documented here.
   - `read_file` (FS) and `http_get` (NET) fully implemented — no longer deferred
   - 106 tests passing
 
-- **Collection Type Operations** ([PR #51](https://github.com/watari-ai/nail/pull/51) — 予定)
-  - Type-checked operations: `list_get`, `list_push`, `list_len`, `map_get`
-  - Element type and key type validated at check time
-  - Out-of-bounds → `NailRuntimeError`; type mismatch → `NailTypeError`
+- **Higher-Order Collection Operations** ([PR #51](https://github.com/watari-ai/nail/pull/51))
+  - `list_map` — apply `fn(T) -> U` to every element; returns `list<U>`
+  - `list_filter` — retain elements where `fn(T) -> bool` is true; returns `list<T>`
+  - `list_fold` — reduce list with `fn(Acc, T) -> Acc` and an initial accumulator; returns `Acc`
+  - `map_values` — apply `fn(V) -> W` to every map value; returns `map<K, W>`
+  - `map_set` — mutate a map entry in place (`key`, `val`); returns `unit`
+  - Function references validated at check time: parameter types, return types, and effect propagation enforced
+  - Module-level constraint: `list_map`, `list_filter`, `list_fold`, `map_values` require the referenced `fn` to be defined in the same module
+  - `FnType` introduced as an internal checker representation (not a first-class NAIL value type)
   - 114 tests passing
 
 ### Changed

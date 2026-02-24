@@ -372,6 +372,52 @@ Rules:
 - `map_has`: `map` must be `map<K, V>`, `key` must be `K`; returns `bool`.
 - `map_keys`: `map` must be `map<K, V>`; returns `list<K>`.
 
+### Higher-Order Collection Operations (v0.4)
+
+These operations accept a **function reference** (`"fn"` field: a string ID of a module-level `kind:fn` definition).
+They are available **only at module level (`kind:module`)** and cannot be used inside a plain `kind:fn` body that is not part of a module.
+
+```json
+{ "op": "list_map",    "list": <list_expr>, "fn": "<fn_id>" }
+{ "op": "list_filter", "list": <list_expr>, "fn": "<fn_id>" }
+{ "op": "list_fold",   "list": <list_expr>, "fn": "<fn_id>", "init": <expr> }
+{ "op": "map_values",  "map":  <map_expr>,  "fn": "<fn_id>" }
+{ "op": "map_set",     "map":  <map_expr>,  "key": <expr>,   "val": <expr> }
+```
+
+#### Signatures & Return Types
+
+| Op | fn signature required | Returns |
+|---|---|---|
+| `list_map` | `fn(T) -> U` | `list<U>` (same length as input) |
+| `list_filter` | `fn(T) -> bool` | `list<T>` (subset, dynamic length) |
+| `list_fold` | `fn(Acc, T) -> Acc` | `Acc` (type of `init`) |
+| `map_values` | `fn(V) -> W` | `map<K, W>` |
+| `map_set` | *(no fn field)* | `unit` — mutates map in place |
+
+#### Argument Types
+
+- **`list_map`**: `list` must be `list<T>`; referenced `fn` must accept exactly one parameter of type `T` and return any type `U`. Returns `list<U>`.
+- **`list_filter`**: `list` must be `list<T>`; referenced `fn` must accept exactly one parameter of type `T` and return `bool`. Returns `list<T>`.
+- **`list_fold`**: `list` must be `list<T>`; `init` must be of type `Acc`; referenced `fn` must accept `(Acc, T)` and return `Acc`. Returns `Acc`.
+- **`map_values`**: `map` must be `map<K, V>`; referenced `fn` must accept exactly one parameter of type `V` and return any type `W`. Returns `map<K, W>`.
+- **`map_set`**: `map` must be `map<K, V>`, `key` must be `K`, `val` must be `V`; mutates the map in place. Returns `unit`. *(No `fn` field.)*
+
+#### Effect Propagation
+
+The effect set of a `list_map` / `list_filter` / `list_fold` / `map_values` operation is the **union** of:
+- effects declared on the *enclosing* function, and
+- effects declared on the referenced `fn`.
+
+If the referenced `fn` declares an effect not declared on the caller, the checker raises a `CheckError`.  
+In other words: **a pure caller cannot reference an effectful fn in a higher-order op.**
+
+#### `kind:module` Constraint
+
+`list_map`, `list_filter`, `list_fold`, and `map_values` require that the referenced `fn` is defined in the **same module** (i.e., appears in the `defs` array of the enclosing `kind:module` document). Cross-module function references in higher-order ops are not supported in v0.4.
+
+`map_set` has no `fn` field and is usable inside any function body without restriction.
+
 ### Overflow Policy (v0.3)
 - **Type-level**: Only `"overflow": "panic"` is valid in type declarations. This is the default.
 - **Expression-level** (v0.3): Per-operation `"overflow"` field overrides the type default:
@@ -467,6 +513,7 @@ Cumulative: v0.4 includes all v0.3 features plus the following additions.
 **New in v0.4:**
 - **Type aliases** (`module.types`, `{ "type": "alias", "name": ... }`) — reusable module-local type definitions.
 - **Collection operations** — `list_get`, `list_push`, `list_len`, `map_get`, `map_set`, `map_has`, `list_make`, `map_make`.
+- **Higher-order collection operations** — `list_map`, `list_filter`, `list_fold`, `map_values`; accept a `fn` reference string; module-level only; effect propagation enforced at check time.
 - **Granular effect capabilities** — structured `effects` objects with `kind`, `allow`, and `ops` for fine-grained access control.
 - **Effectful op contract** — `read_file` and `http_get` require an explicit `"effect"` field; bare declaration is a check-time error.
 - **URL scheme restriction** — `http_get` accepts only `http://` and `https://` schemes; `file://` and other schemes are rejected at both check and runtime.

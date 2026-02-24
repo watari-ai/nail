@@ -168,7 +168,9 @@ class FnType:
         return f"fn({params}) -> {self.return_type}"
 
 
-NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType | FnType
+NailType = IntType | FloatType | BoolType | StringType | BytesType | UnitType | OptionType | ListType | MapType | ResultType | EnumType
+# NOTE: FnType is intentionally excluded from NailType — it is an internal
+# checker representation only, not a first-class NAIL value type.
 
 
 def parse_type(spec: dict) -> NailType:
