@@ -12,6 +12,8 @@ import sys
 import unittest
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from interpreter import Checker, CheckError, NailTypeError, NailEffectError
@@ -166,12 +168,19 @@ class TestL3PassCases(unittest.TestCase):
         check_l3(spec)  # trivially terminates — OK
 
     def test_trivially_empty_loop_negative_step_from_lt_to(self):
-        """step<0 but from<to — loop never executes, trivially terminates."""
+        """step<0 with from<to is an infinite loop at runtime — L3 must reject it (#92 fix).
+
+        The runtime always uses `while i < to_val`, so a negative step with an
+        ascending range loops forever.  Certifying it as 'trivially terminates'
+        was a soundness violation.
+        """
+        from interpreter.checker import CheckError
         spec = loop_fn("empty_bwd",
                        from_expr={"lit": 0},
                        to_expr={"lit": 10},
                        step_expr={"lit": -1})
-        check_l3(spec)  # trivially terminates — OK
+        with pytest.raises(CheckError, match="negative step"):
+            check_l3(spec)
 
     def test_module_loop_terminates(self):
         """Module-level function with terminating loop passes L3."""

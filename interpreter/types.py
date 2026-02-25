@@ -105,7 +105,8 @@ class FloatType:
     bits: int
 
     def __post_init__(self):
-        assert self.bits in (32, 64), f"Invalid float bits: {self.bits}"
+        if self.bits not in (32, 64):
+            raise NailTypeError(f"Invalid float bits: {self.bits}")
 
     def __str__(self):
         return f"float{self.bits}"
