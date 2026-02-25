@@ -28,4 +28,4 @@ where = ["."]
 include = ["interpreter*", "nail_lang*", "demos*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.nail"]
+"*" = ["*.nail", "*.pyi"]

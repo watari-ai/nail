@@ -113,7 +113,35 @@ Modern LLMs have JSON structured output modes built in (OpenAI, Anthropic, Googl
 
 JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonicalize`) is only possible because JSON has well-defined serialization semantics (NAIL uses an RFC 8785-inspired subset: sorted keys + compact separators). S-expressions have no such standard.
 
-## Python API — Effect-Safe Tool Routing
+## Python SDK
+
+`nail-lang` ships a full Python SDK (`pip install nail-lang`). Type stubs are included for IDE completion and mypy/pyright support.
+
+### Verify & run NAIL programs
+
+```python
+from nail_lang import Checker, Runtime, CheckError
+
+spec = {
+    "nail": "0.8.0", "kind": "fn", "id": "add",
+    "effects": [], "params": [
+        {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+        {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+    ],
+    "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+    "body": [{"op": "return", "val": {"op": "+", "l": {"ref": "a"}, "r": {"ref": "b"}}}],
+}
+
+try:
+    Checker(spec, level=3).check()   # L0 schema + L1 types + L2 effects + L3 termination
+except CheckError as e:
+    print(e.to_json())  # machine-parseable error with code, location, message
+
+result = Runtime(spec).run({"a": 3, "b": 4})
+print(result)  # → 7
+```
+
+### Effect-safe tool routing
 
 NAIL's effect system can be used directly in Python to sandbox AI agent tool lists:
 
@@ -135,9 +163,24 @@ safe_tools = filter_by_effects(tools, allowed=["FS", "IO"])
 response = litellm.completion(model="gpt-4o", tools=safe_tools, ...)
 ```
 
-This is the NAIL effect system applied to Function Calling. Add `"effects": [...]` to your tool definitions; `filter_by_effects` handles the rest. Unannotated tools are excluded by default (production-safe).
+Unannotated tools are excluded by default (production-safe). See [`integrations/litellm.md`](integrations/litellm.md) for the full integration guide.
 
-See [`integrations/litellm.md`](integrations/litellm.md) for the full integration guide.
+### SDK public API
+
+| Symbol | Description |
+|---|---|
+| `Checker(spec, level=2)` | Verify a NAIL program (L0–L3) |
+| `Runtime(spec)` | Execute a verified NAIL program |
+| `CheckError` | Structured check-time error (`.to_json()` for machine parsing) |
+| `filter_by_effects(tools, allowed)` | Restrict tool list to an effect scope |
+| `get_tool_effects(tool)` | Introspect declared effects on a tool |
+| `annotate_tool_effects(tool, effects)` | Add effects annotation to a tool |
+| `validate_effects(effects)` | Validate effect label list |
+| `from_mcp(tool)` / `to_mcp(tool)` | MCP ↔ FC-Standard conversion |
+| `to_openai_tool` / `to_anthropic_tool` / `to_gemini_tool` | NAIL → provider conversion |
+| `convert_tools(tools, to="anthropic")` | Batch provider conversion |
+| `parse_type(spec)` | Parse a type descriptor dict into a `NailType` |
+| `VALID_EFFECTS` | `frozenset` of recognised effect kinds |
 
 ## FC Standard — Cross-Provider Function Calling
 
@@ -169,7 +212,7 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 
 ## Status
 
-🧪 **Experimental — v0.8.0** — `pip install nail-lang`
+🧪 **Experimental — v0.9 (dev) / v0.8.2 on PyPI** — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -202,6 +245,9 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 | **FC Standard** (`nail_lang.fc_standard`) | ✅ Implemented (v0.8.0) |
 | **Provider converters** (NAIL ↔ OpenAI / Anthropic / Gemini) | ✅ Implemented (v0.8.0) |
 | **MCP Bridge** (`from_mcp` / `to_mcp` / `infer_effects`) | ✅ Implemented (v0.7) |
+| **Type stubs** (`nail_lang/__init__.pyi`) | ✅ Implemented (v0.9) |
+| **L3.1: Call-site measure verification** (recursive `measure - k` proof) | ✅ Implemented (v0.9) |
+| `nail demo` exit code propagation | ✅ Fixed (v0.9, #82) |
 | Traits / Interfaces / Higher-kinded types | 🔮 Future |
 | L4: Memory safety (buffer overflow proofs) | 🔮 Future |
 
