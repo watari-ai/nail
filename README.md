@@ -5,7 +5,7 @@
 [![CI](https://github.com/watari-ai/nail/actions/workflows/ci.yml/badge.svg)](https://github.com/watari-ai/nail/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/nail-lang)](https://pypi.org/project/nail-lang/)
 
-![NAIL effect system — data exfiltration blocked before execution](demos/nail_killer_demo.gif)
+![NAIL E2E: LLM generates → checker catches → LLM fixes → PASS](demos/e2e_agent_demo.gif)
 
 ## The Problem
 
