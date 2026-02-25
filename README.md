@@ -68,7 +68,7 @@ NAIL is a programming language designed for AI agents to write, verify, and exch
 **Three things NAIL solves that no other language does:**
 
 1. **Effect-safe tool routing** — Declare `"effects": ["NET"]` on a tool; NAIL enforces it. AI agents can't call a network tool from a pure sandbox. Enforced at check time, not runtime.
-2. **Verifiable AI output** — L0/L1/L2/L3 checkers catch type errors, effect violations, and infinite loops *before* execution. AI-generated code that passes NAIL check is formally correct by construction.
+2. **Verifiable AI output** — L0/L1/L2/L3 checkers catch type errors, effect violations, and infinite loops *before* execution. AI-generated code that passes NAIL check is correct for all checked properties (types, effects, and termination under declared annotations).
 3. **Cross-provider Function Calling** — `nail_lang.fc_standard` converts NAIL function definitions to OpenAI / Anthropic / Gemini schemas. Write once, deploy to any provider. (v0.8.0)
 
 Modern AI systems generate code and call tools at scale. NAIL gives that scale a formal foundation.
@@ -77,7 +77,7 @@ Modern AI systems generate code and call tools at scale. NAIL gives that scale a
 
 | | Guarantee | Example |
 |---|---|---|
-| **Zero Ambiguity** | The same spec generates identical code every time | RFC 8785-inspired canonical subset: `json.dumps(sort_keys=True, separators=(',',':'))` — one representation, always |
+| **Zero Ambiguity** | The same spec generates identical code every time | RFC 8785-inspired canonical subset: `json.dumps(sort_keys=True, ensure_ascii=False, separators=(',', ':'))` — one representation, always (non-ASCII preserved as-is) |
 | **Effect System** | Side effects tracked at the type level | `fn main [] → fn helper [IO]` is a compile-time error, not a lint warning |
 | **Verification Layers** | AI-written code passes 3 independent checks before running | L0 (schema) → L1 (types) → L2 (effects) — all enforced, no silent passes |
 
@@ -99,8 +99,8 @@ Most languages use an AST as an *internal* representation. NAIL uses JSON as its
 What makes NAIL different from "JSON-serialized AST":
 
 **1. The verifier layers are the language.**
-The JSON schema (L0), type checker (L1), and effect checker (L2) are not tools built *on top of* NAIL — they *are* NAIL. A program passing all three layers is formally correct by construction.
-Layering is intentional: L0 is minimal by design, while L1/L2 enforce semantic correctness.
+The JSON schema (L0), type checker (L1), and effect checker (L2) are not tools built *on top of* NAIL — they *are* NAIL. A program passing all three layers is correct for all checked properties (types, effects, and termination under declared annotations).
+Layering is intentional: L0 is minimal by design, while L1/L2 enforce semantic correctness. A termination certificate (L3) is issued when all loops are bounded and all recursive calls carry a strictly decreasing `measure` annotation.
 
 | Layer | Responsibility |
 |---|---|
@@ -130,7 +130,7 @@ No runtime needed. The effect contract is violated at check time.
 **3. Canonical form.**
 There is exactly one valid JSON representation for any given program. No formatting choices, no style variants. An LLM generating the same logic twice will produce token-for-token identical output.
 
-This is enforced by an RFC 8785-inspired canonical subset (sorted keys + compact separators; does not claim full RFC 8785 compliance): `nail canonicalize` normalizes any NAIL program to its canonical form, and `nail check --strict` rejects non-canonical input. Example files are stored in canonical form.
+This is enforced by an RFC 8785-inspired canonical subset (sorted keys + compact separators + `ensure_ascii=False`; does not claim full RFC 8785 compliance): `nail canonicalize` normalizes any NAIL program to its canonical form using `json.dumps(sort_keys=True, ensure_ascii=False, separators=(',', ':'))`, preserving non-ASCII characters as-is rather than escaping them. `nail check --strict` rejects non-canonical input. Example files are stored in canonical form.
 
 **4. Designed for LLM *generation*, not LLM *reading*.**
 NAIL is not optimized for an LLM to read existing code. It is optimized for an LLM to write new code: zero ambiguity, zero implicit behavior, zero hallucination surface area.
