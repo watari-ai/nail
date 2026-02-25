@@ -93,6 +93,8 @@ class Checker:
         self._module_source_paths: dict[str, "Path | None"] = {}
         # Current function's in-scope type parameters (for generics support, v0.7)
         self._current_type_params: frozenset[str] = frozenset()
+        # L3.1: Track which recursive functions had their call-site measures verified
+        self._call_site_verified: set[str] = set()
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -616,12 +618,17 @@ class Checker:
                                     f"[{fn_id_in_cycle}] L3: termination measure '{measure}' is not a parameter. "
                                     f"Available: {param_ids}"
                                 )
-                            # Record proof
+                            # Record proof — upgraded to "verified" when call-site was checked (L3.1)
+                            proof_kind = (
+                                "decreasing_measure_verified"
+                                if fn_id_in_cycle in self._call_site_verified
+                                else "decreasing_measure_annotation"
+                            )
                             self._termination_proofs.setdefault(fn_id_in_cycle, []).append({
                                 "kind": "recursion",
                                 "measure": measure,
                                 "verdict": "terminates",
-                                "proof": "decreasing_measure_annotation"
+                                "proof": proof_kind,
                             })
                     else:
                         raise CheckError(f"Recursive call detected: {cycle_text}")
@@ -676,6 +683,71 @@ class Checker:
             "proof": "step_nonzero_literal",
             "note": contradiction,
         }
+
+    def _is_decreasing_measure_expr(self, expr: object, measure_name: str) -> bool:
+        """L3.1: Return True if *expr* is of the form ``measure_name - k`` (k > 0, int literal).
+
+        Accepts the canonical decreasing pattern:
+            {"op": "-", "l": {"ref": "<measure_name>"}, "r": {"lit": k}}  where k is int > 0
+
+        This is the verifiable evidence that the recursive argument strictly decreases.
+        More complex expressions (e.g. nested arithmetic, function calls) are not yet
+        supported and will cause the check to fail — users must rewrite the call-site
+        to use an explicit literal subtraction.
+        """
+        if not isinstance(expr, dict):
+            return False
+        if expr.get("op") != "-":
+            return False
+        l = expr.get("l")
+        r = expr.get("r")
+        if not isinstance(l, dict) or l.get("ref") != measure_name:
+            return False
+        if not isinstance(r, dict):
+            return False
+        lit = r.get("lit")
+        return isinstance(lit, int) and not isinstance(lit, bool) and lit > 0
+
+    def _verify_call_site_measure(
+        self, fn_id: str, callee_id: str, callee: dict, args: list
+    ) -> None:
+        """L3.1: Verify that the measure argument decreases at a recursive call-site.
+
+        Called from ``_check_call_expr`` when level >= 3 and callee_id == fn_id
+        (direct self-recursion with a termination annotation).
+
+        Raises CheckError with code MEASURE_NOT_DECREASING if the argument
+        corresponding to the measure parameter is not of the form
+        ``measure - k`` (k > 0).
+        """
+        termination = callee.get("termination") or {}
+        measure = termination.get("measure")
+        if not measure:
+            return  # no measure annotation — trust-based (already rejected in _detect_recursive_calls)
+
+        params_list = callee.get("params", [])
+        measure_idx = next(
+            (i for i, p in enumerate(params_list) if isinstance(p, dict) and p.get("id") == measure),
+            None,
+        )
+        if measure_idx is None or measure_idx >= len(args):
+            return  # param resolution issue — caught elsewhere
+
+        measure_arg = args[measure_idx]
+        if not self._is_decreasing_measure_expr(measure_arg, measure):
+            raise CheckError(
+                f"[{fn_id}] L3.1: recursive call to '{callee_id}': "
+                f"argument '{measure}' (position {measure_idx}) must strictly decrease — "
+                f"expected '{measure} - k' (k > 0 integer literal), "
+                f"got: {measure_arg}",
+                code="MEASURE_NOT_DECREASING",
+                location={"fn": fn_id, "callee": callee_id},
+                measure=measure,
+                measure_idx=measure_idx,
+            )
+
+        # Mark this function as having a verified call-site
+        self._call_site_verified.add(fn_id)
 
     def get_termination_certificate(self) -> dict:
         """L3: Return the termination proof certificate after a successful check()."""
@@ -1687,6 +1759,10 @@ class Checker:
                 raise CheckError(
                     f"[{fn_id}] Arg {i} to '{callee_id}' type mismatch: expected {param_type}, got {arg_type}"
                 )
+
+        # L3.1: Call-site measure verification for direct self-recursion
+        if self.level >= 3 and callee_id == fn_id:
+            self._verify_call_site_measure(fn_id, callee_id, callee, args)
 
         return self._parse_type(callee["returns"])
 
