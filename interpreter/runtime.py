@@ -759,6 +759,33 @@ class Runtime:
                 )
         return result
 
+    @staticmethod
+    def _substitute_params_in_spec(spec: dict, subst: dict[str, dict]) -> dict:
+        """Substitute type-param placeholders in a raw type spec dict.
+
+        Replaces any ``{"type": "param", "name": "T"}`` nodes with the
+        concrete type dict from ``subst[T]``.  Used when instantiating
+        generic type aliases (Issue #74).
+        """
+        if not isinstance(spec, dict):
+            return spec
+        if spec.get("type") == "param":
+            name = spec.get("name", "")
+            if name in subst:
+                return subst[name]
+        result: dict = {}
+        for k, v in spec.items():
+            if isinstance(v, dict):
+                result[k] = Runtime._substitute_params_in_spec(v, subst)
+            elif isinstance(v, list):
+                result[k] = [
+                    Runtime._substitute_params_in_spec(i, subst) if isinstance(i, dict) else i
+                    for i in v
+                ]
+            else:
+                result[k] = v
+        return result
+
     def _resolve_alias_spec(
         self,
         alias_name: str,
@@ -767,17 +794,43 @@ class Runtime:
         cache: dict[str, dict],
         stack: list[str],
         module_id: str,
+        type_args: list[dict] | None = None,
     ) -> dict:
-        if alias_name in cache:
-            return cache[alias_name]
-        if alias_name in stack:
-            cycle = " -> ".join(stack + [alias_name])
-            raise NailRuntimeError(f"Circular type alias detected in module '{module_id}': {cycle}")
         if alias_name not in aliases:
             raise NailRuntimeError(f"Unknown type alias '{alias_name}' in module '{module_id}'")
         alias_spec = aliases[alias_name]
         if not isinstance(alias_spec, dict):
             raise NailRuntimeError(f"Type alias '{alias_name}' in module '{module_id}' must be a type dict")
+
+        type_params: list[str] = alias_spec.get("type_params") or []
+        is_generic = bool(type_params)
+
+        if is_generic:
+            # Generic alias — requires concrete type args; never cached.
+            provided = type_args or []
+            if len(provided) != len(type_params):
+                raise NailRuntimeError(
+                    f"Generic alias '{alias_name}' requires {len(type_params)} type argument(s), "
+                    f"got {len(provided)}"
+                )
+            subst = {type_params[i]: provided[i] for i in range(len(type_params))}
+            # Strip type_params from body spec before substitution/resolution
+            body_spec = {k: v for k, v in alias_spec.items() if k != "type_params"}
+            body_spec = Runtime._substitute_params_in_spec(body_spec, subst)
+            return self._resolve_type_spec(
+                body_spec,
+                aliases=aliases,
+                cache=cache,
+                stack=stack + [alias_name],
+                module_id=module_id,
+            )
+
+        # Non-generic path: use cache and cycle detection.
+        if alias_name in cache:
+            return cache[alias_name]
+        if alias_name in stack:
+            cycle = " -> ".join(stack + [alias_name])
+            raise NailRuntimeError(f"Circular type alias detected in module '{module_id}': {cycle}")
         resolved = self._resolve_type_spec(
             alias_spec,
             aliases=aliases,
@@ -804,12 +857,19 @@ class Runtime:
             alias_name = type_spec.get("name")
             if not isinstance(alias_name, str) or not alias_name:
                 raise NailRuntimeError("Alias type requires non-empty string field 'name'")
+            # Resolve type args (if any) for generic alias instantiation (#74)
+            raw_args = type_spec.get("args") or []
+            resolved_args = [
+                self._resolve_type_spec(a, aliases=aliases, cache=cache, stack=stack, module_id=module_id)
+                for a in raw_args
+            ] if raw_args else None
             return self._resolve_alias_spec(
                 alias_name,
                 aliases=aliases,
                 cache=cache,
                 stack=stack,
                 module_id=module_id,
+                type_args=resolved_args,
             )
         if t == "option" and "inner" in type_spec:
             resolved = dict(type_spec)
