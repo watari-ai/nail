@@ -360,7 +360,7 @@
   <!-- Header -->
   <header class="header">
     <div class="logo">NAIL <span>playground</span></div>
-    <span class="tag">v0.4.0</span>
+    <span class="tag">v0.8.0</span>
 
     <div class="header-spacer"></div>
 
@@ -382,6 +382,7 @@
     </div>
 
     <button id="run-btn" class="btn btn-run" title="Run (⌘Enter / Ctrl+Enter)">▶ Run</button>
+    <button id="share-btn" class="btn btn-ghost" title="Copy shareable link">Share</button>
 
     <a class="header-github" href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
@@ -671,6 +672,385 @@ const EXAMPLES = {
         }
       ]
     }
+  },
+
+  // ── v0.4 Examples ──────────────────────────────────────────────────────────
+
+  type_aliases: {
+    label: "Type Aliases",
+    group: "v0.4",
+    description: "Demonstrates module-level type aliases (v0.4). UserId, Score, and Username are aliases. The rank_label function accepts a Score alias and returns a Username alias.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "module",
+      "id": "type_aliases_demo",
+      "types": {
+        "UserId":   { "type": "int", "bits": 64, "overflow": "panic" },
+        "Score":    { "type": "int", "bits": 64, "overflow": "panic" },
+        "Username": { "type": "string" }
+      },
+      "exports": ["main"],
+      "defs": [
+        {
+          "nail": "0.4.0",
+          "kind": "fn",
+          "id": "rank_label",
+          "effects": [],
+          "params": [
+            { "id": "score", "type": { "type": "alias", "name": "Score" } }
+          ],
+          "returns": { "type": "alias", "name": "Username" },
+          "body": [
+            {
+              "op": "if",
+              "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 90 } },
+              "then": [ { "op": "return", "val": { "lit": "Gold" } } ],
+              "else": [
+                {
+                  "op": "if",
+                  "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 70 } },
+                  "then": [ { "op": "return", "val": { "lit": "Silver" } } ],
+                  "else": [ { "op": "return", "val": { "lit": "Bronze" } } ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "nail": "0.4.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            { "op": "let", "id": "uid",   "type": { "type": "alias", "name": "UserId"   }, "val": { "lit": 42 } },
+            { "op": "let", "id": "score", "type": { "type": "alias", "name": "Score"    }, "val": { "lit": 85 } },
+            {
+              "op": "let", "id": "label",
+              "type": { "type": "alias", "name": "Username" },
+              "val": { "op": "call", "fn": "rank_label", "args": [ { "ref": "score" } ] }
+            },
+            {
+              "op": "print",
+              "val": {
+                "op": "concat", "l": { "lit": "User #" },
+                "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "uid" } },
+                  "r": { "op": "concat", "l": { "lit": " \u2014 Score: " },
+                    "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "score" } },
+                      "r": { "op": "concat", "l": { "lit": " \u2192 Rank: " }, "r": { "ref": "label" } }
+                    }
+                  }
+                }
+              },
+              "effect": "IO"
+            },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      ]
+    }
+  },
+
+  fine_grained_effect: {
+    label: "Fine-grained FS Effect",
+    group: "v0.4",
+    description: "Demonstrates structured effect capabilities (v0.4). The function declares { kind: 'FS', allow: ['/tmp/'], ops: ['read'] } — read-only access restricted to /tmp/.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "read_demo",
+      "effects": [
+        { "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] },
+        "IO"
+      ],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "read_file",
+          "path": { "lit": "/tmp/nail_demo.txt" },
+          "effect": "FS",
+          "into": "contents"
+        },
+        {
+          "op": "print",
+          "val": { "op": "concat", "l": { "lit": "File says: " }, "r": { "ref": "contents" } },
+          "effect": "IO"
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  // ── v0.5 Examples ──────────────────────────────────────────────────────────
+
+  enum_adt: {
+    label: "Enum / ADT",
+    group: "v0.5",
+    description: "Algebraic Data Types (v0.5). Defines a Shape enum with Circle and Rectangle variants. enum_make constructs a variant; match_enum dispatches exhaustively with field binding.",
+    args: {},
+    program: {
+      "nail": "0.5.0",
+      "kind": "module",
+      "id": "shape_demo",
+      "exports": ["main"],
+      "types": {
+        "Shape": {
+          "type": "enum",
+          "variants": [
+            { "tag": "Circle",    "fields": [{ "name": "radius", "type": { "type": "float", "bits": 64 } }] },
+            { "tag": "Rectangle", "fields": [{ "name": "w", "type": { "type": "float", "bits": 64 } },
+                                              { "name": "h", "type": { "type": "float", "bits": 64 } }] }
+          ]
+        }
+      },
+      "defs": [
+        {
+          "nail": "0.5.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            { "op": "enum_make", "tag": "Circle", "fields": { "radius": { "lit": 3.0 } }, "into": "shape" },
+            {
+              "op": "match_enum",
+              "val": { "ref": "shape" },
+              "cases": [
+                {
+                  "tag": "Circle",
+                  "bind": { "r": "radius" },
+                  "body": [
+                    { "op": "print", "effect": "IO",
+                      "val": { "op": "concat", "l": { "lit": "Circle: radius=" },
+                               "r": { "op": "int_to_str", "v": { "lit": 3 } } } },
+                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+                  ]
+                },
+                {
+                  "tag": "Rectangle",
+                  "bind": { "width": "w", "height": "h" },
+                  "body": [
+                    { "op": "print", "effect": "IO", "val": { "lit": "Rectangle" } },
+                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+
+  stdlib_math: {
+    label: "Core StdLib",
+    group: "v0.5",
+    description: "Core standard library math functions (v0.5): abs, clamp, min2, max2. Pass a negative number to see abs() at work.",
+    args: { n: -42 },
+    program: {
+      "nail": "0.5.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "let", "id": "a",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "abs", "val": { "ref": "n" } }
+        },
+        {
+          "op": "let", "id": "clamped",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "clamp", "val": { "ref": "a" }, "lo": { "lit": 0 }, "hi": { "lit": 100 } }
+        },
+        {
+          "op": "let", "id": "small",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "op": "min2", "l": { "ref": "a" }, "r": { "lit": 50 } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "abs(" },
+                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
+                          "r": { "op": "concat", "l": { "lit": ") = " },
+                                 "r": { "op": "int_to_str", "v": { "ref": "a" } } } } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "clamp(a, 0, 100) = " },
+                   "r": { "op": "int_to_str", "v": { "ref": "clamped" } } }
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "min(a, 50) = " },
+                   "r": { "op": "int_to_str", "v": { "ref": "small" } } }
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  // ── v0.6 Examples ──────────────────────────────────────────────────────────
+
+  l3_termination: {
+    label: "L3 Termination Proof",
+    group: "v0.6",
+    description: "Level 3 Termination Proof (v0.6). This loop sums 1..n. At L3, NAIL proves the loop terminates because step=1 is a non-zero literal. Run `nail check --level 3` to see the termination certificate.",
+    args: { n: 10 },
+    program: {
+      "nail": "0.6.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "let", "id": "total",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "lit": 0 }, "mut": true
+        },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 1 },
+          "to": { "ref": "n" },
+          "step": { "lit": 1 },
+          "body": [
+            {
+              "op": "assign", "id": "total",
+              "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } }
+            }
+          ]
+        },
+        {
+          "op": "print", "effect": "IO",
+          "val": { "op": "concat", "l": { "lit": "sum(1.." },
+                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
+                          "r": { "op": "concat", "l": { "lit": ") = " },
+                                 "r": { "op": "int_to_str", "v": { "ref": "total" } } } } }
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  // ── v0.7 Examples ──────────────────────────────────────────────────────────
+
+  generics_identity: {
+    label: "Generics — identity[T]",
+    group: "v0.7",
+    description: "Generic function (v0.7). identity[T](x: T) -> T works for any type. Called twice: once with int, once with string. The checker infers T from the argument — no type annotations at call sites.",
+    args: {},
+    program: {
+      "nail": "0.7.0",
+      "kind": "module",
+      "id": "generics_demo",
+      "exports": ["main"],
+      "defs": [
+        {
+          "nail": "0.7.0",
+          "kind": "fn",
+          "id": "identity",
+          "type_params": ["T"],
+          "effects": [],
+          "params": [
+            { "id": "x", "type": { "type": "param", "name": "T" } }
+          ],
+          "returns": { "type": "param", "name": "T" },
+          "body": [
+            { "op": "return", "val": { "ref": "x" } }
+          ]
+        },
+        {
+          "nail": "0.7.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            {
+              "op": "let", "id": "n",
+              "type": { "type": "int", "bits": 64, "overflow": "panic" },
+              "val": { "op": "call", "fn": "identity", "args": [{ "lit": 42 }] }
+            },
+            {
+              "op": "let", "id": "s",
+              "type": { "type": "string" },
+              "val": { "op": "call", "fn": "identity", "args": [{ "lit": "NAIL" }] }
+            },
+            {
+              "op": "print", "effect": "IO",
+              "val": { "op": "concat", "l": { "lit": "identity(42) = " },
+                       "r": { "op": "int_to_str", "v": { "ref": "n" } } }
+            },
+            {
+              "op": "print", "effect": "IO",
+              "val": { "op": "concat", "l": { "lit": "identity(\"NAIL\") = " }, "r": { "ref": "s" } }
+            },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      ]
+    }
+  },
+
+  mcp_bridge: {
+    label: "MCP Bridge",
+    group: "v0.7",
+    description: "MCP Bridge (v0.7). from_mcp() converts MCP tool definitions to NAIL effect-annotated format; to_mcp() strips NAIL extensions back to MCP format. Enables seamless interop between MCP servers and NAIL-verified agents.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "module",
+      "id": "mcp_bridge_demo",
+      "fns": {
+        "demo": {
+          "params": [],
+          "returns": { "type": "unit" },
+          "effects": ["IO"],
+          "body": [
+            { "op": "print", "val": { "lit": "MCP Bridge: from_mcp() converts MCP tools to NAIL effect-annotated format" }, "effect": "IO" },
+            { "op": "print", "val": { "lit": "to_mcp() strips NAIL extensions back to MCP format" }, "effect": "IO" },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      }
+    }
+  },
+
+  // ── v0.8 Examples ──────────────────────────────────────────────────────────
+
+  fc_standard: {
+    label: "FC Standard",
+    group: "v0.8",
+    description: "FC Standard (v0.8). convert_tools() converts tool definitions between OpenAI, Anthropic, and Gemini formats. Effects are preserved as NAIL annotations across all providers — enabling portable, verifiable AI tool calls.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "module",
+      "id": "fc_standard_demo",
+      "fns": {
+        "demo": {
+          "params": [],
+          "returns": { "type": "unit" },
+          "effects": ["IO"],
+          "body": [
+            { "op": "print", "val": { "lit": "FC Standard: convert_tools() converts between OpenAI/Anthropic/Gemini formats" }, "effect": "IO" },
+            { "op": "print", "val": { "lit": "Effects are preserved as NAIL annotations across all providers" }, "effect": "IO" },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+          ]
+        }
+      }
+    }
   }
 };
 
@@ -680,6 +1060,7 @@ const editorEl    = document.getElementById("editor");
 const argsEl      = document.getElementById("args-input");
 const outputEl    = document.getElementById("output");
 const runBtn      = document.getElementById("run-btn");
+const shareBtn    = document.getElementById("share-btn");
 const exampleSel  = document.getElementById("example-select");
 const statusText  = document.getElementById("status-text");
 const statusBar   = document.getElementById("status-bar");
@@ -904,6 +1285,48 @@ _json.dumps({"output": _output, "return_val": _return_val, "error": _error})
   }
 }
 
+// ── Share / URL ───────────────────────────────────────────────────────────────
+
+function shareProgram() {
+  const program = editorEl.value.trim();
+  const args    = argsEl.value.trim();
+  if (!program) { setStatus("Nothing to share", "warn"); return; }
+  try { JSON.parse(program); } catch (_) {
+    setStatus("Cannot share: invalid JSON in editor", "error"); return;
+  }
+  let hash = "program=" + btoa(unescape(encodeURIComponent(program)));
+  if (args) hash += "&args=" + encodeURIComponent(args);
+  const url = window.location.origin + window.location.pathname + "#" + hash;
+  navigator.clipboard.writeText(url).then(() => {
+    setStatus("Share link copied to clipboard!", "ok");
+    shareBtn.textContent = "✓ Copied!";
+    setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
+  }).catch(() => {
+    window.history.replaceState(null, "", "#" + hash);
+    setStatus("URL updated — copy from address bar", "info");
+  });
+}
+
+function loadFromUrl() {
+  const hash = window.location.hash.slice(1);
+  if (!hash) return false;
+  const params = new URLSearchParams(hash);
+  const encoded = params.get("program");
+  if (!encoded) return false;
+  try {
+    const program = decodeURIComponent(escape(atob(encoded)));
+    JSON.parse(program); // validate
+    editorEl.value = program;
+    const args = params.get("args");
+    if (args) argsEl.value = decodeURIComponent(args);
+    showOutputHTML(`<span class="output-placeholder">Program loaded from shared link.</span>`);
+    setStatus("Program loaded from shared link", "info");
+    return true;
+  } catch (_) {
+    return false; // malformed — fall back to default
+  }
+}
+
 // ── Format JSON ───────────────────────────────────────────────────────────────
 
 function formatJSON() {
@@ -987,6 +1410,7 @@ document.addEventListener("keydown", (e) => {
 // ── Wire Up Events ────────────────────────────────────────────────────────────
 
 runBtn.addEventListener("click",    runProgram);
+shareBtn.addEventListener("click",  shareProgram);
 formatBtn.addEventListener("click", formatJSON);
 copyBtn.addEventListener("click",   copyOutput);
 clearBtn.addEventListener("click",  clearOutput);
@@ -995,14 +1419,32 @@ exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
 // ── Populate Dropdown & Load Default ─────────────────────────────────────────
 
 (function init() {
+  // Group examples by their optional `group` property; ungrouped go into "Core"
+  const groups = {};
   for (const [key, ex] of Object.entries(EXAMPLES)) {
-    const opt = document.createElement("option");
-    opt.value       = key;
-    opt.textContent = ex.label;
-    exampleSel.appendChild(opt);
+    const g = ex.group || "Core";
+    if (!groups[g]) groups[g] = [];
+    groups[g].push([key, ex]);
   }
-  exampleSel.value = "hello";
-  loadExample("hello");
+
+  for (const [groupName, items] of Object.entries(groups)) {
+    const grp = document.createElement("optgroup");
+    grp.label = groupName;
+    for (const [key, ex] of items) {
+      const opt = document.createElement("option");
+      opt.value       = key;
+      opt.textContent = ex.label;
+      grp.appendChild(opt);
+    }
+    exampleSel.appendChild(grp);
+  }
+
+  // Load from URL hash (shareable link) or fall back to first example
+  if (!loadFromUrl()) {
+    const firstKey = Object.keys(EXAMPLES)[0];
+    exampleSel.value = firstKey;
+    loadExample(firstKey);
+  }
 
   // Start Pyodide boot
   initPyodide();
