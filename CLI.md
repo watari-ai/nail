@@ -127,6 +127,47 @@ nail --version
 
 ---
 
+### `nail demo`
+
+Run interactive demonstrations of NAIL's effect system and verification.
+
+```
+nail demo [--list]
+nail demo <name>
+```
+
+**Available demos:**
+
+| Name | Description |
+|------|-------------|
+| `rogue-agent` | Effect system: 3 escalating scenarios where an AI agent attempts to exceed its declared permissions. NAIL catches each attempt at check time before execution. |
+| `verifiability` | Verification: 3 bug classes that Python misses (hidden side effects, missing return paths, type mismatches) caught statically by NAIL's L1/L2 checker. |
+
+**Examples:**
+
+```bash
+# List available demos
+nail demo --list
+
+# Run the rogue agent demo
+nail demo rogue-agent
+
+# Run the verifiability demo
+nail demo verifiability
+```
+
+Individual scenario `.nail` files are in `demos/scenarios/` for direct `nail check` use:
+
+```bash
+nail check demos/scenarios/rogue-exfil-blocked.nail     # expected: FAIL
+nail check demos/scenarios/rogue-exfil-correct.nail     # expected: PASS
+nail check demos/scenarios/verify-type-mismatch-fail.nail  # expected: FAIL
+```
+
+See [`demos/scenarios/README.md`](demos/scenarios/README.md) for the full list with expected outcomes.
+
+---
+
 ## Python API
 
 The NAIL interpreter is also available as a Python library:

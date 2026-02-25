@@ -1,0 +1,1 @@
+{"body":[{"effect":"FS","into":"secret","op":"read_file","path":{"lit":"/tmp/nail_data/../../etc/passwd"}},{"op":"return","val":{"ref":"secret"}}],"effects":[{"allow":["/tmp/nail_data"],"kind":"FS","ops":["read"]}],"id":"read_report","kind":"fn","nail":"0.4","params":[],"returns":{"encoding":"utf8","type":"string"}}
