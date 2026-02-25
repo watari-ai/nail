@@ -1,0 +1,1 @@
+{"defs":[{"body":[{"effect":"IO","op":"print","val":{"ref":"msg"}},{"op":"return","val":{"lit":null,"type":{"type":"unit"}}}],"effects":["IO"],"id":"log","kind":"fn","nail":"0.4","params":[{"id":"msg","type":{"encoding":"utf8","type":"string"}}],"returns":{"type":"unit"}}],"exports":["log"],"id":"logger","kind":"module","nail":"0.4"}

@@ -142,6 +142,10 @@ nail demo <name>
 |------|-------------|
 | `rogue-agent` | Effect system: 3 escalating scenarios where an AI agent attempts to exceed its declared permissions. NAIL catches each attempt at check time before execution. |
 | `verifiability` | Verification: 3 bug classes that Python misses (hidden side effects, missing return paths, type mismatches) caught statically by NAIL's L1/L2 checker. |
+| `termination` | L3 termination prover: proves bounded loops terminate, catches zero-step infinite loops, and verifies recursive functions with measure annotations. |
+| `ai-review` | AI code review: 4 common LLM coding mistakes (effect leaks, type mix-ups, missing branches, arg mismatches) caught at check time. |
+| `mcp-firewall` | MCP tool filtering: auto-annotates MCP tools with NAIL effects and enforces least-privilege policies (Researcher, Analyst, Air-Gapped). |
+| `trust-boundary` | Cross-module trust boundaries: detects supply chain attacks where a dependency tries to escalate beyond the caller's declared effects. |
 
 **Examples:**
 
