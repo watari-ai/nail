@@ -242,7 +242,7 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 
 ## Status
 
-🧪 **Experimental — v0.9 (dev) / v0.8.2 on PyPI** — `pip install nail-lang`
+🧪 **Experimental — v0.8.2** on PyPI — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -275,9 +275,9 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 | **FC Standard** (`nail_lang.fc_standard`) | ✅ Implemented (v0.8.0) |
 | **Provider converters** (NAIL ↔ OpenAI / Anthropic / Gemini) | ✅ Implemented (v0.8.0) |
 | **MCP Bridge** (`from_mcp` / `to_mcp` / `infer_effects`) | ✅ Implemented (v0.7) |
-| **Type stubs** (`nail_lang/__init__.pyi`) | ✅ Implemented (v0.9) |
-| **L3.1: Call-site measure verification** (recursive `measure - k` proof) | ✅ Implemented (v0.9) |
-| `nail demo` exit code propagation | ✅ Fixed (v0.9, #82) |
+| **Type stubs** (`nail_lang/__init__.pyi`) | ✅ Implemented (v0.8.2) |
+| **L3.1: Call-site measure verification** (recursive `measure - k` proof) | ✅ Implemented (v0.8.2) |
+| `nail demo` exit code propagation | ✅ Fixed (v0.8.2, #82) |
 | Traits / Interfaces / Higher-kinded types | 🔮 Future |
 | L4: Memory safety (buffer overflow proofs) | 🔮 Future |
 

@@ -38,6 +38,9 @@ _UNIVERSAL_TYPES = {"object", "array", "string", "number", "integer", "boolean"}
 # Effects that indicate side effects (non-PURE)
 _SIDE_EFFECT_LABELS = {"IO", "NET", "FS"}
 
+# All recognised effect kind labels (used for validation)
+VALID_EFFECTS = {"FS", "NET", "PROC", "TIME", "RAND", "IO", "PURE"}
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -244,6 +247,13 @@ def fc_check(
                 f"Tool '{name}': declared as PURE but has side-effect labels: "
                 f"{side_effects}"
             )
+        # Validate each effect label against VALID_EFFECTS
+        for e in effects:
+            if e not in VALID_EFFECTS:
+                errors.append(
+                    f"Tool '{name}': unknown effect label '{e}'. "
+                    f"Valid effects: {sorted(VALID_EFFECTS - {'PURE'})}"
+                )
 
     # --- Check 4 (strict): Canonical form ---
     if strict:

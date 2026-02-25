@@ -496,17 +496,17 @@ def from_gemini_tool(
 def convert_tools(
     tools: list[dict[str, Any]],
     *,
-    to: Literal["openai", "anthropic", "gemini"],
-    from_: Literal["openai", "anthropic", "gemini"] = ...,
+    target: Literal["openai", "anthropic", "gemini", "nail"] = ...,
+    source: Literal["openai", "anthropic", "gemini", "nail"] = ...,
 ) -> list[dict[str, Any]]:
     """Batch-convert a list of tool definitions between providers.
 
     Args:
-        tools: List of tool dicts in *from_* format.
-        to: Target provider format (``"openai"``, ``"anthropic"``, or ``"gemini"``).
-        from_: Source provider format.  Default: ``"openai"``.
+        tools: List of tool dicts in *source* format.
+        target: Target provider format (``"openai"``, ``"anthropic"``, ``"gemini"``, or ``"nail"``).
+        source: Source provider format.  Default: ``"nail"``.
 
     Returns:
-        List of tool dicts in *to* format.
+        List of tool dicts in *target* format.
     """
     ...

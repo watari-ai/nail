@@ -253,6 +253,77 @@ class TestFcCheckEffects:
         finally:
             os.unlink(path)
 
+    def test_unknown_effect_label_foobar_errors(self, capsys):
+        """effects: ['FOOBAR'] → FC error (unknown label)."""
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "bad_tool",
+                    "description": "Has unknown effect",
+                    "parameters": {},
+                    "effects": ["FOOBAR"],
+                },
+            }
+        ]
+        path = write_temp_nail(tools)
+        try:
+            exit_code = fc_check(path, "openai", False, "json", False)
+            result = json.loads(capsys.readouterr().out)
+            assert exit_code == 2
+            assert result["ok"] is False
+            assert any("FOOBAR" in e for e in result["errors"])
+        finally:
+            os.unlink(path)
+
+    def test_mixed_valid_and_invalid_effect_label_errors(self, capsys):
+        """effects: ['NET', 'INVALID_LABEL'] → FC error for invalid, NET passes."""
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "mixed_tool",
+                    "description": "Has one valid and one invalid effect",
+                    "parameters": {},
+                    "effects": ["NET", "INVALID_LABEL"],
+                },
+            }
+        ]
+        path = write_temp_nail(tools)
+        try:
+            exit_code = fc_check(path, "openai", False, "json", False)
+            result = json.loads(capsys.readouterr().out)
+            assert exit_code == 2
+            assert result["ok"] is False
+            assert any("INVALID_LABEL" in e for e in result["errors"])
+            # NET is valid — it should not appear as an *unknown* effect error
+            assert not any("unknown effect label 'NET'" in e for e in result["errors"])
+        finally:
+            os.unlink(path)
+
+    def test_valid_effect_labels_pass(self, capsys):
+        """effects: ['NET', 'FS'] → passes (all known labels)."""
+        tools = [
+            {
+                "type": "function",
+                "function": {
+                    "name": "network_file_tool",
+                    "description": "Valid effects",
+                    "parameters": {},
+                    "effects": ["NET", "FS"],
+                },
+            }
+        ]
+        path = write_temp_nail(tools)
+        try:
+            exit_code = fc_check(path, "openai", False, "json", False)
+            result = json.loads(capsys.readouterr().out)
+            assert exit_code == 0
+            assert result["ok"] is True
+            assert result["errors"] == []
+        finally:
+            os.unlink(path)
+
 
 class TestFcCheckSystemErrors:
     def test_missing_file(self, capsys):

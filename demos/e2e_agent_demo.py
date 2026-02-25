@@ -70,8 +70,8 @@ def _openclaw_gateway_config() -> tuple[str, str]:
             auth = gw.get("auth", {})
             if auth.get("mode") == "token":
                 token = auth.get("token", token)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"  Warning: could not read OpenClaw config: {e}", file=sys.stderr)
     return f"http://localhost:{port}/v1", token
 
 
@@ -97,26 +97,36 @@ def make_client() -> tuple:
     return client, "anthropic/claude-sonnet-4-6", "OpenClaw Gateway"
 
 
-def chat(client, model: str, messages: list, backend: str) -> str:
-    """Call the LLM and return the response text."""
-    if backend == "Anthropic":
-        system_msgs = [m["content"] for m in messages if m["role"] == "system"]
-        user_msgs   = [m for m in messages if m["role"] != "system"]
-        resp = client.messages.create(
-            model=model,
-            max_tokens=1024,
-            system=system_msgs[0] if system_msgs else "You are a helpful AI.",
-            messages=user_msgs,
-        )
-        return resp.content[0].text
-    else:
-        resp = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            max_tokens=1024,
-            temperature=0.1,
-        )
-        return resp.choices[0].message.content
+def chat(client, model: str, messages: list, backend: str) -> str | None:
+    """Call the LLM and return the response text, or None on error."""
+    try:
+        if backend == "Anthropic":
+            system_msgs = [m["content"] for m in messages if m["role"] == "system"]
+            user_msgs   = [m for m in messages if m["role"] != "system"]
+            resp = client.messages.create(
+                model=model,
+                max_tokens=1024,
+                system=system_msgs[0] if system_msgs else "You are a helpful AI.",
+                messages=user_msgs,
+            )
+            if not resp.content or not hasattr(resp.content[0], "text"):
+                print("  ✗ LLM API error: empty or unexpected response content", file=sys.stderr)
+                return None
+            return resp.content[0].text
+        else:
+            resp = client.chat.completions.create(
+                model=model,
+                messages=messages,
+                max_tokens=1024,
+                temperature=0.1,
+            )
+            if not resp.choices or resp.choices[0].message is None:
+                print("  ✗ LLM API error: empty or unexpected response choices", file=sys.stderr)
+                return None
+            return resp.choices[0].message.content
+    except Exception as e:
+        print(f"  ✗ LLM API error: {e}", file=sys.stderr)
+        return None
 
 
 # ── NAIL utilities ───────────────────────────────────────────────────────────
@@ -141,8 +151,13 @@ NAIL_CORRECT_EXAMPLE = {
 
 
 def extract_nail_json(text: str) -> dict | None:
-    """Extract the first valid JSON object from LLM response."""
-    # Try fenced code block first: extract everything between ``` markers
+    """Extract the first valid NAIL JSON object from LLM response.
+
+    Priority:
+    1. Fenced code block (```json or ```nail) — preferred
+    2. Brace matching: prefer a JSON object containing a "nail" key
+    """
+    # Try fenced code block first: ```json or ```nail
     m = re.search(r"```(?:json|nail)?\s*\n?(.*?)```", text, re.DOTALL)
     if m:
         block = m.group(1).strip()
@@ -153,8 +168,9 @@ def extract_nail_json(text: str) -> dict | None:
         except json.JSONDecodeError:
             pass
 
-    # Fallback: find outermost JSON object using brace matching
-    depth, start, best = 0, -1, None
+    # Fallback: brace-match all JSON objects; prefer the one with a "nail" key
+    candidates: list[dict] = []
+    depth, start = 0, -1
     for i, ch in enumerate(text):
         if ch == "{":
             if depth == 0:
@@ -166,12 +182,22 @@ def extract_nail_json(text: str) -> dict | None:
                 candidate = text[start:i + 1]
                 try:
                     obj = json.loads(candidate)
-                    if isinstance(obj, dict) and len(candidate) > len(json.dumps(best or {})):
-                        best = obj
+                    if isinstance(obj, dict):
+                        candidates.append(obj)
                 except json.JSONDecodeError:
                     pass
 
-    return best
+    if not candidates:
+        return None
+
+    # Prefer candidates that contain a "nail" key (NAIL programs)
+    nail_candidates = [c for c in candidates if "nail" in c]
+    if nail_candidates:
+        # Among NAIL candidates, pick the largest (most complete)
+        return max(nail_candidates, key=lambda c: len(json.dumps(c)))
+
+    # No NAIL key found — return the largest object by JSON size
+    return max(candidates, key=lambda c: len(json.dumps(c)))
 
 
 def normalize_effects(effects: list) -> list[str]:
@@ -271,6 +297,9 @@ def main():
 
     conversation.append({"role": "user", "content": PROMPT_GENERATE})
     response_v1 = chat(client, model, conversation, backend)
+    if response_v1 is None:
+        print(f"\n{RED}Demo aborted: LLM API call failed at Step 1.{RESET}", file=sys.stderr)
+        return 1
     conversation.append({"role": "assistant", "content": response_v1})
 
     spec_generated = extract_nail_json(response_v1)
@@ -321,6 +350,9 @@ def main():
     fix_prompt = prompt_fix(error_msg, spec_broken)
     conversation.append({"role": "user", "content": fix_prompt})
     response_v2 = chat(client, model, conversation, backend)
+    if response_v2 is None:
+        print(f"\n{RED}Demo aborted: LLM API call failed at Step 3.{RESET}", file=sys.stderr)
+        return 1
     conversation.append({"role": "assistant", "content": response_v2})
 
     spec_fixed_raw = extract_nail_json(response_v2)
