@@ -7,13 +7,15 @@
 
 ## What is NAIL?
 
-NAIL is an experimental programming language built on a simple premise:
+NAIL is a programming language designed for AI agents to write, verify, and exchange — not for humans to read.
 
-**In the age of AI-driven development, human readability is an unnecessary constraint.**
+**Three things NAIL solves that no other language does:**
 
-Modern programming languages carry decades of design decisions optimized for human cognition — syntax sugar, implicit conversions, flexible formatting, multiple ways to express the same thing. These features reduce cognitive load for human developers, but they introduce ambiguity, hidden behavior, and inference overhead for AI systems.
+1. **Verifiable AI output** — L0/L1/L2/L3 checkers catch type errors, effect violations, and infinite loops *before* execution. AI-generated code that passes NAIL check is formally correct by construction.
+2. **Cross-provider Function Calling** — `nail_lang.fc_standard` converts NAIL function definitions to OpenAI / Anthropic / Gemini schemas. Write once, deploy to any provider. (v0.8.0)
+3. **Effect-safe tool routing** — Declare `"effects": ["NET"]` on a tool; NAIL enforces it. AI agents can't call a network tool from a pure sandbox.
 
-NAIL removes that weight entirely.
+Modern AI systems generate code and call tools at scale. NAIL gives that scale a formal foundation.
 
 ## Why NAIL? Three Core Guarantees
 
@@ -29,7 +31,7 @@ NAIL removes that weight entirely.
 2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior. Enforced by JCS canonical form.
 3. **Effects as types** — All side effects (IO, network, filesystem) are declared in function signatures and enforced by the type system.
 4. **Verification layers (L0–L2)** — Every program passes schema, type, and effect checks before execution. No silent passes.
-5. **Formal verification (v0.4+)** — Full termination proofs and formal verification are a future milestone.
+5. **Formal verification (v0.6+)** — `nail check --level 3` emits a termination certificate. Provably guaranteed to halt.
 6. **Self-evolving** — The language specification itself is developed and improved by AI, with humans providing intent and constraints.
 
 ## FAQ: Is NAIL just a JSON AST?
@@ -111,9 +113,37 @@ This is the NAIL effect system applied to Function Calling. Add `"effects": [...
 
 See [`integrations/litellm.md`](integrations/litellm.md) for the full integration guide.
 
+## FC Standard — Cross-Provider Function Calling
+
+NAIL v0.8.0 introduces `nail_lang.fc_standard`: a unified converter between NAIL function definitions and OpenAI / Anthropic / Gemini Function Calling schemas.
+
+```python
+from nail_lang.fc_standard import convert_tools, to_openai_tool, to_anthropic_tool, to_gemini_tool
+
+nail_fn = {
+    "nail": "0.8",
+    "kind": "fn",
+    "id": "search_web",
+    "effects": ["NET"],
+    "params": [{"id": "query", "type": {"type": "string"}}],
+    "returns": {"type": "string"},
+    "description": "Search the web and return results"
+}
+
+openai_tool    = to_openai_tool(nail_fn)    # OpenAI tools format
+anthropic_tool = to_anthropic_tool(nail_fn) # Anthropic tools format
+gemini_tool    = to_gemini_tool(nail_fn)    # Gemini functionDeclarations format
+
+# Round-trip guaranteed: NAIL → provider → NAIL preserves structure
+```
+
+Write once, deploy to any provider. Effect annotations are preserved across conversions.
+
+See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard section in SPEC.md](SPEC.md).
+
 ## Status
 
-🧪 **Experimental — v0.7.0** — `pip install nail-lang`
+🧪 **Experimental — v0.8.0** — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -142,60 +172,12 @@ See [`integrations/litellm.md`](integrations/litellm.md) for the full integratio
 | **Python API** (`nail_lang.filter_by_effects`) | ✅ Implemented (v0.7) |
 | **import `"from"` file resolution** | ✅ Implemented (v0.7) |
 | Structured JSON errors (`to_json()` / error codes) | ✅ Implemented (v0.7) |
+| **Generic type aliases** (module-level `type_params`) | ✅ Implemented (v0.7.2) |
+| **FC Standard** (`nail_lang.fc_standard`) | ✅ Implemented (v0.8.0) |
+| **Provider converters** (NAIL ↔ OpenAI / Anthropic / Gemini) | ✅ Implemented (v0.8.0) |
+| **MCP Bridge** (`from_mcp` / `to_mcp` / `infer_effects`) | ✅ Implemented (v0.7) |
 | Traits / Interfaces / Higher-kinded types | 🔮 Future |
 | L4: Memory safety (buffer overflow proofs) | 🔮 Future |
-
-### v0.4 New Features
-
-#### Type Aliases
-
-Define named type aliases at the module level and use them in function signatures and expressions:
-
-```json
-{"nail":"0.4","kind":"module",
-  "types": {
-    "UserId":   {"type":"int","bits":64,"overflow":"panic"},
-    "Username": {"type":"string"}
-  },
-  "defs":[
-    {"id":"greet_user",
-     "effects":[],
-     "params":[{"id":"uid","type":"UserId"},{"id":"name","type":"Username"}],
-     "returns":{"type":"string"},
-     "body":[
-       {"op":"return","value":{"op":"concat","args":[{"lit":"Hello, "},{"var":"name"}]}}
-     ]}
-  ]
-}
-```
-
-Circular aliases (`A → B → A`) are caught at check time as a `CheckError`:
-
-```
-$ nail check circular.nail
-CheckError: circular type alias detected: 'A' → 'B' → 'A'
-```
-
-#### Fine-grained Effect Capabilities
-
-Effect declarations can now specify structured constraints — restricting which paths, URLs, or operations are permitted. Legacy string-style declarations (`"FS"`, `"NET"`) remain fully supported.
-
-```json
-{"nail":"0.4","kind":"fn","id":"read_config",
-  "effects":[{"kind":"FS","allow":["/etc/myapp/"],"ops":["read"]}],
-  "params":[],"returns":{"type":"string"},
-  "body":[
-    {"op":"return","value":{"op":"read_file","path":{"lit":"/etc/myapp/config.toml"}}}
-  ]
-}
-```
-
-Attempting to write, or to access a path outside the allow-list, is a **runtime error** enforced by the Effect Capability:
-
-```
-$ nail run write_attempt.nail
-EffectDenied: 'write' not in allowed ops for FS capability (allow: ['/etc/myapp/'], ops: ['read'])
-```
 
 ## Secondary Effects: Token Efficiency
 

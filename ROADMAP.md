@@ -123,13 +123,17 @@ Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 - [x] **Round-trip tests** — NAIL ↔ OpenAI ↔ Anthropic ↔ Gemini verified
 - [x] **Playground examples** — MCP Bridge, Generic Type Aliases, FC Standard demo examples
 
-## v0.7 Original Goals — Developer Experience + Connectivity
+## Future Plans
+
+These items were originally scoped for v0.7/v0.8 but are deferred. They remain valuable long-term goals.
+
+### Developer Experience & Connectivity
 - [ ] **LSP Support** — Language Server Protocol for Nail-Lens integration. Hover types, error highlighting, go-to-definition for NAIL JSON.
 - [ ] **NAIL → WebAssembly** — Compile NAIL to Wasm for browser execution. Playground v2 with native performance.
 - [ ] **AI Agent Protocol (NATP)** — NAIL-format task delegation between agents. Agent A delegates to Agent B with formal effect constraints.
 
-## v0.8 Original Goals — Concurrency + Security
-- [ ] **Async / Concurrency** — Full design required simultaneously: cancellation, timeout, join/await types, determinism policy. Not just 'effects: [ASYNC]'.
+### Concurrency & Security
+- [ ] **Async / Concurrency** — Full design required simultaneously: cancellation, timeout, join/await types, determinism policy. Not just `effects: [ASYNC]`.
 - [ ] **Effect Security Model** — Formal policy for FS/NET/TIME/RAND/ASYNC: audit log spec, permission boundary definitions.
 
 ## v0.9 Goals — v1.0 RC Preparation
