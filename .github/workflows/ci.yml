@@ -48,6 +48,36 @@ jobs:
           EOF
       - name: Check canonical form of examples
         run: python tools/check-canonical.py
+      - name: Check nail version strings in demos and playground
+        run: |
+          python - <<'EOF'
+          import re, sys, glob
+          from pathlib import Path
+
+          # Versions older than 0.7 should not appear in demos or playground.
+          # New examples must use 0.7+ to reflect current language capabilities.
+          OLD_VERSION_PATTERN = re.compile(r'"nail"\s*:\s*"(0\.[0-6](?:\.\d+)?)"')
+
+          targets = list(glob.glob("demos/**/*.py", recursive=True)) + \
+                    list(glob.glob("playground/**/*.js", recursive=True)) + \
+                    list(glob.glob("demos/scenarios/*.nail"))
+
+          failures = []
+          for path in sorted(targets):
+              text = Path(path).read_text()
+              matches = OLD_VERSION_PATTERN.findall(text)
+              if matches:
+                  for v in matches:
+                      failures.append((path, v))
+                      print(f"  OLD VERSION  {path}: \"nail\": \"{v}\" (use 0.7+ for new examples)")
+
+          if failures:
+              print(f"\n{len(failures)} old nail version string(s) found.")
+              print("Update to 0.8 (or current version) to reflect current language capabilities.")
+              sys.exit(1)
+          else:
+              print("All demo/playground nail version strings are current (0.7+).")
+          EOF
       - name: Check examples (type + effect check)
         run: |
           for f in examples/*.nail; do
