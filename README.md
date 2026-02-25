@@ -201,6 +201,7 @@ nail/
 ├── SPEC.md          — Language specification
 ├── PHILOSOPHY.md    — Design rationale and background
 ├── ROADMAP.md       — Development phases
+├── CLI.md           — CLI command reference
 ├── examples/        — Sample NAIL programs
 ├── interpreter/     — Python interpreter (Checker + Runtime)
 ├── playground/      — Local FastAPI playground (server-based)
@@ -249,6 +250,10 @@ pip install -r requirements.txt
 ## Why NAIL?
 
 See [PHILOSOPHY.md](./PHILOSOPHY.md) for the full reasoning.
+
+---
+
+→ **[CLI.md](./CLI.md)** — full command reference (`nail run`, `nail check`, `nail canonicalize`)
 
 ---
 
