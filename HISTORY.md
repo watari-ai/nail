@@ -126,6 +126,23 @@ Strategic directions identified by Opus (Claude Opus 4.5) for NAIL's growth beyo
 
 ---
 
+## v0.9.0 — Spec & Conformance (2026-02-26)
+
+### New Features
+- **Conformance Test Suite** (`conformance/`): 45 canonical tests across L0/L1/L2/L3/FC — reference test set for alternative NAIL implementations. Run with `python -m pytest conformance/` (validation script TBD).
+- **Spec Versioning Policy** (`designs/v0.9/spec-versioning-policy.md`): Formal definition of breaking vs non-breaking changes, deprecation period rules, FC IR v1.0 compatibility guarantee.
+- **HN Show HN Preparation**: Token efficiency benchmarks, E2E agent demo GIF (`demos/nail_killer_demo.gif`), FC CLI (`nail fc convert/check/roundtrip`).
+
+### Improvements
+- FC IR v1.0 spec finalized (freeze candidate): `docs/fc-ir-v1.md`
+- Type stubs complete (`nail_lang/__init__.pyi`)
+- NAIL SDK quickstart documentation
+
+### Tests
+- 617 → 617 tests (conformance suite is separate, not counted in unit tests)
+
+---
+
 ## Phase 4 Vision: "A World of AI Forks"
 
 ### The last OSS project created by humans

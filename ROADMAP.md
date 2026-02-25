@@ -10,11 +10,12 @@
 v0.8.0: ✅ COMPLETE (2026-02-25) — FC Standard, 594 tests
 v0.8.1: ✅ COMPLETE — L3.1 call-site measure verification, type stubs
 v0.8.2: ✅ COMPLETE — version string sync, Playground fixes, CLI.md
+v0.9.0: ✅ COMPLETE (2026-02-26) — Spec Versioning Policy, Conformance Test Suite (45 tests)
 Phase 3: 🚀 Active — repo public, Playground live, articles published
 Phase 4: 🚀 Active — AI-driven OSS vision in progress
 ```
 
-*Last updated: 2026-02-25 by Watari*
+*Last updated: 2026-02-26 by Watari*
 
 ---
 
@@ -33,6 +34,7 @@ Phase 4: 🚀 Active — AI-driven OSS vision in progress
 | v0.8.0 | 2026-02-25 | FC Standard (`nail_lang.fc_standard`), OpenAI/Anthropic/Gemini converters, round-trip tests, 594 tests |
 | v0.8.1 | 2026-02-25 | L3.1 call-site measure verification, type stubs (`nail_lang/__init__.pyi`) |
 | v0.8.2 | 2026-02-25 | Version string sync, Playground fixes, CLI.md, demo exit code fix (#82) |
+| v0.9.0 | 2026-02-26 | Spec Versioning Policy, Conformance Test Suite (45 tests, L0/L1/L2/L3/FC) |
 
 ---
 
@@ -45,8 +47,8 @@ Phase 4: 🚀 Active — AI-driven OSS vision in progress
 - [x] **Documentation complete** — SPEC.md (v0.8.0), PHILOSOPHY.md, ROADMAP.md, README.md, CLI.md, IDEAS.md all updated and reviewed (2026-02-25).
 
 **Phase B: Post-HN (v0.9.x)**
-- [ ] **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules.
-- [ ] **Conformance Test Suite** — Canonical test set for alternative NAIL implementations to validate spec compliance.
+- [x] **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules. (`designs/v0.9/spec-versioning-policy.md`, commit e065c24)
+- [x] **Conformance Test Suite** — Canonical test set for alternative NAIL implementations to validate spec compliance. (`conformance/`, 45 tests, L0/L1/L2/L3/FC, commit 37ca91c)
 
 **Phase C: v1.0 RC**
 - [ ] **Spec Freeze** — NAIL JSON format frozen. No breaking changes after this point.
