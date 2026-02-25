@@ -2,6 +2,13 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.8.2] — 2026-02-25
+
+### Fixed
+
+- **`nail demo` broken in pip installs** (#81) — `demos/` was not included in the package distribution. Added `demos/__init__.py`, `demos/scenarios/__init__.py`, and `"demos*"` to setuptools package discovery. Added helpful error message when demo script is not found.
+- **Version strings in scenario files** — all `.nail` scenario files updated from `"0.4"` to `"0.8"`.
+
 ## [v0.8.1] — 2026-02-25
 
 ### Fixed
