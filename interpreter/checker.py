@@ -89,6 +89,8 @@ class Checker:
         self._module_enum_type_cache: dict[str, dict[str, EnumType]] = {}
         # Track which imported modules have already been body-checked (Bug 2 fix)
         self._checked_module_ids: set[str] = set()
+        # Track the resolved file path for each imported module (for nested source_path resolution)
+        self._module_source_paths: dict[str, "Path | None"] = {}
         # Current function's in-scope type parameters (for generics support, v0.7)
         self._current_type_params: frozenset[str] = frozenset()
 
@@ -454,6 +456,7 @@ class Checker:
                             code="MODULE_LOAD_ERROR",
                         )
                     self.modules[module_id] = loaded
+                    self._module_source_paths[module_id] = resolved
                 else:
                     raise CheckError(
                         f"Imported module '{module_id}' not found. "
@@ -521,6 +524,10 @@ class Checker:
 
         Uses _checked_module_ids to prevent infinite recursion on circular
         structures (circular imports are caught first by _detect_circular_imports).
+
+        Propagates level and source_path from the parent checker so that L3
+        termination proofs and path-relative import resolution work correctly
+        for nested imports (#72).
         """
         if module_id in self._checked_module_ids:
             return
@@ -528,8 +535,16 @@ class Checker:
         imported_mod = self.modules.get(module_id)
         if imported_mod is None:
             return
-        sub = Checker(imported_mod, modules=self.modules)
+        # Resolve the source_path for the imported module (enables relative "from" paths)
+        mod_source_path = self._module_source_paths.get(module_id)
+        sub = Checker(
+            imported_mod,
+            modules=self.modules,
+            level=self.level,          # propagate L3 (or any level) to sub-checker (#72)
+            source_path=mod_source_path,  # propagate file path for nested relative imports
+        )
         sub._checked_module_ids = self._checked_module_ids  # share the visited set
+        sub._module_source_paths = self._module_source_paths  # share path registry
         sub.check()
 
     def _detect_circular_imports(self, module_id: str, visiting: set[str]):
