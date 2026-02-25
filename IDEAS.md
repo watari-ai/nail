@@ -1,73 +1,103 @@
-# IDEAS.md - NAILネタ帳
+# IDEAS.md — NAIL Idea Board
 
-TODOではない。面白そうなアイデア、妄想、将来の可能性を書き留める場所。
+Not a TODO list. A place to capture interesting ideas, half-formed thoughts, and long-term possibilities.
 
 ---
 
-## コンパイラ・トランスパイラ系
+## Compiler / Transpiler
 
-### Python サブセット → NAIL トランスパイラ
-- AIが書いたPythonをNAILに変換して型・エフェクト検証を通す
-- 実用性とデモ映えの両立
-- HN投稿後のフォローアップネタにもなりそう
-- Bossとの会話で浮上（2026-02-23）
+### Python Subset → NAIL Transpiler ✅ Implemented in v0.4
+- Convert AI-written Python to NAIL and run it through type + effect verification
+- Practical utility combined with strong demo appeal
+- A natural follow-up topic for the HN post
+- Surfaced in conversation with Boss (2026-02-23)
+- **Status: Implemented in v0.4** (`transpiler/python_to_nail.py`). AST-based conversion with auto-effect inference.
 
 ### Lisp/Scheme → NAIL
-- S式とJSONはほぼ同じ構造 → 変換が自然
-- トランスパイラが一番書きやすい候補
-- 学術的・実験的な方向
+- S-expressions and JSON are nearly the same structure → conversion is natural
+- Probably the easiest transpiler to write
+- Academic / experimental direction
 
-### NAIL → WebAssembly コンパイラ
-- NAILの厳格な型システムはWasmと相性抜群
-- ブラウザで動くAIエージェントランタイム、という夢がある
-- 「AIが書いてブラウザで動く」というデモが完成する
+### NAIL → WebAssembly Compiler
+- NAIL's strict type system pairs perfectly with Wasm
+- The dream: an AI agent runtime that runs in the browser
+- Would complete the "AI writes it, browser runs it" demo story
 
 ### Prolog → NAIL
-- 論理プログラミング × エフェクトシステム
-- 異色の組み合わせ、学術寄り
+- Logic programming × effect system
+- An unusual combination; leans academic
 
 ---
 
-## NAILをIRとして使う構想
+## NAIL as an Intermediate Representation
 
 ```
-人間が書いた言語
-    ↓ (トランスパイラ)
-NAIL JSON  ← ここで型チェック + エフェクト検証
-    ↓ (コンパイラ)
-実行（ネイティブ / Wasm / Python）
+Human-written language
+    ↓ (transpiler)
+NAIL JSON  ← type checking + effect verification happens here
+    ↓ (compiler)
+Execution (native / Wasm / Python)
 ```
 
-- NAILは「AIが書く言語」だけでなく「あらゆる言語の安全な実行基盤」になれる
-- LLVMのIRがCもRustも受け入れるように、NAILも複数言語のフロントエンドを持てる
+- NAIL isn't just "the language AI writes" — it can become a safe execution substrate for any language
+- Just as LLVM IR accepts C, Rust, and more, NAIL could have front-ends for multiple languages
 
 ---
 
-## エコシステム・ツール系
+## Ecosystem / Tooling
 
-### Language Server Protocol (LSP) 対応
-- AI向けとはいえ、人間がNAILを読む・デバッグするためのツールは必要
-- エラーメッセージの可視化、型推論結果の表示
+### Language Server Protocol (LSP) Support
+- Even though NAIL targets AI, humans still need to read and debug it
+- Error message visualization, type inference result display
 
-### NAIL パッケージマネージャー
-- NAILモジュールの配布・依存解決
-- AIがissue・PR・forkを通じて言語自体を育てる「OSS for AI」構想の延長
+### NAIL Package Manager
+- Distribution and dependency resolution for NAIL modules
+- An extension of the "OSS for AI" vision — where AI agents grow the language through issues, PRs, and forks
+- **Status: Still future** (needs a user base first)
 
 ### NAIL Linter / Formatter
-- JSON整形だけじゃなく、NAIL特有のベストプラクティス検証
+- Beyond JSON formatting — validate NAIL-specific best practices
 
 ---
 
-## 面白い応用先
+## Interesting Application Areas
 
-### AI同士の通信プロトコルとしてのNAIL
-- エージェントAがエージェントBに「処理依頼」を送るフォーマットとしてNAILを使う
-- 現在のJSON-RPCより型安全・エフェクト追跡可能
+### NAIL as an Inter-Agent Communication Protocol
+- Use NAIL as the format for agent A to send a "task request" to agent B
+- More type-safe and effect-traceable than current JSON-RPC
 
-### NAILでOSのシステムコールを記述する
-- エフェクト宣言が強制されるので、セキュリティ的に面白い
-- 「どのエフェクトを持つプログラムをどのプロセスに許可するか」がコードレベルで制御できる
+### Describing OS System Calls in NAIL
+- Effect declarations are enforced, which makes for interesting security properties
+- "Which effects does this program have, and which process is allowed to run it?" — controlled at the code level
 
 ---
 
-*思いついたら追記していく*
+## Implemented (no longer ideas)
+
+- **Python → NAIL Transpiler** — Implemented in v0.4 (`transpiler/python_to_nail.py`). AST-based conversion with auto-effect inference.
+- **Function Calling Effect Annotations** — Implemented in v0.5. `filter_by_effects()` API.
+- **FC Standard (Cross-provider converters)** — Implemented in v0.8.0 (`nail_lang.fc_standard`). NAIL ↔ OpenAI/Anthropic/Gemini.
+- **MCP Bridge** — Implemented in v0.7 (`from_mcp`, `to_mcp`, `infer_effects`).
+
+## New Ideas (post-v0.8.0)
+
+### AI Agent Orchestration via NAIL
+- Use NAIL as the typed message format between orchestrator and sub-agents
+- Orchestrator writes a NAIL module defining delegated tasks with effect constraints
+- Sub-agents can only use effects declared in their task definition
+- Formal audit trail: every inter-agent call is a NAIL-checked operation
+
+### NAIL as a Compliance Layer
+- Enterprise use case: "Prove this AI-generated function never touches the database"
+- Convert AI-generated code in any language → NAIL IR → run L0-L3 verification
+- Compliance-ready: formal verification output for regulated industries
+
+### Encoding Optimization Experiment
+- Current JSON encoding was designed by humans. Has it actually been optimized for AI?
+- Inspired by Codex "pair token" discovery: representation shapes required compute
+- Task: give an AI agent: "Design the most efficient NAIL encoding that minimizes LLM token cost while maintaining Zero Ambiguity"
+- Measure: token count per operation, generation reproducibility, checker pass rate
+
+---
+
+*Add new ideas as they surface*
