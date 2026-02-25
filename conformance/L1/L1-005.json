@@ -1,0 +1,21 @@
+{
+  "id": "L1-005",
+  "category": "type-check",
+  "description": "Undefined variable reference — 'z' not declared in scope",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "use_undef",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+    "body": [
+      {"op": "return", "val": {"ref": "z"}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["undefined-variable", "type"]
+}

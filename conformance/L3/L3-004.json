@@ -1,0 +1,45 @@
+{
+  "id": "L3-004",
+  "category": "termination",
+  "description": "Recursive function with valid decreasing measure annotation — valid at L3",
+  "level": 3,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "fact_mod",
+    "exports": ["fact"],
+    "defs": [
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "fact",
+        "effects": [],
+        "params": [
+          {"id": "n", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+        ],
+        "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+        "termination": {"measure": "n"},
+        "body": [
+          {
+            "op": "if",
+            "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+            "then": [{"op": "return", "val": {"lit": 1}}],
+            "else": [
+              {
+                "op": "return",
+                "val": {
+                  "op": "call",
+                  "fn": "fact",
+                  "args": [{"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["recursive", "measure", "termination"]
+}

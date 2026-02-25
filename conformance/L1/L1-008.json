@@ -1,0 +1,21 @@
+{
+  "id": "L1-008",
+  "category": "type-check",
+  "description": "String concat type mismatch: right operand is int, not string",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_concat",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "return", "val": {"op": "concat", "l": {"lit": "x = "}, "r": {"lit": 42}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["concat", "mismatch", "type"]
+}

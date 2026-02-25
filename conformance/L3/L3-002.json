@@ -1,0 +1,28 @@
+{
+  "id": "L3-002",
+  "category": "termination",
+  "description": "Loop with negative literal step — provably terminates at L3",
+  "level": 3,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "count_down",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {
+        "op": "loop",
+        "bind": "i",
+        "from": {"lit": 10},
+        "to": {"lit": 0},
+        "step": {"lit": -1},
+        "body": []
+      },
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["loop", "negative-step", "termination"]
+}

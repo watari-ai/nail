@@ -1,0 +1,22 @@
+{
+  "id": "L2-003",
+  "category": "effect-check",
+  "description": "print used without declaring IO effect — effect violation",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_print",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "print", "val": {"lit": "oops"}, "effect": "IO"},
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "EFFECT_ERROR",
+  "tags": ["io", "print", "missing-effect", "effect"]
+}

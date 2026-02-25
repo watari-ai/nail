@@ -1,0 +1,22 @@
+{
+  "id": "L2-007",
+  "category": "effect-check",
+  "description": "http_get used without declaring NET effect — effect violation",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_fetch",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "http_get", "url": {"lit": "https://api.example.com"}, "effect": "NET", "into": "body"},
+      {"op": "return", "val": {"ref": "body"}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "EFFECT_ERROR",
+  "tags": ["net", "http_get", "missing-effect", "effect"]
+}

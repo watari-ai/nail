@@ -1,0 +1,22 @@
+{
+  "id": "L2-001",
+  "category": "effect-check",
+  "description": "PURE function with no side effects — valid",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "pure_double",
+    "effects": [],
+    "params": [
+      {"id": "n", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+    ],
+    "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+    "body": [
+      {"op": "return", "val": {"op": "*", "l": {"ref": "n"}, "r": {"lit": 2}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["pure", "no-effects", "effect"]
+}

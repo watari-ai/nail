@@ -1,0 +1,40 @@
+{
+  "id": "FC-003",
+  "category": "fc-check",
+  "description": "Duplicate tool names — must be rejected",
+  "level": 99,
+  "spec_version": "0.8",
+  "input": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a file",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"}
+          }
+        },
+        "effects": ["FS"]
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Another read_file",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"}
+          }
+        },
+        "effects": ["FS"]
+      }
+    }
+  ],
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["duplicate-name", "fc"]
+}

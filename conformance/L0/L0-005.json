@@ -1,0 +1,19 @@
+{
+  "id": "L0-005",
+  "category": "schema",
+  "description": "Unknown 'kind' value — must be 'fn' or 'module'",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "class",
+    "id": "f",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": []
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["unknown-kind", "schema"]
+}

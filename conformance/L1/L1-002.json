@@ -1,0 +1,22 @@
+{
+  "id": "L1-002",
+  "category": "type-check",
+  "description": "Valid string concatenation — both operands are string",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "greet",
+    "effects": [],
+    "params": [
+      {"id": "name", "type": {"type": "string"}}
+    ],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "return", "val": {"op": "concat", "l": {"lit": "Hello, "}, "r": {"ref": "name"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["string", "concat", "type"]
+}

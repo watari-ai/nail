@@ -1,0 +1,29 @@
+{
+  "id": "L3-003",
+  "category": "termination",
+  "description": "Loop with step=0 — infinite loop detected at L3",
+  "level": 3,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "inf_loop",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {
+        "op": "loop",
+        "bind": "i",
+        "from": {"lit": 0},
+        "to": {"lit": 10},
+        "step": {"lit": 0},
+        "body": []
+      },
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "MEASURE_NOT_DECREASING",
+  "tags": ["loop", "zero-step", "infinite", "termination"]
+}

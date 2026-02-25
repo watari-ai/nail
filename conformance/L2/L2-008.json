@@ -1,0 +1,22 @@
+{
+  "id": "L2-008",
+  "category": "effect-check",
+  "description": "'print' op missing required 'effect' field — structural error",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_print_struct",
+    "effects": ["IO"],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "print", "val": {"lit": "hello"}},
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["print", "missing-effect-field", "structural", "effect"]
+}

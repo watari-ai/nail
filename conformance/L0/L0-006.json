@@ -1,0 +1,21 @@
+{
+  "id": "L0-006",
+  "category": "schema",
+  "description": "Unknown effect label in effects list",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "f",
+    "effects": ["MAGIC"],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["unknown-effect", "schema"]
+}

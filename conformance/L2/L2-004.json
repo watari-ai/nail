@@ -1,0 +1,21 @@
+{
+  "id": "L2-004",
+  "category": "effect-check",
+  "description": "FS function declares FS and uses read_file — valid",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "read_config",
+    "effects": ["FS"],
+    "params": [],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "read_file", "path": {"lit": "/etc/config.txt"}, "effect": "FS", "into": "data"},
+      {"op": "return", "val": {"ref": "data"}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["fs", "read_file", "effect"]
+}

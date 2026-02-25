@@ -1,0 +1,32 @@
+{
+  "id": "L3-006",
+  "category": "termination",
+  "description": "Loop with variable step — cannot prove termination at L3 (must be literal)",
+  "level": 3,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "var_step",
+    "effects": [],
+    "params": [
+      {"id": "s", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+    ],
+    "returns": {"type": "unit"},
+    "body": [
+      {
+        "op": "loop",
+        "bind": "i",
+        "from": {"lit": 0},
+        "to": {"lit": 10},
+        "step": {"ref": "s"},
+        "body": []
+      },
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "notes": "Variable step cannot be proven non-zero at compile time. L2 would accept this.",
+  "tags": ["loop", "variable-step", "termination"]
+}

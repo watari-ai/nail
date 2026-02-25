@@ -1,0 +1,22 @@
+{
+  "id": "L1-006",
+  "category": "type-check",
+  "description": "let annotation mismatch: declared as int but assigned bool literal",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_let",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "let", "id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}, "val": {"lit": true}},
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["let", "annotation-mismatch", "type"]
+}

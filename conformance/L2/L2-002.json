@@ -1,0 +1,23 @@
+{
+  "id": "L2-002",
+  "category": "effect-check",
+  "description": "IO function declares IO and uses print — valid",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "log_msg",
+    "effects": ["IO"],
+    "params": [
+      {"id": "msg", "type": {"type": "string"}}
+    ],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "print", "val": {"ref": "msg"}, "effect": "IO"},
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["io", "print", "effect"]
+}

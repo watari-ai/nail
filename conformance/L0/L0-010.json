@@ -1,0 +1,16 @@
+{
+  "id": "L0-010",
+  "category": "schema",
+  "description": "Module with empty defs list is valid",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "empty_module",
+    "exports": [],
+    "defs": []
+  },
+  "expected": "ACCEPT",
+  "tags": ["empty-module", "schema"]
+}

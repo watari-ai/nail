@@ -1,0 +1,22 @@
+{
+  "id": "L0-009",
+  "category": "schema",
+  "description": "Valid fn with all standard effects declared (IO, FS, NET)",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "do_everything",
+    "effects": ["IO", "FS", "NET"],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": [
+      {"op": "print", "val": {"lit": "starting"}, "effect": "IO"},
+      {"op": "read_file", "path": {"lit": "/tmp/data.txt"}, "effect": "FS", "into": "contents"},
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["effects", "io", "fs", "net", "schema"]
+}

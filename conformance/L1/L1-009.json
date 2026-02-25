@@ -1,0 +1,22 @@
+{
+  "id": "L1-009",
+  "category": "type-check",
+  "description": "Valid int_to_str conversion: int param to string return",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "num_to_s",
+    "effects": [],
+    "params": [
+      {"id": "n", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+    ],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "return", "val": {"op": "int_to_str", "v": {"ref": "n"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["int_to_str", "conversion", "type"]
+}

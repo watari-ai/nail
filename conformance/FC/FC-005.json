@@ -1,0 +1,26 @@
+{
+  "id": "FC-005",
+  "category": "fc-check",
+  "description": "Tool with unknown effect label — must be rejected",
+  "level": 99,
+  "spec_version": "0.8",
+  "input": [
+    {
+      "type": "function",
+      "function": {
+        "name": "magic_tool",
+        "description": "Tool with unknown effect MAGIC",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "x": {"type": "string"}
+          }
+        },
+        "effects": ["MAGIC"]
+      }
+    }
+  ],
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["unknown-effect", "fc"]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "FC-007",
+  "category": "fc-check",
+  "description": "Tool with IO effect — valid side-effectful tool",
+  "level": 99,
+  "spec_version": "0.8",
+  "input": [
+    {
+      "type": "function",
+      "function": {
+        "name": "log_message",
+        "description": "Write a log message to standard output",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "message": {"type": "string"},
+            "level": {"type": "string"}
+          },
+          "required": ["message"]
+        },
+        "effects": ["IO"]
+      }
+    }
+  ],
+  "expected": "ACCEPT",
+  "tags": ["io", "fc"]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "L0-007",
+  "category": "schema",
+  "description": "'params' must be a list, not an object",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "f",
+    "effects": [],
+    "params": {"name": "x"},
+    "returns": {"type": "unit"},
+    "body": []
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["params-not-array", "schema"]
+}

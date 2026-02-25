@@ -1,0 +1,18 @@
+{
+  "id": "L0-003",
+  "category": "schema",
+  "description": "Missing required top-level 'nail' version field",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "kind": "fn",
+    "id": "f",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": []
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["missing-field", "schema", "nail-version"]
+}

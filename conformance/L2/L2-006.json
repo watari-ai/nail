@@ -1,0 +1,23 @@
+{
+  "id": "L2-006",
+  "category": "effect-check",
+  "description": "NET function declares NET and uses http_get — valid",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "fetch_data",
+    "effects": ["NET"],
+    "params": [
+      {"id": "url", "type": {"type": "string"}}
+    ],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "http_get", "url": {"ref": "url"}, "effect": "NET", "into": "body"},
+      {"op": "return", "val": {"ref": "body"}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["net", "http_get", "effect"]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "L0-002",
+  "category": "schema",
+  "description": "Minimal valid module with one pure function",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "math",
+    "exports": ["add"],
+    "defs": [
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "add",
+        "effects": [],
+        "params": [
+          {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+          {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+        ],
+        "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+        "body": [
+          {"op": "return", "val": {"op": "+", "l": {"ref": "a"}, "r": {"ref": "b"}}}
+        ]
+      }
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["minimal", "module", "schema"]
+}

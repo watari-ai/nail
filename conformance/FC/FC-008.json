@@ -1,0 +1,10 @@
+{
+  "id": "FC-008",
+  "category": "fc-check",
+  "description": "Empty tools array — valid (no tools to validate)",
+  "level": 99,
+  "spec_version": "0.8",
+  "input": [],
+  "expected": "ACCEPT",
+  "tags": ["empty", "fc"]
+}

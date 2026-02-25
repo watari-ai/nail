@@ -1,0 +1,41 @@
+{
+  "id": "FC-002",
+  "category": "fc-check",
+  "description": "Multiple tools with distinct names — valid",
+  "level": 99,
+  "spec_version": "0.8",
+  "input": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a file from the filesystem",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {"type": "string"}
+          },
+          "required": ["path"]
+        },
+        "effects": ["FS"]
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "search_web",
+        "description": "Search the web",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {"type": "string"}
+          },
+          "required": ["query"]
+        },
+        "effects": ["NET"]
+      }
+    }
+  ],
+  "expected": "ACCEPT",
+  "tags": ["multiple-tools", "fs", "net", "fc"]
+}

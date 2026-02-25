@@ -1,0 +1,23 @@
+{
+  "id": "L1-001",
+  "category": "type-check",
+  "description": "Valid binary integer addition — types match",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "add",
+    "effects": [],
+    "params": [
+      {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+      {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+    ],
+    "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+    "body": [
+      {"op": "return", "val": {"op": "+", "l": {"ref": "a"}, "r": {"ref": "b"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["arithmetic", "int", "type"]
+}

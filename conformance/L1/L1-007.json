@@ -1,0 +1,21 @@
+{
+  "id": "L1-007",
+  "category": "type-check",
+  "description": "Valid let binding: correct type annotation matches assigned value",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "use_let",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "let", "id": "msg", "type": {"type": "string"}, "val": {"lit": "hello"}},
+      {"op": "return", "val": {"ref": "msg"}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["let", "string", "type"]
+}

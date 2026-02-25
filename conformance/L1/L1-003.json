@@ -1,0 +1,21 @@
+{
+  "id": "L1-003",
+  "category": "type-check",
+  "description": "Return type mismatch: function declares int return but returns bool literal",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_return",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+    "body": [
+      {"op": "return", "val": {"lit": true}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["return-type", "mismatch", "type"]
+}

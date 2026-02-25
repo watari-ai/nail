@@ -1,0 +1,21 @@
+{
+  "id": "L1-004",
+  "category": "type-check",
+  "description": "Arithmetic type mismatch: adding int and bool is forbidden",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_add",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "bool"},
+    "body": [
+      {"op": "return", "val": {"op": "+", "l": {"lit": 1}, "r": {"lit": true}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["arithmetic", "mismatch", "type"]
+}

@@ -1,0 +1,21 @@
+{
+  "id": "L1-010",
+  "category": "type-check",
+  "description": "int_to_str applied to bool — type error: expects int, got bool",
+  "level": 1,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "bad_conversion",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "string"},
+    "body": [
+      {"op": "return", "val": {"op": "int_to_str", "v": {"lit": true}}}
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["int_to_str", "mismatch", "type"]
+}

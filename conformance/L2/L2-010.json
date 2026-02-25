@@ -1,0 +1,41 @@
+{
+  "id": "L2-010",
+  "category": "effect-check",
+  "description": "Valid transitive effect propagation: caller correctly declares IO",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "effect_ok",
+    "exports": ["main"],
+    "defs": [
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "helper",
+        "effects": ["IO"],
+        "params": [],
+        "returns": {"type": "unit"},
+        "body": [
+          {"op": "print", "val": {"lit": "helper"}, "effect": "IO"},
+          {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+        ]
+      },
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "main",
+        "effects": ["IO"],
+        "params": [],
+        "returns": {"type": "unit"},
+        "body": [
+          {"op": "call", "fn": "helper", "args": []},
+          {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+        ]
+      }
+    ]
+  },
+  "expected": "ACCEPT",
+  "tags": ["transitive", "cross-function", "effect"]
+}

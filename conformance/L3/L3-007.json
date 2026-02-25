@@ -1,0 +1,31 @@
+{
+  "id": "L3-007",
+  "category": "termination",
+  "description": "Level 2 accepts variable step — L3 restriction does not apply at L2",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "var_step_l2",
+    "effects": [],
+    "params": [
+      {"id": "s", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+    ],
+    "returns": {"type": "unit"},
+    "body": [
+      {
+        "op": "loop",
+        "bind": "i",
+        "from": {"lit": 0},
+        "to": {"lit": 10},
+        "step": {"ref": "s"},
+        "body": []
+      },
+      {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+    ]
+  },
+  "expected": "ACCEPT",
+  "notes": "At level L2, variable step in loop is not checked. Only L3 enforces step-literal proof.",
+  "tags": ["loop", "variable-step", "level-boundary", "termination"]
+}

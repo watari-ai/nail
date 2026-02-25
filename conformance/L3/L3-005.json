@@ -1,0 +1,45 @@
+{
+  "id": "L3-005",
+  "category": "termination",
+  "description": "Recursive function without termination annotation — rejected at L3",
+  "level": 3,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "rec_mod",
+    "exports": ["unannotated"],
+    "defs": [
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "unannotated",
+        "effects": [],
+        "params": [
+          {"id": "n", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+        ],
+        "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+        "body": [
+          {
+            "op": "if",
+            "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+            "then": [{"op": "return", "val": {"lit": 1}}],
+            "else": [
+              {
+                "op": "return",
+                "val": {
+                  "op": "call",
+                  "fn": "unannotated",
+                  "args": [{"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}]
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["recursive", "no-measure", "termination"]
+}

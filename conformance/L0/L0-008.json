@@ -1,0 +1,19 @@
+{
+  "id": "L0-008",
+  "category": "schema",
+  "description": "'body' must be a list, not a string",
+  "level": 0,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "fn",
+    "id": "f",
+    "effects": [],
+    "params": [],
+    "returns": {"type": "unit"},
+    "body": "return null"
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "CHECK_ERROR",
+  "tags": ["body-not-array", "schema"]
+}

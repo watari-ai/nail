@@ -1,0 +1,42 @@
+{
+  "id": "L2-009",
+  "category": "effect-check",
+  "description": "Transitive effect violation: caller missing IO effect when calling IO function",
+  "level": 2,
+  "spec_version": "0.8",
+  "input": {
+    "nail": "0.1.0",
+    "kind": "module",
+    "id": "effect_mod",
+    "exports": ["main"],
+    "defs": [
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "helper",
+        "effects": ["IO"],
+        "params": [],
+        "returns": {"type": "unit"},
+        "body": [
+          {"op": "print", "val": {"lit": "helper"}, "effect": "IO"},
+          {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+        ]
+      },
+      {
+        "nail": "0.1.0",
+        "kind": "fn",
+        "id": "main",
+        "effects": [],
+        "params": [],
+        "returns": {"type": "unit"},
+        "body": [
+          {"op": "call", "fn": "helper", "args": []},
+          {"op": "return", "val": {"lit": null, "type": {"type": "unit"}}}
+        ]
+      }
+    ]
+  },
+  "expected": "CHECK_ERROR",
+  "error_code": "EFFECT_VIOLATION",
+  "tags": ["transitive", "cross-function", "missing-effect", "effect"]
+}
