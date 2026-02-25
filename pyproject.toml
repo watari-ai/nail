@@ -25,7 +25,7 @@ py-modules = ["nail_cli"]
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["interpreter*", "nail_lang*"]
+include = ["interpreter*", "nail_lang*", "demos*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.nail"]
