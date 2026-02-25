@@ -2,6 +2,26 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.8.1] — 2026-02-25
+
+### Fixed
+
+- **Generic alias eager resolution in imports** (#71) — `_process_imports()` now skips eager resolution for generic aliases (`type_params`), matching main-module behavior. Prevents false arity errors at import time.
+- **Checker context propagation to imported modules** (#72) — `_check_imported_module_body()` now passes `level` and `source_path` to sub-checkers, ensuring L3 termination proofs and nested path resolution work correctly.
+- **Runtime generic alias args support** (#74) — `_resolve_type_spec` in runtime now handles `{"type":"alias","name":"X","args":[...]}`, matching checker semantics. Fixes typed-null and let-binding paths for generic aliases.
+- **CLI option parsing hardened** (#73) — `--level` validates range 1–3, `--format` validates `human|json`, unknown flags produce clear error messages.
+
+### Added
+
+- **`nail demo` subcommand** — `nail demo rogue-agent`, `nail demo verifiability`, `nail demo termination`, `nail demo ai-review`, `nail demo mcp-firewall`, `nail demo trust-boundary`. Six interactive demos showcasing NAIL's effect system, verification, and tooling.
+- **Scenario files** (`demos/scenarios/`) — 28 standalone `.nail` files for direct `nail check` verification.
+- **CLI.md** — Comprehensive CLI command reference.
+
+### Docs
+
+- README, PHILOSOPHY.md, SPEC.md, ROADMAP.md, IDEAS.md all updated to reflect v0.8.0 positioning and FC Standard.
+- GitHub repository: homepage set to `https://naillang.com`, topics added.
+
 ## [v0.7.2] — 2026-02-25
 
 ### Added
