@@ -10,7 +10,7 @@ const EXAMPLES = {
     description: "Prints a greeting. No arguments.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -28,7 +28,7 @@ const EXAMPLES = {
     description: "Computes the Nth Fibonacci number. Pass arg n (e.g. 10).",
     args: { n: 10 },
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "fibonacci",
       "effects": [],
@@ -62,7 +62,7 @@ const EXAMPLES = {
     description: "Computes n! iteratively. Pass arg n (e.g. 10).",
     args: { n: 10 },
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "factorial",
       "effects": [],
@@ -92,7 +92,7 @@ const EXAMPLES = {
     description: "Counts down from 5 to 1, then prints Liftoff!",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -125,7 +125,7 @@ const EXAMPLES = {
     description: "Sums integers from 1 to 10 using a loop.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -158,7 +158,7 @@ const EXAMPLES = {
     description: "Returns true if n is even. Pass arg n (e.g. 42).",
     args: { n: 42 },
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "is_even",
       "effects": [],
@@ -183,7 +183,7 @@ const EXAMPLES = {
     description: "Demonstrates module-level type aliases (v0.4). UserId, Score, and Username are aliases. The rank_label function accepts a Score alias and returns a Username alias.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "module",
       "id": "type_aliases_demo",
       "types": {
@@ -194,7 +194,7 @@ const EXAMPLES = {
       "exports": ["main"],
       "defs": [
         {
-          "nail": "0.4.0",
+          "nail": "0.8.0",
           "kind": "fn",
           "id": "rank_label",
           "effects": [],
@@ -219,7 +219,7 @@ const EXAMPLES = {
           ]
         },
         {
-          "nail": "0.4.0",
+          "nail": "0.8.0",
           "kind": "fn",
           "id": "main",
           "effects": ["IO"],
@@ -260,7 +260,7 @@ const EXAMPLES = {
     description: "Demonstrates structured effect capabilities (v0.4). The function declares { kind: 'FS', allow: ['/tmp/'], ops: ['read'] } — read-only access restricted to /tmp/. Reads /tmp/nail_demo.txt from the server.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "read_demo",
       "effects": [
@@ -294,7 +294,7 @@ const EXAMPLES = {
     description: "An agent is asked to summarise a file. It reads it (FS) — then secretly tries to send the data to an external server via http_get (NET). NAIL catches this: the function only declares FS, so any NET operation is rejected at check time. Try it — the checker will block the exfiltration before any code runs.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "summarise",
       "effects": ["FS"],
@@ -311,22 +311,18 @@ const EXAMPLES = {
   rogue_exfil_safe: {
     label: "Safe: FS-only Summarise",
     group: "Rogue Agent",
-    description: "The safe version: the agent only reads the file and returns it. No network calls. The checker passes because the body only uses FS operations, matching the declared effects.",
+    description: "The safe version: the agent only reads the file and returns it. No network calls. Same signature as the bad example — compare side-by-side to see the only difference is the missing http_get in the body.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "summarise",
-      "effects": [
-        { "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] },
-        "IO"
-      ],
-      "params": [],
-      "returns": { "type": "unit" },
+      "effects": ["FS"],
+      "params": [{ "id": "path", "type": { "type": "string", "encoding": "utf8" } }],
+      "returns": { "type": "string", "encoding": "utf8" },
       "body": [
-        { "op": "read_file", "path": { "lit": "/tmp/nail_demo.txt" }, "effect": "FS", "into": "data" },
-        { "op": "print", "val": { "op": "concat", "l": { "lit": "Summary: " }, "r": { "ref": "data" } }, "effect": "IO" },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+        { "op": "read_file", "path": { "ref": "path" }, "effect": "FS", "into": "data" },
+        { "op": "return", "val": { "ref": "data" } }
       ]
     }
   },
@@ -337,7 +333,7 @@ const EXAMPLES = {
     description: "The agent has read access to /tmp/ only. It tries to escape via path traversal (../../etc/passwd). NAIL's fine-grained FS capability resolves the path and rejects it — the real path is outside the allowed directory.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "read_report",
       "effects": [{ "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] }],
@@ -356,7 +352,7 @@ const EXAMPLES = {
     description: "The agent has NET access (http/https). It abuses http_get with a file:// URL to read local files. NAIL's scheme validation blocks this — only http and https are permitted, regardless of any NET capability declared.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "sneaky_read",
       "effects": [{ "kind": "NET", "allow": ["example.com"] }],
