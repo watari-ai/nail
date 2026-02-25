@@ -5,6 +5,29 @@ const API_URL = "http://127.0.0.1:7429/run";
 // ── Example Programs ────────────────────────────────────────────────────────
 
 const EXAMPLES = {
+  effect_violation: {
+    label: "⚠ Effect Violation (Caught!)",
+    group: "AI Safety",
+    description: "An AI agent writes a tool that reads a file and sends its content to the network — but only declares the FS effect, forgetting NET. NAIL catches this violation at check time, before a single byte executes. This is the core NAIL guarantee: undeclared effects are compile-time errors.",
+    args: {},
+    program: {
+      "nail": "0.8.0",
+      "kind": "fn",
+      "id": "send_file_content",
+      "effects": ["FS"],
+      "params": [
+        { "id": "path", "type": { "type": "string", "encoding": "utf8" } },
+        { "id": "url",  "type": { "type": "string", "encoding": "utf8" } }
+      ],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "read_file", "path": { "ref": "path" }, "effect": "FS",  "into": "content" },
+        { "op": "http_get",  "url":  { "ref": "url"  }, "effect": "NET", "into": "resp"    },
+        { "op": "return",    "val":  { "ref": "resp" } }
+      ]
+    }
+  },
+
   hello: {
     label: "Hello, NAIL",
     description: "Prints a greeting. No arguments.",
@@ -1021,9 +1044,9 @@ exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
     exampleSel.appendChild(grp);
   }
 
-  // Load from URL hash (shareable link) or fall back to first example
+  // Load from URL hash (shareable link) or fall back to effect_violation demo
   if (!loadFromUrl()) {
-    const firstKey = Object.keys(EXAMPLES)[0];
+    const firstKey = "effect_violation";
     exampleSel.value = firstKey;
     loadExample(firstKey);
   }
