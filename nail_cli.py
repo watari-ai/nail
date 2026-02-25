@@ -291,6 +291,10 @@ def main():
         elif demo_name in available:
             import subprocess
             script = Path(__file__).parent / available[demo_name]
+            if not script.exists():
+                print(f"✗ Demo script not found: {script}", file=sys.stderr)
+                print("  (If installed via pip, try upgrading: pip install -U nail-lang)", file=sys.stderr)
+                sys.exit(1)
             subprocess.run([sys.executable, str(script)])
         else:
             print(f"Unknown demo: {demo_name!r}. Available: {', '.join(available.keys())}", file=sys.stderr)
