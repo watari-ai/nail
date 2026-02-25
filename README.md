@@ -50,6 +50,8 @@ Or try it now → [naillang.com](https://naillang.com)
 | L2    | Effect declarations |
 | L3    | Termination proofs |
 
+> **L0 is intentionally permissive.** It validates structural shape only (required fields, basic types). Semantic correctness — type safety, effect declarations, termination proofs — is guaranteed by L1–L3. This separation means L0 can be checked with any JSON Schema validator; L1–L3 require the NAIL type system.
+
 [▶ Full documentation](docs/) · [▶ E2E Demo](demos/e2e_agent_demo.py) · [▶ Playground](https://naillang.com)
 
 ---

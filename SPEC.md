@@ -34,6 +34,17 @@ A NAIL program is a **collection of JSON documents**. There is no text syntax. T
 - Integer overflow behavior must be declared.
 - At the **type level**, only `"overflow": "panic"` is supported (type default).
 - At the **expression level** (v0.3+), `"overflow": "wrap"` and `"overflow": "sat"` are supported per-operation. See [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md).
+
+**Overflow mode availability:**
+
+| Mode    | Type declaration (`"overflow": "..."`) | Expression op (`"overflow": "..."`) | Behavior |
+|---------|---------------------------------------|-------------------------------------|----------|
+| `panic` | ✅ (default)                          | ✅                                  | Program terminates on overflow |
+| `wrap`  | ❌ type-level not supported            | ✅ (v0.3+)                         | Modular arithmetic (2ⁿ wrap) |
+| `sat`   | ❌ type-level not supported            | ✅ (v0.3+)                         | Clamps to min/max representable value |
+
+Type declarations only support `panic`; `wrap` and `sat` are expression-level overrides applied per-operation.
+
 - No implicit type conversions of any kind.
 
 ### Type Aliases (v0.4)
@@ -531,6 +542,8 @@ The presence and format of these files is checked by the NAIL project verifier.
 | L2 | Effect consistency (only declared effects may be used; effect propagation through `call` enforced) |
 | L3 | Termination proof (all loops are proven to terminate) |
 | L4 | Memory safety (buffer overflows proven impossible) |
+
+> **Design note:** L0 uses `additionalProperties: true` intentionally. L0 is the structural minimum — it ensures the input is valid JSON with required fields. Meaning (types, effects, termination) is enforced by L1–L3. Keeping L0 loose allows future language versions to add fields without breaking L0 validators.
 
 **Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in canonical form: `json.dumps(sort_keys=True, separators=(',',':'))`. NAIL uses an RFC 8785-inspired canonical subset (sorted keys + compact separators; does not claim full RFC 8785 compliance). One program = one representation. Non-canonical input is rejected at L0 when `--strict` is used. Use `nail canonicalize` to convert.
 
