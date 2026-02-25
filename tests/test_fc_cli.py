@@ -20,7 +20,7 @@ PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip
+from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip, fc_import
 
 # ── Fixtures / helpers ────────────────────────────────────────────────────────
 
@@ -393,3 +393,110 @@ def test_demo_tools_check_passes(provider: str, capsys):
     assert exit_code == 0, f"fc_check failed for provider={provider}: {result}"
     assert result["ok"] is True
     assert result["errors"] == []
+
+
+# ── fc_import tests ───────────────────────────────────────────────────────────
+
+OPENAI_TOOL_JSON = json.dumps([
+    {
+        "type": "function",
+        "function": {
+            "name": "search_web",
+            "description": "Search the web",
+            "parameters": {
+                "type": "object",
+                "properties": {"query": {"type": "string"}},
+                "required": ["query"],
+            },
+        },
+    }
+])
+
+ANTHROPIC_TOOL_JSON = json.dumps([
+    {
+        "name": "read_file",
+        "description": "Read a file",
+        "input_schema": {
+            "type": "object",
+            "properties": {"path": {"type": "string"}},
+            "required": ["path"],
+        },
+    }
+])
+
+GEMINI_TOOL_JSON = json.dumps([
+    {
+        "name": "calculate",
+        "description": "Perform arithmetic",
+        "parameters": {
+            "type": "object",
+            "properties": {"expression": {"type": "string"}},
+            "required": ["expression"],
+        },
+    }
+])
+
+
+@pytest.mark.parametrize("source,raw_json", [
+    ("openai", OPENAI_TOOL_JSON),
+    ("anthropic", ANTHROPIC_TOOL_JSON),
+    ("gemini", GEMINI_TOOL_JSON),
+])
+def test_fc_import_stdout(source: str, raw_json: str, capsys):
+    """fc_import should convert provider JSON to NAIL format and print to stdout."""
+    with tempfile.NamedTemporaryFile(suffix=".json", mode="w", delete=False) as f:
+        f.write(raw_json)
+        f.flush()
+        exit_code = fc_import(f.name, source, None, "json")
+
+    captured = capsys.readouterr()
+    assert exit_code == 0, f"fc_import failed for source={source}: {captured.err}"
+    nail_tools = json.loads(captured.out)
+    assert isinstance(nail_tools, list)
+    assert len(nail_tools) == 1
+    fn = nail_tools[0].get("function", nail_tools[0])
+    assert "name" in fn
+    assert "parameters" in fn or "input_schema" not in fn  # must be NAIL format
+
+
+def test_fc_import_to_file(tmp_path):
+    """fc_import --out should write NAIL JSON to a file."""
+    src = tmp_path / "tools.json"
+    src.write_text(OPENAI_TOOL_JSON)
+    out = tmp_path / "tools.nail"
+
+    exit_code = fc_import(str(src), "openai", str(out), "human")
+    assert exit_code == 0
+    assert out.exists()
+    data = json.loads(out.read_text())
+    assert isinstance(data, list)
+    assert data[0]["function"]["name"] == "search_web"
+
+
+def test_fc_import_missing_file(capsys):
+    """fc_import should return 1 for a missing input file."""
+    exit_code = fc_import("/nonexistent/tools.json", "openai", None, "human")
+    assert exit_code == 1
+    captured = capsys.readouterr()
+    assert "not found" in captured.err.lower() or "No such" in captured.err
+
+
+def test_fc_import_single_tool_dict(tmp_path):
+    """fc_import should accept a single tool dict (not wrapped in a list)."""
+    single = {
+        "type": "function",
+        "function": {
+            "name": "ping",
+            "description": "Ping",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+    }
+    src = tmp_path / "single.json"
+    src.write_text(json.dumps(single))
+    out = tmp_path / "single.nail"
+
+    exit_code = fc_import(str(src), "openai", str(out), "human")
+    assert exit_code == 0
+    data = json.loads(out.read_text())
+    assert len(data) == 1
+    assert data[0]["function"]["name"] == "ping"

@@ -1,6 +1,6 @@
 """FC CLI: Logic for `nail fc` subcommands.
 
-Provides convert, check, and roundtrip operations on NAIL's OpenAI FC format.
+Provides convert, check, roundtrip, and import operations on NAIL's OpenAI FC format.
 
 Input format:
     A JSON array of tools in NAIL's internal OpenAI FC format, e.g.::
@@ -30,7 +30,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from nail_lang._fc_standard import convert_tools, from_openai_tool
+from nail_lang._fc_standard import (
+    convert_tools,
+    from_openai_tool,
+    from_anthropic_tool,
+    from_gemini_tool,
+)
 
 # Allowed primitive types for all providers
 _UNIVERSAL_TYPES = {"object", "array", "string", "number", "integer", "boolean"}
@@ -380,3 +385,89 @@ def fc_roundtrip(input_path: str, provider: str, fmt: str) -> int:
                     print(f"      roundtripped: {json.dumps(fd['roundtripped'], ensure_ascii=False)}")
 
     return exit_code
+
+
+def fc_import(input_path: str, source: str, out: str | None, fmt: str) -> int:
+    """Import provider tool schemas into NAIL format.
+
+    Reads a JSON file containing tool schemas in a provider-specific format
+    (OpenAI, Anthropic, or Gemini) and converts them to NAIL's internal
+    OpenAI FC format with effect annotations.
+
+    Args:
+        input_path: Path to the input JSON file containing provider tool schemas.
+        source:     Source provider format: "openai", "anthropic", or "gemini".
+        out:        Output .nail file path, or None to print to stdout.
+        fmt:        Output format: "human" (default) or "json".
+
+    Returns:
+        0 on success, 1 on error.
+
+    Example::
+
+        $ nail fc import openai_tools.json --from openai
+        $ nail fc import anthropic_tools.json --from anthropic --out my_tools.nail
+    """
+    p = Path(input_path)
+    if not p.exists():
+        print(f"✗ File not found: {input_path}", file=sys.stderr)
+        return 1
+
+    try:
+        with open(p) as f:
+            data = json.load(f)
+    except json.JSONDecodeError as e:
+        print(f"✗ JSON parse error in {input_path}: {e}", file=sys.stderr)
+        return 1
+
+    # Accept both a single tool dict and a list of tools
+    if isinstance(data, dict):
+        data = [data]
+
+    if not isinstance(data, list):
+        print(f"✗ Expected a JSON array of tools, got {type(data).__name__}", file=sys.stderr)
+        return 1
+
+    _from_fn = {
+        "openai": from_openai_tool,
+        "anthropic": from_anthropic_tool,
+        "gemini": from_gemini_tool,
+    }
+    converter = _from_fn[source]
+
+    nail_tools: list[dict[str, Any]] = []
+    errors: list[str] = []
+
+    for i, tool in enumerate(data):
+        try:
+            nail_tools.append(converter(tool))
+        except (KeyError, ValueError, TypeError) as e:
+            errors.append(f"Tool[{i}]: {e}")
+
+    if errors:
+        for err in errors:
+            print(f"✗ {err}", file=sys.stderr)
+        return 1
+
+    output = json.dumps(nail_tools, indent=2, ensure_ascii=False)
+
+    if out:
+        try:
+            out_path = Path(out)
+            if out_path.suffix == "":
+                out_path = out_path.with_suffix(".nail")
+            out_path.write_text(output + "\n", encoding="utf-8")
+            if fmt == "human":
+                print(f"✓ Imported {len(nail_tools)} tool(s) from {source} → {out_path}")
+        except OSError as e:
+            print(f"✗ Cannot write output file: {e}", file=sys.stderr)
+            return 1
+    else:
+        print(output)
+        if fmt == "human":
+            print(
+                f"\n# Imported {len(nail_tools)} tool(s) from {source} format.",
+                file=sys.stderr,
+            )
+
+    return 0

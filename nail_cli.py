@@ -14,9 +14,10 @@ Usage:
   nail canonicalize -                                     # Read from stdin
   nail demo [--list]                                      # List available demos
   nail demo <name>                                        # Run a named demo
-  nail fc convert <tools.nail> --provider openai|anthropic|gemini [--out file] [--format json]
-  nail fc check   <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]
+  nail fc convert  <tools.nail> --provider openai|anthropic|gemini [--out file] [--format json]
+  nail fc check    <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]
   nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]
+  nail fc import   <tools.json> --from openai|anthropic|gemini [--out file] [--format json]
   nail --version                                          # Show interpreter version
   nail version                                            # Show interpreter version (alias)
 """
@@ -368,23 +369,28 @@ def main():
                 "Usage:\n"
                 "  nail fc convert  <tools.nail> --provider openai|anthropic|gemini [--out file] [--format json]\n"
                 "  nail fc check    <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]\n"
-                "  nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]\n",
+                "  nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]\n"
+                "  nail fc import   <tools.json> --from openai|anthropic|gemini [--out file] [--format json]\n",
                 file=sys.stderr,
             )
             sys.exit(0)
 
         fc_sub = args[1]
 
-        if fc_sub not in ("convert", "check", "roundtrip"):
-            print(f"✗ Unknown fc subcommand: {fc_sub!r}. Expected: convert, check, roundtrip", file=sys.stderr)
+        if fc_sub not in ("convert", "check", "roundtrip", "import"):
+            print(f"✗ Unknown fc subcommand: {fc_sub!r}. Expected: convert, check, roundtrip, import", file=sys.stderr)
             sys.exit(1)
 
         if len(args) < 3 or args[2].startswith("-"):
-            print(f"Usage: nail fc {fc_sub} <tools.nail> --provider openai|anthropic|gemini", file=sys.stderr)
+            if fc_sub == "import":
+                print(f"Usage: nail fc import <tools.json> --from openai|anthropic|gemini", file=sys.stderr)
+            else:
+                print(f"Usage: nail fc {fc_sub} <tools.nail> --provider openai|anthropic|gemini", file=sys.stderr)
             sys.exit(1)
 
         fc_file = args[2]
         fc_provider = None
+        fc_from = None   # for import subcommand
         fc_out = None
         fc_fmt = "human"
         fc_strict = False
@@ -397,6 +403,12 @@ def main():
                     print("✗ --provider requires a value", file=sys.stderr)
                     sys.exit(1)
                 fc_provider = args[i + 1]
+                i += 2
+            elif args[i] == "--from":
+                if i + 1 >= len(args):
+                    print("✗ --from requires a value", file=sys.stderr)
+                    sys.exit(1)
+                fc_from = args[i + 1]
                 i += 2
             elif args[i] == "--out":
                 if i + 1 >= len(args):
@@ -426,6 +438,20 @@ def main():
                 print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
                 sys.exit(1)
 
+        from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip, fc_import
+
+        # --- nail fc import ---
+        if fc_sub == "import":
+            if fc_from is None:
+                print("✗ --from is required (openai, anthropic, or gemini)", file=sys.stderr)
+                sys.exit(1)
+            if fc_from not in _VALID_PROVIDERS:
+                print(f"✗ Unknown source: {fc_from!r}. Valid: {', '.join(_VALID_PROVIDERS)}", file=sys.stderr)
+                sys.exit(1)
+            exit_code = fc_import(fc_file, fc_from, fc_out, fc_fmt)
+            sys.exit(exit_code)
+
+        # --- convert / check / roundtrip require --provider ---
         if fc_provider is None:
             print("✗ --provider is required (openai, anthropic, or gemini)", file=sys.stderr)
             sys.exit(1)
@@ -433,8 +459,6 @@ def main():
         if fc_provider not in _VALID_PROVIDERS:
             print(f"✗ Unknown provider: {fc_provider!r}. Valid: {', '.join(_VALID_PROVIDERS)}", file=sys.stderr)
             sys.exit(1)
-
-        from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip
 
         if fc_sub == "convert":
             exit_code = fc_convert(fc_file, fc_provider, fc_out, fc_fmt)
