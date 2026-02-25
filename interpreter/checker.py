@@ -102,8 +102,11 @@ class Checker:
         """Validate basic required fields (jsonschema L0 + strict canonical check)."""
         # Strict mode: verify canonical form (JCS / RFC 8785 subset)
         if self.strict and self.raw_text is not None:
+            # NAIL uses an RFC 8785-inspired canonical subset: sorted keys + compact separators
+            # (does not claim full RFC 8785 compliance).
+            # --strict requires byte-exact match: no leading/trailing whitespace or newlines allowed.
             canonical = json.dumps(self.spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
-            if self.raw_text.strip() != canonical:
+            if self.raw_text != canonical:
                 raise CheckError(
                     "Input is not in canonical form. Run 'nail canonicalize' to fix.",
                     code="NOT_CANONICAL",

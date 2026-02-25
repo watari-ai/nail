@@ -526,13 +526,15 @@ The presence and format of these files is checked by the NAIL project verifier.
 
 | Level | Description |
 |---|---|
-| L0 | Syntactic correctness: JSON schema validation **+ JCS canonical form enforcement** |
+| L0 | Syntactic correctness: JSON schema validation **+ canonical form enforcement** |
 | L1 | Type consistency (type inference and type checking) |
 | L2 | Effect consistency (only declared effects may be used; effect propagation through `call` enforced) |
 | L3 | Termination proof (all loops are proven to terminate) |
 | L4 | Memory safety (buffer overflows proven impossible) |
 
-**JCS Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in [JSON Canonicalization Scheme](https://www.rfc-editor.org/rfc/rfc8785) form: `json.dumps(sort_keys=True, separators=(',',':'))`. One program = one representation. Non-canonical input is rejected at L0. Use `nail canonicalize` to convert.
+**Canonical Form (L0 requirement, v0.2+):** All NAIL source must be in canonical form: `json.dumps(sort_keys=True, separators=(',',':'))`. NAIL uses an RFC 8785-inspired canonical subset (sorted keys + compact separators; does not claim full RFC 8785 compliance). One program = one representation. Non-canonical input is rejected at L0 when `--strict` is used. Use `nail canonicalize` to convert.
+
+**`--strict` mode:** Input must be *exactly* equal to the canonical form — no leading or trailing whitespace or newlines are permitted.
 
 v0.6 implements L0–L3 (L4 planned for future versions).
 

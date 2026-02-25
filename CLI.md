@@ -51,7 +51,7 @@ nail check <file.nail> [options]
 | Option | Description |
 |--------|-------------|
 | `--level <1\|2\|3>` | Verification level: 1=types, 2=effects (default), 3=termination |
-| `--strict` | Reject non-canonical JSON (enforces JCS canonical form) |
+| `--strict` | Reject non-canonical JSON (enforces RFC 8785-inspired canonical subset; input must be byte-exact with no leading/trailing whitespace) |
 | `--format <human\|json>` | Output format: `human` (default) or `json` (machine-parseable) |
 | `--modules <path>` | Add a module file to the import search path (repeatable) |
 
@@ -93,7 +93,7 @@ nail check examples/main.nail --modules examples/math_module.nail
 
 ### `nail canonicalize`
 
-Normalize a NAIL program to JCS canonical form (RFC 8785).
+Normalize a NAIL program to its canonical form (RFC 8785-inspired subset: sorted keys + compact separators).
 
 ```
 nail canonicalize [file.nail]

@@ -261,7 +261,7 @@
       "type": "object"
     }
   },
-  "description": "Permissive structural validation for NAIL v0.1 function/module documents.",
+  "description": "Minimum structural validation for NAIL v0.8 programs. L0 validates JSON structure only; type/effect/termination checking is performed by L1-L3.",
   "oneOf": [
     {
       "$ref": "#/definitions/function"

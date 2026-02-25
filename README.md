@@ -21,14 +21,14 @@ Modern AI systems generate code and call tools at scale. NAIL gives that scale a
 
 | | Guarantee | Example |
 |---|---|---|
-| **Zero Ambiguity** | The same spec generates identical code every time | JCS canonical form: `json.dumps(sort_keys=True, separators=(',',':'))` — one representation, always |
+| **Zero Ambiguity** | The same spec generates identical code every time | RFC 8785-inspired canonical subset: `json.dumps(sort_keys=True, separators=(',',':'))` — one representation, always |
 | **Effect System** | Side effects tracked at the type level | `fn main [] → fn helper [IO]` is a compile-time error, not a lint warning |
 | **Verification Layers** | AI-written code passes 3 independent checks before running | L0 (schema) → L1 (types) → L2 (effects) — all enforced, no silent passes |
 
 ## Core Design Principles
 
 1. **AI-first, human-second** — Written and maintained by AI. Human developers interact at the specification layer, not the code layer.
-2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior. Enforced by JCS canonical form.
+2. **Zero ambiguity** — One way to express every construct. No implicit behavior. No undefined behavior. Enforced by an RFC 8785-inspired canonical subset.
 3. **Effects as types** — All side effects (IO, network, filesystem) are declared in function signatures and enforced by the type system.
 4. **Verification layers (L0–L2)** — Every program passes schema, type, and effect checks before execution. No silent passes.
 5. **Formal verification (v0.6+)** — `nail check --level 3` emits a termination certificate. Provably guaranteed to halt.
@@ -74,7 +74,7 @@ No runtime needed. The effect contract is violated at check time.
 **3. Canonical form.**
 There is exactly one valid JSON representation for any given program. No formatting choices, no style variants. An LLM generating the same logic twice will produce token-for-token identical output.
 
-This is enforced by the JCS (JSON Canonicalization Scheme, RFC 8785) implementation: `nail canonicalize` normalizes any NAIL program to its canonical form, and `nail check --strict` rejects non-canonical input. Example files are stored in canonical form.
+This is enforced by an RFC 8785-inspired canonical subset (sorted keys + compact separators; does not claim full RFC 8785 compliance): `nail canonicalize` normalizes any NAIL program to its canonical form, and `nail check --strict` rejects non-canonical input. Example files are stored in canonical form.
 
 **4. Designed for LLM *generation*, not LLM *reading*.**
 NAIL is not optimized for an LLM to read existing code. It is optimized for an LLM to write new code: zero ambiguity, zero implicit behavior, zero hallucination surface area.
@@ -85,7 +85,7 @@ The analogy: SQL is "just text for querying tables," but the relational model an
 
 Modern LLMs have JSON structured output modes built in (OpenAI, Anthropic, Google all provide `response_format: json`). JSON is the de facto interchange format of AI systems in 2026. Using S-expressions would make NAIL "typed Scheme with effects" — a 60-year-old idea without the novelty.
 
-JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonicalize`) is only possible because JSON has well-defined serialization semantics (RFC 8785 / JCS). S-expressions have no such standard.
+JSON-as-AST is the differentiator. The canonical form guarantee (`nail canonicalize`) is only possible because JSON has well-defined serialization semantics (NAIL uses an RFC 8785-inspired subset: sorted keys + compact separators). S-expressions have no such standard.
 
 ## Python API — Effect-Safe Tool Routing
 
@@ -149,7 +149,7 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 |---|---|
 | Types: int/float/bool/string/option/list/map/unit | ✅ Implemented |
 | Effect system (IO/FS/NET/TIME/RAND/MUT) | ✅ Implemented |
-| JCS canonical form + `nail canonicalize` + `--strict` | ✅ Implemented |
+| RFC 8785-inspired canonical subset + `nail canonicalize` + `--strict` | ✅ Implemented |
 | `kind: fn` + `kind: module` + function calls | ✅ Implemented |
 | Mutable variables (`let mut` + `assign`) | ✅ Implemented |
 | Bounded loops + if/else | ✅ Implemented |
