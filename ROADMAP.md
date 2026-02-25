@@ -98,8 +98,8 @@ Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 
 ## v0.6 Goals — Type System Strengthening + Formal Verification ✅ COMPLETE
 - [x] **L3 Formal Verification** — Termination proofs for bounded loops + recursive decreasing-measure annotation. `nail check --level 3` emits a termination certificate. NAIL's strongest differentiator: 'this program is provably guaranteed to halt.'
-- [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib. (deferred to v0.7+)
-- [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option. (deferred to v0.7+)
+- [x] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib. (deferred to v0.7+) (implemented in v0.7)
+- [x] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option. (deferred to v0.7+) (implemented in v0.7)
 
 ### L3 Future Work
 - [ ] **L3.1 (future)**: Verify measure decrease at call sites — confirm that recursive calls pass `measure - k` (k > 0), ensuring the annotated measure is genuinely decreasing.
@@ -136,11 +136,20 @@ These items were originally scoped for v0.7/v0.8 but are deferred. They remain v
 - [ ] **Async / Concurrency** — Full design required simultaneously: cancellation, timeout, join/await types, determinism policy. Not just `effects: [ASYNC]`.
 - [ ] **Effect Security Model** — Formal policy for FS/NET/TIME/RAND/ASYNC: audit log spec, permission boundary definitions.
 
-## v0.9 Goals — v1.0 RC Preparation
-- [ ] **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules.
+## v0.9 Goals — HN Show HN Preparation
+
+**Phase A: Pre-HN (v0.9.0)**
+- [ ] **Token Efficiency Benchmarks** — Quantitative comparison of NAIL vs Python/TypeScript token usage per function. Validates the "AI-native" claim with data. Publish results on Moldium + include in HN post.
+- [ ] **L3.1 Call-site Measure Verification** — Verify that recursive calls pass `measure - k` (k > 0) at each call site, making termination proofs genuinely sound rather than trust-based annotations.
+- [ ] **NAIL SDK** — Clean Python API with type stubs (`nail_lang` public interface), formal API documentation, and usage examples for each major feature (FC Standard, filter_by_effects, MCP Bridge).
+- [x] **Documentation complete** — SPEC.md (v0.8.0), PHILOSOPHY.md, ROADMAP.md, README.md, CLI.md, IDEAS.md all updated and reviewed (2026-02-25).
+
+**Phase B: Post-HN (v0.9.x)**
+- [ ] **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules. (Incorporate community feedback from HN first.)
 - [ ] **Conformance Test Suite** — Canonical test set for alternative NAIL implementations to validate spec compliance.
+
+**Phase C: v1.0 RC**
 - [ ] **Spec Freeze** — NAIL JSON format frozen. No breaking changes after this point.
-- [ ] **Documentation complete** — SPEC.md, PHILOSOPHY.md, ROADMAP.md, all examples updated and reviewed.
 
 ---
 
