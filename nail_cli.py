@@ -295,7 +295,8 @@ def main():
                 print(f"✗ Demo script not found: {script}", file=sys.stderr)
                 print("  (If installed via pip, try upgrading: pip install -U nail-lang)", file=sys.stderr)
                 sys.exit(1)
-            subprocess.run([sys.executable, str(script)])
+            proc = subprocess.run([sys.executable, str(script)])
+            sys.exit(proc.returncode)
         else:
             print(f"Unknown demo: {demo_name!r}. Available: {', '.join(available.keys())}", file=sys.stderr)
             sys.exit(1)
