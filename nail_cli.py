@@ -14,6 +14,9 @@ Usage:
   nail canonicalize -                                     # Read from stdin
   nail demo [--list]                                      # List available demos
   nail demo <name>                                        # Run a named demo
+  nail fc convert <tools.nail> --provider openai|anthropic|gemini [--out file] [--format json]
+  nail fc check   <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]
+  nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]
   nail --version                                          # Show interpreter version
   nail version                                            # Show interpreter version (alias)
 """
@@ -355,6 +358,92 @@ def main():
                 sys.exit(1)
 
         cmd_run(file_path, call_fn, raw_args, module_paths=module_paths, level=run_level)
+
+    elif cmd == "fc":
+        # --- nail fc <subcommand> ---
+        _VALID_PROVIDERS = ("openai", "anthropic", "gemini")
+
+        if len(args) < 2 or args[1] in ("-h", "--help"):
+            print(
+                "Usage:\n"
+                "  nail fc convert  <tools.nail> --provider openai|anthropic|gemini [--out file] [--format json]\n"
+                "  nail fc check    <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]\n"
+                "  nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]\n",
+                file=sys.stderr,
+            )
+            sys.exit(0)
+
+        fc_sub = args[1]
+
+        if fc_sub not in ("convert", "check", "roundtrip"):
+            print(f"✗ Unknown fc subcommand: {fc_sub!r}. Expected: convert, check, roundtrip", file=sys.stderr)
+            sys.exit(1)
+
+        if len(args) < 3 or args[2].startswith("-"):
+            print(f"Usage: nail fc {fc_sub} <tools.nail> --provider openai|anthropic|gemini", file=sys.stderr)
+            sys.exit(1)
+
+        fc_file = args[2]
+        fc_provider = None
+        fc_out = None
+        fc_fmt = "human"
+        fc_strict = False
+        fc_strict_provider = False
+
+        i = 3
+        while i < len(args):
+            if args[i] == "--provider":
+                if i + 1 >= len(args):
+                    print("✗ --provider requires a value", file=sys.stderr)
+                    sys.exit(1)
+                fc_provider = args[i + 1]
+                i += 2
+            elif args[i] == "--out":
+                if i + 1 >= len(args):
+                    print("✗ --out requires a file path", file=sys.stderr)
+                    sys.exit(1)
+                fc_out = args[i + 1]
+                i += 2
+            elif args[i] == "--format":
+                if i + 1 >= len(args):
+                    print("✗ --format requires a value (human or json)", file=sys.stderr)
+                    sys.exit(1)
+                fc_fmt = args[i + 1]
+                if fc_fmt not in ("human", "json"):
+                    print(f"✗ --format must be 'human' or 'json', got: {fc_fmt!r}", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
+            elif args[i] == "--strict":
+                fc_strict = True
+                i += 1
+            elif args[i] == "--strict-provider":
+                fc_strict_provider = True
+                i += 1
+            elif args[i].startswith("-"):
+                print(f"✗ Unknown flag: {args[i]!r}", file=sys.stderr)
+                sys.exit(1)
+            else:
+                print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
+                sys.exit(1)
+
+        if fc_provider is None:
+            print("✗ --provider is required (openai, anthropic, or gemini)", file=sys.stderr)
+            sys.exit(1)
+
+        if fc_provider not in _VALID_PROVIDERS:
+            print(f"✗ Unknown provider: {fc_provider!r}. Valid: {', '.join(_VALID_PROVIDERS)}", file=sys.stderr)
+            sys.exit(1)
+
+        from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip
+
+        if fc_sub == "convert":
+            exit_code = fc_convert(fc_file, fc_provider, fc_out, fc_fmt)
+        elif fc_sub == "check":
+            exit_code = fc_check(fc_file, fc_provider, fc_strict_provider, fc_fmt, fc_strict)
+        else:  # roundtrip
+            exit_code = fc_roundtrip(fc_file, fc_provider, fc_fmt)
+
+        sys.exit(exit_code)
 
     else:
         print(f"Unknown command: {cmd}", file=sys.stderr)

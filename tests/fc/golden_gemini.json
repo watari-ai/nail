@@ -1,0 +1,58 @@
+[
+  {
+    "name": "read_file",
+    "description": "Read a file from the filesystem",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "File path to read"
+        },
+        "encoding": {
+          "type": "string",
+          "description": "File encoding (default: utf-8)"
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  {
+    "name": "search_web",
+    "description": "Search the web for information",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query"
+        },
+        "max_results": {
+          "type": "integer",
+          "description": "Maximum number of results"
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  {
+    "name": "calculate",
+    "description": "Perform arithmetic calculations",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": "string",
+          "description": "Mathematical expression to evaluate"
+        }
+      },
+      "required": [
+        "expression"
+      ]
+    }
+  }
+]
