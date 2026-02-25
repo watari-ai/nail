@@ -269,11 +269,22 @@ def main():
 
     elif cmd == "demo":
         demo_name = args[1] if len(args) > 1 else None
-        available = {"rogue-agent": "demos/rogue_agent_demo.py", "verifiability": "demos/verifiability_demo.py"}
+        available = {
+            "rogue-agent": "demos/rogue_agent_demo.py",
+            "verifiability": "demos/verifiability_demo.py",
+            "termination": "demos/termination_demo.py",
+            "ai-review": "demos/ai_review_demo.py",
+            "mcp-firewall": "demos/mcp_firewall_demo.py",
+            "trust-boundary": "demos/trust_boundary_demo.py",
+        }
         if demo_name is None or demo_name == "--list":
             print("Available demos:")
             print("  rogue-agent     -- Effect system: 3 scenarios of AI agents exceeding permissions")
             print("  verifiability   -- Verification: 3 scenarios NAIL catches that Python misses")
+            print("  termination     -- L3 termination prover: loops and recursion")
+            print("  ai-review       -- AI code review: 4 common LLM mistakes caught at check time")
+            print("  mcp-firewall    -- MCP tool filtering by effect-based policies")
+            print("  trust-boundary  -- Cross-module trust boundaries: supply chain attack detection")
             print()
             print("Run: nail demo <name>")
             sys.exit(0)

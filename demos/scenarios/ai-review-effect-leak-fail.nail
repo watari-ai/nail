@@ -1,0 +1,1 @@
+{"body":[{"effect":"IO","op":"print","val":{"ref":"x"}},{"op":"return","val":{"l":{"ref":"x"},"op":"*","r":{"lit":2}}}],"effects":[],"id":"double","kind":"fn","nail":"0.4","params":[{"id":"x","type":{"bits":64,"overflow":"panic","type":"int"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}
