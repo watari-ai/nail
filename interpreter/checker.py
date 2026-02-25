@@ -474,6 +474,10 @@ class Checker:
                     raise CheckError(f"Module '{module_id}' has invalid type alias name")
                 if not isinstance(alias_spec, dict):
                     raise CheckError(f"Module '{module_id}' type alias '{alias_name}' must be a type dict")
+                # Generic aliases (have type_params) are resolved lazily at each
+                # instantiation site; skip eager resolution to avoid missing args.
+                if alias_spec.get("type_params"):
+                    continue
                 self._resolve_alias_spec(
                     alias_name,
                     aliases=imported_aliases,
