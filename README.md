@@ -25,9 +25,9 @@ $ nail check summarise.nail
 CheckError: [summarise] 'http_get' uses NET effect, but function does not declare it
 ```
 
-![Rogue agent demo — 3 attacks, all blocked](demos/nail_rogue_agent_demo.gif)
+![NAIL effect system — data exfiltration blocked before execution](demos/nail_killer_demo.gif)
 
-*Three real attack vectors (data exfiltration, path traversal, scheme smuggling) — all blocked before a single byte executes.*
+*AI agent attempts data exfiltration — NAIL effect system catches it before a single byte executes.*
 
 ---
 
