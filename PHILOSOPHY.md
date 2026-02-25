@@ -45,17 +45,13 @@ By packing in omission, implicitness, and flexibility for human convenience, we 
 
 NAIL removes that burden. Everything is explicit. Everything is unambiguous. Everything is verifiable.
 
-### Context Efficiency as a New Metric
+### Context Efficiency: A Secondary Benefit
 
-NAIL's defining trait is adding AI operating cost (context-window usage) as a first-class language design metric.
+One byproduct of NAIL's zero-ambiguity design is reduced token usage. When expressing identical logic, NAIL programs often require significantly fewer tokens than equivalent Python. This is a natural consequence of removing syntactic sugar, formatting flexibility, and implicit conventions.
 
-When expressing identical logic:
-- If a Python file takes 100 lines,
-- A NAIL structure may fit in 30 tokens.
+But token efficiency is a **side effect, not a goal**. The primary goal is verifiability: code that can be formally checked before running. Token savings follow automatically from the same design decisions.
 
-Fewer tokens = more logic visible in one context = better consistency across larger systems.
-
-This may look "hard to read" for humans. But humans are not the primary readers of NAIL. AI reads NAIL, and AI writes NAIL.
+This matters in large-scale AI systems where context windows are finite — but it is not NAIL's reason for existing.
 
 ### Directory Structure as "Another Language"
 
@@ -97,12 +93,22 @@ This is the "Secure Plugin Format" for AI agents: any LLM can generate NAIL, any
 
 ---
 
+## The FC Standard: Interoperability as a Language Feature
+
+As of v0.8.0, NAIL introduces a new dimension: **cross-provider interoperability**.
+
+Modern AI agents call tools. Those tools are defined differently for OpenAI, Anthropic, and Gemini. Every team must maintain three schema definitions for the same function — a fragmentation problem.
+
+NAIL's FC Standard (`nail_lang.fc_standard`) solves this at the language level: a NAIL function definition is the canonical source of truth, and `to_openai_tool`, `to_anthropic_tool`, `to_gemini_tool` convert it to any provider format. Round-trips preserve structure.
+
+This is interoperability as a language feature — not a conversion utility bolted on, but a consequence of NAIL's formal, unambiguous function definition format.
+
 ## Summary
 
 NAIL pursues three goals:
 
-1. **Zero Ambiguity** — minimize AI inference cost
-2. **Formal Safety** — code that cannot be proven should not exist
-3. **Context Efficiency** — represent more logic with fewer tokens
+1. **Zero Ambiguity** — One way to express every construct. No implicit behavior. Enforced by JCS canonical form.
+2. **Formal Safety** — Code that cannot be proven correct should not run. L0–L3 verification before execution.
+3. **Interoperability** — FC Standard enables NAIL function definitions to convert losslessly between OpenAI, Anthropic, and Gemini schemas. Write once, deploy to any provider.
 
 Not beauty for humans, but precision for machines.

@@ -1,6 +1,6 @@
 # NAIL Language Specification v0.8
 
-> ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI (v0.4 fine-grained effects + type aliases fully specified)
+> ⚠️ Draft. This specification evolves. Last updated: 2026-02-25 by Watari AI (v0.8.0 FC Standard + MCP Bridge + Generics specified)
 
 ---
 
@@ -538,22 +538,46 @@ v0.6 implements L0–L3 (L4 planned for future versions).
 
 ---
 
-## 14. Implemented in v0.4
+## 14. Version Changelog
 
-Cumulative: v0.4 includes all v0.3 features plus the following additions.
-
-**v0.3 features (carried forward):**
+### v0.3 (cumulative from v0.2)
 - Result type (`result`, `ok`, `err`, `match_result`) — see [designs/v0.3/result-type.md](designs/v0.3/result-type.md)
 - Cross-module imports — see [designs/v0.3/cross-module.md](designs/v0.3/cross-module.md)
 - Expression-level overflow (`wrap`/`sat`/`panic` per operation) — see [designs/v0.3/overflow-ops.md](designs/v0.3/overflow-ops.md)
 
-**New in v0.4:**
+### v0.4 additions
 - **Type aliases** (`module.types`, `{ "type": "alias", "name": ... }`) — reusable module-local type definitions.
 - **Collection operations** — `list_get`, `list_push`, `list_len`, `map_get`, `map_set`, `map_has`, `list_make`, `map_make`.
 - **Higher-order collection operations** — `list_map`, `list_filter`, `list_fold`, `map_values`; accept a `fn` reference string; module-level only; effect propagation enforced at check time.
 - **Granular effect capabilities** — structured `effects` objects with `kind`, `allow`, and `ops` for fine-grained access control.
 - **Effectful op contract** — `read_file` and `http_get` require an explicit `"effect"` field; bare declaration is a check-time error.
-- **URL scheme restriction** — `http_get` accepts only `http://` and `https://` schemes; `file://` and other schemes are rejected at both check and runtime.
+- **URL scheme restriction** — `http_get` accepts only `http://` and `https://` schemes.
+- **PyPI** — `pip install nail-lang` published.
+
+### v0.5 additions
+- **Enum / ADT** (`enum_make` / `match_enum`) — see §2.
+- **Core StdLib** (`str_split`, `str_trim`, `str_upper`, `str_lower`, `str_contains`, `str_starts_with`, `str_replace`, `abs`, `min2`, `max2`).
+- **FC effect annotations** — tool sandbox metadata for AI agent tool lists.
+- **Return-path exhaustiveness check** — checker verifies all branches return.
+
+### v0.6 additions
+- **L3 Termination Proof** — `nail check --level 3` emits a termination certificate. See §15.
+
+### v0.7 additions
+- **Generics / Parametric Types** (`type_params`, `{"type": "param", "name": "T"}`) — see §16.
+- **MCP Bridge** (`from_mcp` / `to_mcp` / `infer_effects`) — see §18.
+- **JSON error format** — `nail check --format json` for machine-parseable output.
+- **`import "from"` file resolution** — auto-module load from file path.
+- **Shareable Playground links** — URL hash encoding.
+
+### v0.7.2 additions
+- **Generic Type Aliases** — `type_params` on module-level aliases. See §16.5.
+
+### v0.8.0 additions
+- **FC Standard** (`nail_lang.fc_standard`) — unified Function Calling standard library. See §19.
+- **Provider converters** — `to_openai_tool`, `to_anthropic_tool`, `to_gemini_tool`, and their inverses.
+- **Batch conversion** — `convert_tools()` utility.
+- **Round-trip guarantee** — NAIL ↔ OpenAI ↔ Anthropic ↔ Gemini verified.
 
 ## 15. L3 Termination Proof (v0.6)
 
@@ -770,7 +794,7 @@ This resolves to `{"type": "list", "inner": {"type": "int", "bits": 64, "overflo
 
 If a non-generic alias (no `type_params`) is referenced with `"args": [...]`, the args are silently ignored. The alias resolves as a non-generic alias.
 
-## 17. Out of Scope (v0.7)
+## 17. Out of Scope (v0.8)
 
 - Closures
 - Async/await
@@ -780,3 +804,171 @@ If a non-generic alias (no `type_params`) is referenced with `"args": [...]`, th
 - Higher-rank polymorphism
 
 These may be added in future versions based on AI-generated proposals accepted into the spec.
+
+---
+
+## 18. MCP Bridge (v0.7)
+
+NAIL integrates with the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) via three operations:
+
+### `from_mcp`
+
+Convert an MCP tool definition to a NAIL function definition:
+
+```json
+{
+  "op": "from_mcp",
+  "tool": {
+    "name": "read_file",
+    "description": "Read a file from the filesystem",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "path": { "type": "string" }
+      },
+      "required": ["path"]
+    }
+  }
+}
+```
+
+### `to_mcp`
+
+Convert a NAIL function definition to MCP tool format:
+
+```json
+{
+  "op": "to_mcp",
+  "fn": "read_file"
+}
+```
+
+### `infer_effects`
+
+Infer NAIL effects from an MCP tool definition (heuristic analysis of name, description, and schema):
+
+```json
+{
+  "op": "infer_effects",
+  "tool": { "name": "http_fetch", "description": "Fetch from URL" }
+}
+```
+
+Returns an array of inferred effect strings (e.g., `["NET"]`).
+
+### Effect Inference Rules
+
+| Pattern | Inferred Effect |
+|---------|----------------|
+| name/description contains `file`, `read`, `write`, `fs` | `FS` |
+| name/description contains `http`, `url`, `fetch`, `request`, `net` | `NET` |
+| name/description contains `print`, `log`, `output` | `IO` |
+| otherwise | `[]` (pure) |
+
+---
+
+## 19. FC Standard (v0.8.0)
+
+`nail_lang.fc_standard` provides a unified Function Calling standard library for converting between NAIL function definitions and provider-specific schemas.
+
+### Converters
+
+```python
+from nail_lang.fc_standard import (
+    to_openai_tool,
+    to_anthropic_tool,
+    to_gemini_tool,
+    from_openai_tool,
+    from_anthropic_tool,
+    from_gemini_tool,
+    convert_tools,
+)
+```
+
+### `to_openai_tool(nail_fn) -> dict`
+
+Converts a NAIL function definition to OpenAI `tools` format:
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name": "search_web",
+    "description": "Search the web and return results",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": { "type": "string" }
+      },
+      "required": ["query"]
+    }
+  }
+}
+```
+
+### `to_anthropic_tool(nail_fn) -> dict`
+
+Converts to Anthropic `tools` format:
+
+```json
+{
+  "name": "search_web",
+  "description": "Search the web and return results",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "query": { "type": "string" }
+    },
+    "required": ["query"]
+  }
+}
+```
+
+### `to_gemini_tool(nail_fn) -> dict`
+
+Converts to Gemini `functionDeclarations` format:
+
+```json
+{
+  "name": "search_web",
+  "description": "Search the web and return results",
+  "parameters": {
+    "type": "OBJECT",
+    "properties": {
+      "query": { "type": "STRING" }
+    },
+    "required": ["query"]
+  }
+}
+```
+
+### `convert_tools(nail_fns, target) -> list`
+
+Batch conversion from a list of NAIL function definitions to the specified target format.
+
+```python
+openai_tools = convert_tools(nail_fns, target="openai")
+anthropic_tools = convert_tools(nail_fns, target="anthropic")
+gemini_tools = convert_tools(nail_fns, target="gemini")
+```
+
+### Round-Trip Guarantee
+
+NAIL → provider → NAIL round-trips preserve:
+- Function name and description
+- Parameter names and types (within the expressiveness of each provider's schema format)
+- Required parameter list
+
+Effect annotations are preserved as NAIL-side metadata and survive round-trips.
+
+### Type Mapping
+
+| NAIL type | OpenAI/Anthropic/Gemini JSON Schema |
+|-----------|-------------------------------------|
+| `int` | `"integer"` |
+| `float` | `"number"` |
+| `bool` | `"boolean"` |
+| `string` | `"string"` |
+| `list<T>` | `{"type": "array", "items": ...}` |
+| `map<K,V>` | `{"type": "object"}` |
+| `option<T>` | T + not required |
