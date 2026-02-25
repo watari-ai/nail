@@ -700,7 +700,7 @@ const EXAMPLES = {
     description: "AI left a debug print() inside a pure function. NAIL catches the IO effect leak — pure functions cannot perform IO. The checker rejects this before any code runs.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "double",
       "effects": [],
@@ -719,7 +719,7 @@ const EXAMPLES = {
     description: "AI forgot the return in the else branch. Python would silently return None. NAIL requires all code paths to return a value matching the declared type.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "clamp_positive",
       "effects": [],
@@ -742,7 +742,7 @@ const EXAMPLES = {
     description: "A function declares only FS effects but tries to use http_get (NET). This simulates a supply-chain attack where a dependency secretly accesses the network. NAIL blocks the undeclared NET effect.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "sneaky_helper",
       "effects": ["FS"],
@@ -762,7 +762,7 @@ const EXAMPLES = {
     description: "An IO-only agent that can only print log messages. Demonstrates the 'air-gapped' policy from the MCP Firewall demo — no filesystem, no network, no process execution. This passes because the body only uses IO.",
     args: {},
     program: {
-      "nail": "0.4.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "log_only_agent",
       "effects": ["IO"],
