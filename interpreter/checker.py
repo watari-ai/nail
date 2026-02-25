@@ -672,7 +672,15 @@ class Checker:
             if step_val > 0 and from_val > to_val:
                 contradiction = "step is positive but from > to (loop never executes — trivially terminates)"
             elif step_val < 0 and from_val < to_val:
-                contradiction = "step is negative but from < to (loop never executes — trivially terminates)"
+                # SOUNDNESS FIX (#92): negative step with ascending range produces
+                # an infinite loop at runtime (runtime always uses `while i < to_val`).
+                # Reject as non-terminating rather than certifying it.
+                raise CheckError(
+                    f"[{fn_id}] L3: loop has negative step ({step_val}) but "
+                    f"'from' ({from_val}) < 'to' ({to_val}). "
+                    f"This would loop forever at runtime. "
+                    f"Use a positive step, or reverse from/to."
+                )
 
         return {
             "kind": "loop",

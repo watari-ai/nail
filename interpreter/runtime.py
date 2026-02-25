@@ -3,10 +3,55 @@ NAIL Runtime — v0.4
 Executes validated NAIL programs.
 """
 
+import ipaddress
+import socket
 from typing import Any
 from pathlib import Path
 from urllib.parse import urlparse
 from urllib.request import urlopen
+
+
+# SSRF protection: reserved/internal IP ranges blocked for bare NET effect (#94)
+_BLOCKED_NETWORKS = [
+    ipaddress.ip_network("127.0.0.0/8"),       # loopback
+    ipaddress.ip_network("::1/128"),            # IPv6 loopback
+    ipaddress.ip_network("169.254.0.0/16"),     # link-local / AWS metadata
+    ipaddress.ip_network("fe80::/10"),          # IPv6 link-local
+    ipaddress.ip_network("10.0.0.0/8"),         # RFC 1918
+    ipaddress.ip_network("172.16.0.0/12"),      # RFC 1918
+    ipaddress.ip_network("192.168.0.0/16"),     # RFC 1918
+    ipaddress.ip_network("0.0.0.0/8"),          # "this" network
+    ipaddress.ip_network("100.64.0.0/10"),      # shared address space
+]
+_BLOCKED_HOSTNAMES = {"metadata.google.internal"}
+
+
+def _is_ssrf_blocked(url: str) -> bool:
+    """Return True if *url* targets an internal/reserved address (SSRF risk)."""
+    try:
+        parsed = urlparse(url)
+        host = (parsed.hostname or "").lower().rstrip(".")
+    except Exception:
+        return True  # fail closed
+
+    if host in _BLOCKED_HOSTNAMES:
+        return True
+
+    # Resolve hostname to IP(s) and check against blocked ranges
+    try:
+        addrs = socket.getaddrinfo(host, None)
+    except OSError:
+        return False  # DNS failure — let runtime handle it
+
+    for addr_info in addrs:
+        try:
+            ip = ipaddress.ip_address(addr_info[4][0])
+            for net in _BLOCKED_NETWORKS:
+                if ip in net:
+                    return True
+        except ValueError:
+            continue
+    return False
 from .types import (
     IntType, FloatType, BoolType, StringType, UnitType, OptionType,
     NailRuntimeError, NailTypeError, parse_type, types_equal,
@@ -1002,6 +1047,12 @@ class Runtime:
         if parsed_scheme.scheme not in ("http", "https"):
             raise NailRuntimeError(
                 f"http_get blocked: scheme {parsed_scheme.scheme!r} not allowed (only 'http' and 'https' are permitted)"
+            )
+        # SSRF protection (#94): block internal/reserved addresses for bare NET effect.
+        if _is_ssrf_blocked(url):
+            raise NailRuntimeError(
+                f"http_get blocked: {url!r} resolves to a reserved/internal address. "
+                f"Use granular NET capabilities to allow specific hosts."
             )
         _, caps = self._current_effect_policy()
         net_caps = caps.get("NET", [])
