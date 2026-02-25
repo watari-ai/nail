@@ -101,6 +101,9 @@ Informed by multi-AI strategic review (Opus, Codex, Gemini — 2026-02-24).
 - [ ] **Generics / Parametric Types** — list<T>, map<K,V>, fn<T>(T) -> T. Required for type-safe stdlib. (deferred to v0.7+)
 - [ ] **Error Message Improvement** — Structured checker errors that AI agents can parse and self-correct. JSON-formatted error output option. (deferred to v0.7+)
 
+### L3 Future Work
+- [ ] **L3.1 (future)**: Verify measure decrease at call sites — confirm that recursive calls pass `measure - k` (k > 0), ensuring the annotated measure is genuinely decreasing.
+
 ## v0.7.0 (2026-02-25) — Generics & MCP Bridge ✅ COMPLETE
 - [x] **TypeParam / type inference** — `unify_types` / `substitute_type`, generic function definitions
 - [x] **import "from" optional schema** — auto-module load from file path

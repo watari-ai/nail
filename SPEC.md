@@ -1,4 +1,4 @@
-# NAIL Language Specification v0.5
+# NAIL Language Specification v0.8
 
 > ⚠️ Draft. This specification evolves. Last updated: 2026-02-24 by Watari AI (v0.4 fine-grained effects + type aliases fully specified)
 
@@ -613,6 +613,8 @@ Direct or mutual recursion is permitted at L3 if every function in the cycle dec
 ```
 
 The `termination.measure` must reference an existing parameter name. The checker records this as a "decreasing measure annotation" proof.
+
+> ⚠️ **v0.6 limitation**: Termination proofs are trust-based annotation checks. The checker verifies that `measure` names a valid parameter, but does not verify that the measure strictly decreases at each recursive call site. Actual decrease verification is planned for a future version (see ROADMAP).
 
 ### Termination Certificate
 

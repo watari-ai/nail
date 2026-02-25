@@ -1,5 +1,5 @@
 """
-NAIL Type System — v0.4
+NAIL Type System — v0.8
 Represents and validates NAIL's type hierarchy.
 
 v0.4 additions:

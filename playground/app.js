@@ -598,8 +598,12 @@ const EXAMPLES = {
       "nail": "0.8.0",
       "kind": "module",
       "id": "mcp_bridge_demo",
-      "fns": {
-        "demo": {
+      "exports": ["demo"],
+      "defs": [
+        {
+          "nail": "0.8.0",
+          "kind": "fn",
+          "id": "demo",
           "params": [],
           "returns": { "type": "unit" },
           "effects": ["IO"],
@@ -609,45 +613,56 @@ const EXAMPLES = {
             { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
           ]
         }
-      }
+      ]
     }
   },
 
   generic_aliases: {
     label: "Generic Type Aliases (v0.7)",
     group: "v0.7",
-    description: "Generic type aliases (v0.7). Defines a Pair[A, B] tuple alias with type parameters. make_pair[A, B] constructs a Pair from any two types — fully type-checked with NAIL's generics system.",
+    description: "Generic type aliases (v0.7). Defines a Container[T] list alias with a type parameter. wrap_int accepts a Container<int> and returns it unchanged — fully type-checked with NAIL's generics system.",
     args: {},
     program: {
       "nail": "0.8.0",
       "kind": "module",
       "id": "generic_aliases",
+      "exports": ["wrap_int", "main"],
       "types": {
-        "Pair": {
-          "type": "tuple",
-          "type_params": ["A", "B"],
-          "first": { "type": "param", "name": "A" },
-          "second": { "type": "param", "name": "B" }
+        "Container": {
+          "type_params": ["T"],
+          "type": "list",
+          "inner": { "type": "param", "name": "T" }
         }
       },
-      "fns": {
-        "make_pair": {
-          "type_params": ["A", "B"],
-          "params": [
-            { "name": "first", "type": { "type": "param", "name": "A" } },
-            { "name": "second", "type": { "type": "param", "name": "B" } }
-          ],
-          "returns": {
-            "type": "alias",
-            "name": "Pair",
-            "args": [{ "type": "param", "name": "A" }, { "type": "param", "name": "B" }]
-          },
+      "defs": [
+        {
+          "nail": "0.8.0",
+          "kind": "fn",
+          "id": "wrap_int",
+          "type_params": [],
           "effects": [],
+          "params": [
+            { "id": "xs", "type": { "type": "alias", "name": "Container", "args": [{ "type": "int", "bits": 64, "overflow": "panic" }] } }
+          ],
+          "returns": { "type": "alias", "name": "Container", "args": [{ "type": "int", "bits": 64, "overflow": "panic" }] },
           "body": [
-            { "op": "return", "val": { "op": "tuple", "vals": [{ "var": "first" }, { "var": "second" }] } }
+            { "op": "return", "val": { "ref": "xs" } }
+          ]
+        },
+        {
+          "nail": "0.8.0",
+          "kind": "fn",
+          "id": "main",
+          "effects": ["IO"],
+          "params": [],
+          "returns": { "type": "unit" },
+          "body": [
+            { "op": "print", "val": { "lit": "Generic Type Aliases: Container[T] = list<T>" }, "effect": "IO" },
+            { "op": "print", "val": { "lit": "Container<int> and Container<string> are fully type-checked" }, "effect": "IO" },
+            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
           ]
         }
-      }
+      ]
     }
   },
 
@@ -662,8 +677,12 @@ const EXAMPLES = {
       "nail": "0.8.0",
       "kind": "module",
       "id": "fc_standard_demo",
-      "fns": {
-        "demo": {
+      "exports": ["demo"],
+      "defs": [
+        {
+          "nail": "0.8.0",
+          "kind": "fn",
+          "id": "demo",
           "params": [],
           "returns": { "type": "unit" },
           "effects": ["IO"],
@@ -673,7 +692,7 @@ const EXAMPLES = {
             { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
           ]
         }
-      }
+      ]
     }
   }
 };
