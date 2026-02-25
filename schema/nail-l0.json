@@ -216,7 +216,8 @@
             "unit",
             "result",
             "alias",
-            "enum"
+            "enum",
+            "param"
           ],
           "type": "string"
         },
