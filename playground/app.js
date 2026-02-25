@@ -373,7 +373,7 @@ const EXAMPLES = {
     description: "Algebraic Data Types (v0.5). Defines a Shape enum with Circle and Rectangle variants. enum_make constructs a variant; match_enum dispatches exhaustively with field binding.",
     args: {},
     program: {
-      "nail": "0.5.0",
+      "nail": "0.8.0",
       "kind": "module",
       "id": "shape_demo",
       "exports": ["main"],
@@ -389,7 +389,7 @@ const EXAMPLES = {
       },
       "defs": [
         {
-          "nail": "0.5.0",
+          "nail": "0.8.0",
           "kind": "fn",
           "id": "main",
           "effects": ["IO"],
@@ -433,7 +433,7 @@ const EXAMPLES = {
     description: "Core standard library math functions (v0.5): abs, clamp, min2, max2. Pass a negative number to see abs() at work.",
     args: { n: -42 },
     program: {
-      "nail": "0.5.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],
@@ -546,7 +546,7 @@ const EXAMPLES = {
     description: "Level 3 Termination Proof (v0.6). This loop sums 1..n. At L3, NAIL proves the loop terminates because step=1 is a non-zero literal. Run `nail check --level 3` to see the termination certificate.",
     args: { n: 10 },
     program: {
-      "nail": "0.6.0",
+      "nail": "0.8.0",
       "kind": "fn",
       "id": "main",
       "effects": ["IO"],

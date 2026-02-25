@@ -1,1 +1,1 @@
-{"body":[{"op":"return","val":{"l":{"ref":"age"},"op":"gte","r":{"lit":18}}}],"effects":[],"id":"is_adult","kind":"fn","nail":"0.4","params":[{"id":"age","type":{"bits":64,"overflow":"panic","type":"int"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}
+{"body":[{"op":"return","val":{"l":{"ref":"age"},"op":"gte","r":{"lit":18}}}],"effects":[],"id":"is_adult","kind":"fn","nail":"0.8","params":[{"id":"age","type":{"bits":64,"overflow":"panic","type":"int"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}

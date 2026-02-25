@@ -54,7 +54,7 @@ print("""
 
 # NAIL equivalent: declared pure but tries to use read_file (FS effect)
 nail_hidden_effect = {
-    "nail": "0.2", "kind": "fn", "id": "process",
+    "nail": "0.8", "kind": "fn", "id": "process",
     "effects": [],          # declared pure
     "params": [{"id": "path", "type": {"type": "string", "encoding": "utf8"}}],
     "returns": {"type": "string", "encoding": "utf8"},
@@ -68,7 +68,7 @@ check_nail(nail_hidden_effect, "hidden FS effect in pure fn")
 
 # NAIL correct version: declare FS
 nail_correct_effect = {
-    "nail": "0.2", "kind": "fn", "id": "process",
+    "nail": "0.8", "kind": "fn", "id": "process",
     "effects": ["FS"],      # correctly declared
     "params": [{"id": "path", "type": {"type": "string", "encoding": "utf8"}}],
     "returns": {"type": "string", "encoding": "utf8"},
@@ -98,7 +98,7 @@ print("""
 """)
 
 nail_partial_return = {
-    "nail": "0.2", "kind": "fn", "id": "abs_val",
+    "nail": "0.8", "kind": "fn", "id": "abs_val",
     "effects": [],
     "params": [{"id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}}],
     "returns": {"type": "int", "bits": 64, "overflow": "panic"},
@@ -112,7 +112,7 @@ nail_partial_return = {
 check_nail(nail_partial_return, "missing else-return")
 
 nail_full_return = {
-    "nail": "0.2", "kind": "fn", "id": "abs_val",
+    "nail": "0.8", "kind": "fn", "id": "abs_val",
     "effects": [],
     "params": [{"id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}}],
     "returns": {"type": "int", "bits": 64, "overflow": "panic"},
@@ -142,7 +142,7 @@ print("""
 """)
 
 nail_type_mismatch = {
-    "nail": "0.2", "kind": "fn", "id": "is_positive",
+    "nail": "0.8", "kind": "fn", "id": "is_positive",
     "effects": [],
     "params": [{"id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}}],
     "returns": {"type": "int", "bits": 64, "overflow": "panic"},   # declared int
@@ -153,7 +153,7 @@ nail_type_mismatch = {
 check_nail(nail_type_mismatch, "declared int, returns bool")
 
 nail_type_correct = {
-    "nail": "0.2", "kind": "fn", "id": "is_positive",
+    "nail": "0.8", "kind": "fn", "id": "is_positive",
     "effects": [],
     "params": [{"id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}}],
     "returns": {"type": "bool"},

@@ -1,1 +1,1 @@
-{"body":[{"effect":"FS","into":"data","op":"read_file","path":{"ref":"path"}},{"op":"return","val":{"ref":"data"}}],"effects":["FS"],"id":"summarise","kind":"fn","nail":"0.4","params":[{"id":"path","type":{"encoding":"utf8","type":"string"}}],"returns":{"encoding":"utf8","type":"string"}}
+{"body":[{"effect":"FS","into":"data","op":"read_file","path":{"ref":"path"}},{"op":"return","val":{"ref":"data"}}],"effects":["FS"],"id":"summarise","kind":"fn","nail":"0.8","params":[{"id":"path","type":{"encoding":"utf8","type":"string"}}],"returns":{"encoding":"utf8","type":"string"}}

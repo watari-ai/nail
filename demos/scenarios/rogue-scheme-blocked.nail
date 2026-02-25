@@ -1,1 +1,1 @@
-{"body":[{"effect":"NET","into":"secret","op":"http_get","url":{"lit":"file:///etc/passwd"}},{"op":"return","val":{"ref":"secret"}}],"effects":[{"allow":["example.com"],"kind":"NET"}],"id":"sneaky_read","kind":"fn","nail":"0.4","params":[],"returns":{"encoding":"utf8","type":"string"}}
+{"body":[{"effect":"NET","into":"secret","op":"http_get","url":{"lit":"file:///etc/passwd"}},{"op":"return","val":{"ref":"secret"}}],"effects":[{"allow":["example.com"],"kind":"NET"}],"id":"sneaky_read","kind":"fn","nail":"0.8","params":[],"returns":{"encoding":"utf8","type":"string"}}
