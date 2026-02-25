@@ -8,8 +8,12 @@ Usage:
   nail run <file.nail>                                    # Run a fn-kind NAIL program
   nail run <file.nail> --call <fn_id> [--arg name=value] # Run a function in a module
   nail check <file.nail> [--strict]                       # Check without running (L0-L2)
+  nail check <file.nail> --level N                        # N=1 (schema), 2 (type+effect), 3 (termination)
+  nail check <file.nail> --format human|json              # Output format (default: human)
   nail canonicalize <file.nail>                           # Output canonical form JSON
   nail canonicalize -                                     # Read from stdin
+  nail demo [--list]                                      # List available demos
+  nail demo <name>                                        # Run a named demo
   nail --version                                          # Show interpreter version
   nail version                                            # Show interpreter version (alias)
 """
@@ -208,35 +212,83 @@ def main():
         sys.exit(0)
 
     elif cmd == "check":
-        if len(args) < 2:
-            print("Usage: nail check <file.nail> [--strict] [--level N] [--format human|json]", file=sys.stderr)
+        if len(args) < 2 or args[1].startswith("-"):
+            print("Usage: nail check <file.nail> [--strict] [--level 1|2|3] [--format human|json]", file=sys.stderr)
+            print("       nail check <file.nail> [--modules <mod.nail>] ...", file=sys.stderr)
             sys.exit(1)
         file_path = args[1]
-        strict = "--strict" in args[2:]
-        module_paths = [args[i+1] for i in range(2, len(args)-1) if args[i] == "--modules"]
+        strict = False
+        module_paths = []
         level = 2
         fmt = "human"
-        for i in range(2, len(args) - 1):
-            if args[i] == "--level":
+        i = 2
+        while i < len(args):
+            if args[i] == "--strict":
+                strict = True
+                i += 1
+            elif args[i] == "--level":
+                if i + 1 >= len(args):
+                    print("✗ --level requires a value (1, 2, or 3)", file=sys.stderr)
+                    sys.exit(1)
                 try:
                     level = int(args[i + 1])
-                except (ValueError, IndexError):
-                    print("✗ --level requires an integer (1, 2, or 3)", file=sys.stderr)
+                except ValueError:
+                    print(f"✗ --level must be an integer (1, 2, or 3), got: {args[i+1]!r}", file=sys.stderr)
                     sys.exit(1)
+                if level not in (1, 2, 3):
+                    print(f"✗ --level must be 1, 2, or 3, got: {level}", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
             elif args[i] == "--format":
-                fmt = args[i + 1] if i + 1 < len(args) else "human"
+                if i + 1 >= len(args):
+                    print("✗ --format requires a value (human or json)", file=sys.stderr)
+                    sys.exit(1)
+                fmt = args[i + 1]
                 if fmt not in ("human", "json"):
                     print(f"✗ --format must be 'human' or 'json', got: {fmt!r}", file=sys.stderr)
                     sys.exit(1)
+                i += 2
+            elif args[i] == "--modules":
+                if i + 1 >= len(args):
+                    print("✗ --modules requires a file path", file=sys.stderr)
+                    sys.exit(1)
+                module_paths.append(args[i + 1])
+                i += 2
+            elif args[i].startswith("-"):
+                print(f"✗ Unknown flag: {args[i]!r}", file=sys.stderr)
+                print("  Run 'nail check --help' or 'nail --help' for usage.", file=sys.stderr)
+                sys.exit(1)
+            else:
+                print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
+                sys.exit(1)
         cmd_check(file_path, strict=strict, module_paths=module_paths, level=level, fmt=fmt)
 
     elif cmd == "canonicalize":
         file_path = args[1] if len(args) > 1 else None
         cmd_canonicalize(file_path)
 
+    elif cmd == "demo":
+        demo_name = args[1] if len(args) > 1 else None
+        available = {"rogue-agent": "demos/rogue_agent_demo.py", "verifiability": "demos/verifiability_demo.py"}
+        if demo_name is None or demo_name == "--list":
+            print("Available demos:")
+            print("  rogue-agent     -- Effect system: 3 scenarios of AI agents exceeding permissions")
+            print("  verifiability   -- Verification: 3 scenarios NAIL catches that Python misses")
+            print()
+            print("Run: nail demo <name>")
+            sys.exit(0)
+        elif demo_name in available:
+            import subprocess
+            script = Path(__file__).parent / available[demo_name]
+            subprocess.run([sys.executable, str(script)])
+        else:
+            print(f"Unknown demo: {demo_name!r}. Available: {', '.join(available.keys())}", file=sys.stderr)
+            sys.exit(1)
+
     elif cmd == "run":
-        if len(args) < 2:
-            print("Usage: nail run <file.nail> [--call fn] [--arg name=value]", file=sys.stderr)
+        if len(args) < 2 or args[1].startswith("-"):
+            print("Usage: nail run <file.nail> [--call fn_id] [--arg name=value] [--level 1|2|3]", file=sys.stderr)
+            print("       nail run <file.nail> [--modules <mod.nail>] ...", file=sys.stderr)
             sys.exit(1)
 
         file_path = args[1]
@@ -247,24 +299,43 @@ def main():
         module_paths = []
         i = 2
         while i < len(args):
-            if args[i] == "--call" and i + 1 < len(args):
+            if args[i] == "--call":
+                if i + 1 >= len(args):
+                    print("✗ --call requires a function id", file=sys.stderr)
+                    sys.exit(1)
                 call_fn = args[i + 1]
                 i += 2
-            elif args[i] == "--arg" and i + 1 < len(args):
+            elif args[i] == "--arg":
+                if i + 1 >= len(args):
+                    print("✗ --arg requires name=value", file=sys.stderr)
+                    sys.exit(1)
                 raw_args.append(args[i + 1])
                 i += 2
-            elif args[i] == "--modules" and i + 1 < len(args):
+            elif args[i] == "--modules":
+                if i + 1 >= len(args):
+                    print("✗ --modules requires a file path", file=sys.stderr)
+                    sys.exit(1)
                 module_paths.append(args[i + 1])
                 i += 2
-            elif args[i] == "--level" and i + 1 < len(args):
+            elif args[i] == "--level":
+                if i + 1 >= len(args):
+                    print("✗ --level requires a value (1, 2, or 3)", file=sys.stderr)
+                    sys.exit(1)
                 try:
                     run_level = int(args[i + 1])
                 except ValueError:
-                    print("✗ --level requires an integer (1, 2, or 3)", file=sys.stderr)
+                    print(f"✗ --level must be an integer (1, 2, or 3), got: {args[i+1]!r}", file=sys.stderr)
+                    sys.exit(1)
+                if run_level not in (1, 2, 3):
+                    print(f"✗ --level must be 1, 2, or 3, got: {run_level}", file=sys.stderr)
                     sys.exit(1)
                 i += 2
+            elif args[i].startswith("-"):
+                print(f"✗ Unknown flag: {args[i]!r}", file=sys.stderr)
+                print("  Run 'nail run --help' or 'nail --help' for usage.", file=sys.stderr)
+                sys.exit(1)
             else:
-                print(f"Unknown option: {args[i]}", file=sys.stderr)
+                print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
                 sys.exit(1)
 
         cmd_run(file_path, call_fn, raw_args, module_paths=module_paths, level=run_level)

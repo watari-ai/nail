@@ -1,0 +1,1 @@
+{"body":[{"cond":{"l":{"ref":"x"},"op":"lt","r":{"lit":0}},"else":[{"op":"return","val":{"ref":"x"}}],"op":"if","then":[{"op":"return","val":{"l":{"lit":0},"op":"-","r":{"ref":"x"}}}]}],"effects":[],"id":"abs_val","kind":"fn","nail":"0.2","params":[{"id":"x","type":{"bits":64,"overflow":"panic","type":"int"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}

