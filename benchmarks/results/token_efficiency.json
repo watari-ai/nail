@@ -1,0 +1,54 @@
+{
+  "tokenizer": "tiktoken:cl100k_base",
+  "results": [
+    {
+      "scenario": "simple_typed_function",
+      "description": "add(a: int64, b: int64) -> int64 \u2014 pure arithmetic",
+      "nail_tokens": 98,
+      "python_tokens": 18,
+      "typescript_tokens": 19,
+      "openai_fc_tokens": 70,
+      "nail_vs_python_pct": 444.4,
+      "nail_vs_typescript_pct": 415.8,
+      "nail_vs_openai_fc_pct": 40.0
+    },
+    {
+      "scenario": "effect_annotated_function",
+      "description": "read_file(path, encoding) -> str [FS] \u2014 filesystem access with effect declaration",
+      "nail_tokens": 72,
+      "python_tokens": 96,
+      "typescript_tokens": 90,
+      "openai_fc_tokens": 73,
+      "nail_vs_python_pct": -25.0,
+      "nail_vs_typescript_pct": -20.0,
+      "nail_vs_openai_fc_pct": -1.4
+    },
+    {
+      "scenario": "result_type_function",
+      "description": "safe_div(a, b) -> Result<int64, str> \u2014 structured error handling",
+      "nail_tokens": 170,
+      "python_tokens": 89,
+      "typescript_tokens": 119,
+      "openai_fc_tokens": 83,
+      "nail_vs_python_pct": 91.0,
+      "nail_vs_typescript_pct": 42.9,
+      "nail_vs_openai_fc_pct": 104.8
+    },
+    {
+      "scenario": "fc_standard_module",
+      "description": "Multi-tool module: read_file[FS] + write_file[FS] + http_get[NET]",
+      "nail_tokens": 248,
+      "python_tokens": 196,
+      "typescript_tokens": 194,
+      "openai_fc_tokens": 208,
+      "nail_vs_python_pct": 26.5,
+      "nail_vs_typescript_pct": 27.8,
+      "nail_vs_openai_fc_pct": 19.2
+    }
+  ],
+  "summary": {
+    "avg_nail_vs_python_pct": 134.2,
+    "avg_nail_vs_typescript_pct": 116.6,
+    "avg_nail_vs_openai_fc_pct": 40.6
+  }
+}

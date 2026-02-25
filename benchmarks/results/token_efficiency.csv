@@ -1,0 +1,5 @@
+scenario,description,nail_tokens,python_tokens,typescript_tokens,openai_fc_tokens,nail_vs_python_pct,nail_vs_typescript_pct,nail_vs_openai_fc_pct
+simple_typed_function,"add(a: int64, b: int64) -> int64 — pure arithmetic",98,18,19,70,444.4,415.8,40.0
+effect_annotated_function,"read_file(path, encoding) -> str [FS] — filesystem access with effect declaration",72,96,90,73,-25.0,-20.0,-1.4
+result_type_function,"safe_div(a, b) -> Result<int64, str> — structured error handling",170,89,119,83,91.0,42.9,104.8
+fc_standard_module,Multi-tool module: read_file[FS] + write_file[FS] + http_get[NET],248,196,194,208,26.5,27.8,19.2

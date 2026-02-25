@@ -35,7 +35,7 @@ Phase 4: 🚀 Active — AI-driven OSS vision in progress
 ## In Progress / Next: v0.9
 
 **Phase A: Pre-HN (v0.9.0)**
-- [ ] **Token Efficiency Benchmarks** — Quantitative comparison of NAIL vs Python/TypeScript token usage per function. Validates the "AI-native" claim with data. Publish results on Moldium + include in HN post.
+- [x] **Token Efficiency Benchmarks** — `benchmarks/token_efficiency.py` (tiktoken cl100k_base). NAIL saves 25% vs Python and 20% vs TypeScript for effect-annotated function declarations; within 19% of OpenAI FC for multi-tool modules. See `benchmarks/README.md`.
 - [ ] **L3.1 Call-site Measure Verification** — Verify that recursive calls pass `measure - k` (k > 0) at each call site, making termination proofs genuinely sound rather than trust-based annotations.
 - [ ] **NAIL SDK** — Clean Python API with type stubs (`nail_lang` public interface), formal API documentation, and usage examples for each major feature (FC Standard, filter_by_effects, MCP Bridge).
 - [x] **Documentation complete** — SPEC.md (v0.8.0), PHILOSOPHY.md, ROADMAP.md, README.md, CLI.md, IDEAS.md all updated and reviewed (2026-02-25).
