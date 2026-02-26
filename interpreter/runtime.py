@@ -56,6 +56,7 @@ from .types import (
     IntType, FloatType, BoolType, StringType, UnitType, OptionType,
     NailRuntimeError, NailTypeError, parse_type, types_equal,
 )
+from .type_resolver import TypeResolver
 
 
 UNIT = object()     # Sentinel for the unit value
@@ -93,6 +94,8 @@ class Runtime:
         # Bug 3 fix: stack of currently-executing module IDs for local call resolution
         self._module_id_stack: list[str | None] = []
         self._effect_policy_stack: list[tuple[set[str], dict[str, list[dict]]]] = []
+        # Shared type resolution helper (Issue #95)
+        self._type_resolver = TypeResolver(error_cls=NailRuntimeError)
 
     def run(self, args: dict | None = None):
         """Run the program. For kind:fn, executes it directly.
@@ -806,30 +809,8 @@ class Runtime:
 
     @staticmethod
     def _substitute_params_in_spec(spec: dict, subst: dict[str, dict]) -> dict:
-        """Substitute type-param placeholders in a raw type spec dict.
-
-        Replaces any ``{"type": "param", "name": "T"}`` nodes with the
-        concrete type dict from ``subst[T]``.  Used when instantiating
-        generic type aliases (Issue #74).
-        """
-        if not isinstance(spec, dict):
-            return spec
-        if spec.get("type") == "param":
-            name = spec.get("name", "")
-            if name in subst:
-                return subst[name]
-        result: dict = {}
-        for k, v in spec.items():
-            if isinstance(v, dict):
-                result[k] = Runtime._substitute_params_in_spec(v, subst)
-            elif isinstance(v, list):
-                result[k] = [
-                    Runtime._substitute_params_in_spec(i, subst) if isinstance(i, dict) else i
-                    for i in v
-                ]
-            else:
-                result[k] = v
-        return result
+        """Delegate to TypeResolver (Issue #95)."""
+        return TypeResolver.substitute_params_in_spec(spec, subst)
 
     def _resolve_alias_spec(
         self,
@@ -841,50 +822,15 @@ class Runtime:
         module_id: str,
         type_args: list[dict] | None = None,
     ) -> dict:
-        if alias_name not in aliases:
-            raise NailRuntimeError(f"Unknown type alias '{alias_name}' in module '{module_id}'")
-        alias_spec = aliases[alias_name]
-        if not isinstance(alias_spec, dict):
-            raise NailRuntimeError(f"Type alias '{alias_name}' in module '{module_id}' must be a type dict")
-
-        type_params: list[str] = alias_spec.get("type_params") or []
-        is_generic = bool(type_params)
-
-        if is_generic:
-            # Generic alias — requires concrete type args; never cached.
-            provided = type_args or []
-            if len(provided) != len(type_params):
-                raise NailRuntimeError(
-                    f"Generic alias '{alias_name}' requires {len(type_params)} type argument(s), "
-                    f"got {len(provided)}"
-                )
-            subst = {type_params[i]: provided[i] for i in range(len(type_params))}
-            # Strip type_params from body spec before substitution/resolution
-            body_spec = {k: v for k, v in alias_spec.items() if k != "type_params"}
-            body_spec = Runtime._substitute_params_in_spec(body_spec, subst)
-            return self._resolve_type_spec(
-                body_spec,
-                aliases=aliases,
-                cache=cache,
-                stack=stack + [alias_name],
-                module_id=module_id,
-            )
-
-        # Non-generic path: use cache and cycle detection.
-        if alias_name in cache:
-            return cache[alias_name]
-        if alias_name in stack:
-            cycle = " -> ".join(stack + [alias_name])
-            raise NailRuntimeError(f"Circular type alias detected in module '{module_id}': {cycle}")
-        resolved = self._resolve_type_spec(
-            alias_spec,
+        """Delegate to TypeResolver (Issue #95)."""
+        return self._type_resolver.resolve_alias_spec(
+            alias_name,
             aliases=aliases,
             cache=cache,
-            stack=stack + [alias_name],
+            stack=stack,
             module_id=module_id,
+            type_args=type_args,
         )
-        cache[alias_name] = resolved
-        return resolved
 
     def _resolve_type_spec(
         self,
@@ -895,86 +841,14 @@ class Runtime:
         stack: list[str],
         module_id: str,
     ) -> dict:
-        if not isinstance(type_spec, dict):
-            raise NailRuntimeError(f"Type spec must be a dict, got {type(type_spec)}")
-        t = type_spec.get("type")
-        if t == "alias":
-            alias_name = type_spec.get("name")
-            if not isinstance(alias_name, str) or not alias_name:
-                raise NailRuntimeError("Alias type requires non-empty string field 'name'")
-            # Resolve type args (if any) for generic alias instantiation (#74)
-            raw_args = type_spec.get("args") or []
-            resolved_args = [
-                self._resolve_type_spec(a, aliases=aliases, cache=cache, stack=stack, module_id=module_id)
-                for a in raw_args
-            ] if raw_args else None
-            return self._resolve_alias_spec(
-                alias_name,
-                aliases=aliases,
-                cache=cache,
-                stack=stack,
-                module_id=module_id,
-                type_args=resolved_args,
-            )
-        if t == "option" and "inner" in type_spec:
-            resolved = dict(type_spec)
-            resolved["inner"] = self._resolve_type_spec(
-                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            return resolved
-        if t == "list" and "inner" in type_spec:
-            resolved = dict(type_spec)
-            resolved["inner"] = self._resolve_type_spec(
-                type_spec["inner"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            return resolved
-        if t == "map" and "key" in type_spec and "value" in type_spec:
-            resolved = dict(type_spec)
-            resolved["key"] = self._resolve_type_spec(
-                type_spec["key"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            resolved["value"] = self._resolve_type_spec(
-                type_spec["value"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            return resolved
-        if t == "result" and "ok" in type_spec and "err" in type_spec:
-            resolved = dict(type_spec)
-            resolved["ok"] = self._resolve_type_spec(
-                type_spec["ok"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            resolved["err"] = self._resolve_type_spec(
-                type_spec["err"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-            )
-            return resolved
-        if t == "enum":
-            variants = type_spec.get("variants")
-            if not isinstance(variants, list):
-                return dict(type_spec)
-            resolved = dict(type_spec)
-            resolved_variants = []
-            for variant in variants:
-                if not isinstance(variant, dict):
-                    resolved_variants.append(variant)
-                    continue
-                rv = dict(variant)
-                fields = variant.get("fields")
-                if isinstance(fields, list):
-                    resolved_fields = []
-                    for field in fields:
-                        if not isinstance(field, dict):
-                            resolved_fields.append(field)
-                            continue
-                        rf = dict(field)
-                        if "type" in field:
-                            rf["type"] = self._resolve_type_spec(
-                                field["type"], aliases=aliases, cache=cache, stack=stack, module_id=module_id
-                            )
-                        resolved_fields.append(rf)
-                    rv["fields"] = resolved_fields
-                resolved_variants.append(rv)
-            resolved["variants"] = resolved_variants
-            return resolved
-        return dict(type_spec)
+        """Delegate to TypeResolver (Issue #95)."""
+        return self._type_resolver.resolve_type_spec(
+            type_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=stack,
+            module_id=module_id,
+        )
 
     def _parse_type(self, type_spec: dict, module_id: str | None = None):
         if module_id is None:
