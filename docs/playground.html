@@ -360,7 +360,7 @@
   <!-- Header -->
   <header class="header">
     <div class="logo">NAIL <span>playground</span></div>
-    <span class="tag">v0.8.0</span>
+    <span class="tag">v0.9.0</span>
 
     <div class="header-spacer"></div>
 
@@ -1009,7 +1009,7 @@ const EXAMPLES = {
     description: "MCP Bridge (v0.7). from_mcp() converts MCP tool definitions to NAIL effect-annotated format; to_mcp() strips NAIL extensions back to MCP format. Enables seamless interop between MCP servers and NAIL-verified agents.",
     args: {},
     program: {
-      "nail": "0.8.0",
+      "nail": "0.7.0",
       "kind": "module",
       "id": "mcp_bridge_demo",
       "fns": {
@@ -1035,7 +1035,7 @@ const EXAMPLES = {
     description: "FC Standard (v0.8). convert_tools() converts tool definitions between OpenAI, Anthropic, and Gemini formats. Effects are preserved as NAIL annotations across all providers — enabling portable, verifiable AI tool calls.",
     args: {},
     program: {
-      "nail": "0.8.0",
+      "nail": "0.9.0",
       "kind": "module",
       "id": "fc_standard_demo",
       "fns": {
@@ -1050,6 +1050,62 @@ const EXAMPLES = {
           ]
         }
       }
+    }
+  },
+
+  // ── v0.9 Examples ──────────────────────────────────────────────────────────
+
+  conformance_layers: {
+    label: "Conformance Layers",
+    group: "v0.9",
+    description: "Conformance Test Suite (v0.9). NAIL defines five conformance layers: L0 (parse), L1 (type), L2 (effect), L3 (termination), FC (function-calling). This demo is a pure, effect-free function that passes all layers. Run `nail check --level 3` locally to see the termination certificate.",
+    args: { n: 7 },
+    program: {
+      "nail": "0.9.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "let", "id": "a",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "lit": 0 }, "mut": true
+        },
+        {
+          "op": "let", "id": "b",
+          "type": { "type": "int", "bits": 64, "overflow": "panic" },
+          "val": { "lit": 1 }, "mut": true
+        },
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": { "lit": 0 },
+          "to": { "ref": "n" },
+          "step": { "lit": 1 },
+          "body": [
+            {
+              "op": "print", "effect": "IO",
+              "val": { "op": "concat",
+                       "l": { "lit": "fib(" },
+                       "r": { "op": "concat",
+                              "l": { "op": "int_to_str", "v": { "ref": "i" } },
+                              "r": { "op": "concat",
+                                     "l": { "lit": ") = " },
+                                     "r": { "op": "int_to_str", "v": { "ref": "a" } } } } }
+            },
+            {
+              "op": "let", "id": "next",
+              "type": { "type": "int", "bits": 64, "overflow": "panic" },
+              "val": { "op": "+", "l": { "ref": "a" }, "r": { "ref": "b" } }
+            },
+            { "op": "assign", "id": "a", "val": { "ref": "b" } },
+            { "op": "assign", "id": "b", "val": { "ref": "next" } }
+          ]
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
     }
   }
 };
