@@ -1,1 +1,1 @@
-{"body":[{"effect":"IO","op":"print","val":{"lit":"Hello, NAIL"}},{"op":"return","val":{"lit":null,"type":{"type":"unit"}}}],"effects":["IO"],"id":"main","kind":"fn","nail":"0.1.0","params":[],"returns":{"type":"unit"}}
+{"body":[{"effect":"IO","op":"print","val":{"lit":"Hello, NAIL"}},{"op":"return","val":{"lit":null,"type":{"type":"unit"}}}],"effects":["IO"],"id":"main","kind":"fn","meta":{"spec_version":"0.9.0"},"nail":"0.1.0","params":[],"returns":{"type":"unit"}}

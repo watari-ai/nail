@@ -18,6 +18,10 @@ Usage:
   nail fc check    <tools.nail> --provider openai|anthropic|gemini [--strict] [--strict-provider] [--format json]
   nail fc roundtrip <tools.nail> --provider openai|anthropic|gemini [--format json]
   nail fc import   <tools.json> --from openai|anthropic|gemini [--out file] [--format json]
+  nail mcp check   <tools.nail> [--format json]
+  nail mcp convert <tools.nail> [--out file] [--format json]
+  nail mcp a2a     <tools.nail> --name <n> --url <u> [--description d] [--version v] [--out file]
+  nail mcp serve   <tools.nail> [--name n] [--version v]
   nail --version                                          # Show interpreter version
   nail version                                            # Show interpreter version (alias)
 """
@@ -33,6 +37,8 @@ if str(_pkg_root) not in sys.path:
 
 from interpreter import Checker, Runtime, CheckError, NailTypeError, NailEffectError, NailRuntimeError
 from interpreter.runtime import UNIT
+from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip, fc_import
+from nail_lang.mcp_cli import mcp_check, mcp_convert, mcp_a2a, mcp_serve
 
 
 def load(path: str) -> dict:
@@ -438,8 +444,6 @@ def main():
                 print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
                 sys.exit(1)
 
-        from nail_lang.fc_cli import fc_convert, fc_check, fc_roundtrip, fc_import
-
         # --- nail fc import ---
         if fc_sub == "import":
             if fc_from is None:
@@ -466,6 +470,112 @@ def main():
             exit_code = fc_check(fc_file, fc_provider, fc_strict_provider, fc_fmt, fc_strict)
         else:  # roundtrip
             exit_code = fc_roundtrip(fc_file, fc_provider, fc_fmt)
+
+        sys.exit(exit_code)
+
+    elif cmd == "mcp":
+        if len(args) < 2 or args[1] in ("-h", "--help"):
+            print(
+                "Usage:\n"
+                "  nail mcp check   <tools.nail> [--format json]\n"
+                "  nail mcp convert <tools.nail> [--out file] [--format json]\n"
+                "  nail mcp a2a     <tools.nail> --name <n> --url <u> [--description d] [--version v] [--out file] [--format json]\n"
+                "  nail mcp serve   <tools.nail> [--name n] [--version v]\n",
+                file=sys.stderr,
+            )
+            sys.exit(0)
+
+        mcp_sub = args[1]
+        if mcp_sub not in ("check", "convert", "a2a", "serve"):
+            print(f"✗ Unknown mcp subcommand: {mcp_sub!r}. Expected: check, convert, a2a, serve", file=sys.stderr)
+            sys.exit(1)
+
+        if len(args) < 3 or args[2].startswith("-"):
+            print(f"Usage: nail mcp {mcp_sub} <tools.nail>", file=sys.stderr)
+            sys.exit(1)
+
+        mcp_file = args[2]
+        mcp_fmt = "human"
+        mcp_out = None
+        mcp_name = None
+        mcp_url = None
+        mcp_description = ""
+        mcp_version = "0.1.0"
+
+        i = 3
+        while i < len(args):
+            if args[i] == "--format":
+                if i + 1 >= len(args):
+                    print("✗ --format requires a value (human or json)", file=sys.stderr)
+                    sys.exit(1)
+                mcp_fmt = args[i + 1]
+                if mcp_fmt not in ("human", "json"):
+                    print(f"✗ --format must be 'human' or 'json', got: {mcp_fmt!r}", file=sys.stderr)
+                    sys.exit(1)
+                i += 2
+            elif args[i] == "--out":
+                if i + 1 >= len(args):
+                    print("✗ --out requires a file path", file=sys.stderr)
+                    sys.exit(1)
+                mcp_out = args[i + 1]
+                i += 2
+            elif args[i] == "--name":
+                if i + 1 >= len(args):
+                    print("✗ --name requires a value", file=sys.stderr)
+                    sys.exit(1)
+                mcp_name = args[i + 1]
+                i += 2
+            elif args[i] == "--url":
+                if i + 1 >= len(args):
+                    print("✗ --url requires a value", file=sys.stderr)
+                    sys.exit(1)
+                mcp_url = args[i + 1]
+                i += 2
+            elif args[i] == "--description":
+                if i + 1 >= len(args):
+                    print("✗ --description requires a value", file=sys.stderr)
+                    sys.exit(1)
+                mcp_description = args[i + 1]
+                i += 2
+            elif args[i] == "--version":
+                if i + 1 >= len(args):
+                    print("✗ --version requires a value", file=sys.stderr)
+                    sys.exit(1)
+                mcp_version = args[i + 1]
+                i += 2
+            elif args[i].startswith("-"):
+                print(f"✗ Unknown flag: {args[i]!r}", file=sys.stderr)
+                sys.exit(1)
+            else:
+                print(f"✗ Unexpected argument: {args[i]!r}", file=sys.stderr)
+                sys.exit(1)
+
+        if mcp_sub == "check":
+            exit_code = mcp_check(mcp_file, fmt=mcp_fmt)
+        elif mcp_sub == "convert":
+            exit_code = mcp_convert(mcp_file, out=mcp_out, fmt=mcp_fmt)
+        elif mcp_sub == "a2a":
+            if mcp_name is None:
+                print("✗ --name is required for nail mcp a2a", file=sys.stderr)
+                sys.exit(1)
+            if mcp_url is None:
+                print("✗ --url is required for nail mcp a2a", file=sys.stderr)
+                sys.exit(1)
+            exit_code = mcp_a2a(
+                mcp_file,
+                name=mcp_name,
+                url=mcp_url,
+                description=mcp_description,
+                version=mcp_version,
+                out=mcp_out,
+                fmt=mcp_fmt,
+            )
+        else:  # serve
+            exit_code = mcp_serve(
+                mcp_file,
+                server_name=mcp_name or "nail-mcp-server",
+                version=mcp_version,
+            )
 
         sys.exit(exit_code)
 

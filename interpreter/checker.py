@@ -6,6 +6,7 @@ L2: Effect checking
 """
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -23,12 +24,23 @@ class CheckError(Exception):
 
     Backward compatible: str(err) and err.args[0] still return the human message.
     New: err.to_json() returns a machine-parseable dict.
+
+    severity: "error" (default) or "warning".  Warnings do not abort execution
+    but are collected in Checker.warnings for the caller to inspect.
     """
-    def __init__(self, message: str, code: str = "CHECK_ERROR", location: dict = None, **extra):
+    def __init__(
+        self,
+        message: str,
+        code: str = "CHECK_ERROR",
+        location: dict = None,
+        severity: str = "error",
+        **extra,
+    ):
         super().__init__(message)
         self.message = message
         self.code = code
         self.location: dict = location or {}
+        self.severity = severity  # "error" | "warning"
         self._extra = extra
 
     def to_json(self) -> dict:
@@ -37,6 +49,7 @@ class CheckError(Exception):
             "error": "CheckError",
             "code": self.code,
             "message": self.message,
+            "severity": self.severity,
             "location": self.location,
         }
         result.update(self._extra)
@@ -100,6 +113,10 @@ class Checker:
         self._call_edges: dict[tuple[str, str], list[list]] = {}
         # Shared type-alias resolver (Issue #95 DRY refactor)
         self._type_resolver = TypeResolver(CheckError)
+        # Spec Freeze (#101): legacy_mode is True when spec_version is absent (backward compat)
+        self._legacy_mode: bool = False
+        # Accumulated warnings (severity="warning" CheckErrors that don't abort)
+        self.warnings: list[CheckError] = []
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -142,11 +159,54 @@ class Checker:
             raise CheckError(f"Unknown kind: {kind}. Must be 'fn' or 'module'")
         if "id" not in self.spec:
             raise CheckError("Missing 'id' field")
+
+        # Spec Freeze (#101): validate meta.spec_version
+        self._check_spec_version()
+
         if kind == "fn":
             self._check_fn_schema(self.spec)
         elif kind == "module":
             if "defs" not in self.spec:
                 raise CheckError("Module missing 'defs' field")
+
+    # -----------------------------------------------------------------------
+    # Spec Freeze helpers (#101)
+    # -----------------------------------------------------------------------
+
+    # Accepted spec_version patterns for NAIL 1.0.0 Spec Freeze:
+    #   "1.0.0"          — stable release
+    #   "0.9.<number>"   — late pre-release (0.9.0, 0.9.1, …)
+    _VALID_SPEC_VERSION_RE = re.compile(r'^(1\.0\.0|0\.9\.\d+)$')
+
+    def _check_spec_version(self) -> None:
+        """Validate meta.spec_version field (Spec Freeze #101).
+
+        - Missing spec_version → warning + _legacy_mode = True (backward compat)
+        - Present but unsupported format → CheckError(code=UNSUPPORTED_SPEC_VERSION)
+        """
+        meta = self.spec.get("meta")
+        spec_version: str | None = None
+        if isinstance(meta, dict):
+            spec_version = meta.get("spec_version")
+
+        if spec_version is None:
+            # Backward-compatible: treat as legacy
+            w = CheckError(
+                "meta.spec_version is missing; running in legacy mode (backward compatible). "
+                "Add \"meta\": {\"spec_version\": \"0.9.0\"} to silence this warning.",
+                code="MISSING_SPEC_VERSION",
+                severity="warning",
+            )
+            self.warnings.append(w)
+            self._legacy_mode = True
+            return
+
+        if not isinstance(spec_version, str) or not self._VALID_SPEC_VERSION_RE.match(spec_version):
+            raise CheckError(
+                f"Unsupported spec_version: {spec_version!r}. "
+                f"Accepted values: '1.0.0' or '0.9.<number>' (e.g. '0.9.0').",
+                code="UNSUPPORTED_SPEC_VERSION",
+            )
 
     def _check_fn_schema(self, fn: dict):
         for field in ("effects", "params", "returns", "body"):

@@ -191,3 +191,97 @@ def to_mcp(
         result.append(mcp_tool)
 
     return result
+
+
+def validate_for_mcp(tools: list[dict[str, Any]]) -> list[str]:
+    """Validate NAIL/OpenAI-style tools for MCP compatibility."""
+    errors: list[str] = []
+    seen_names: dict[str, int] = {}
+
+    for i, tool in enumerate(tools):
+        fn = tool.get("function") if isinstance(tool, dict) else None
+        if not isinstance(fn, dict):
+            fn = tool if isinstance(tool, dict) else {}
+
+        name = fn.get("name")
+        description = fn.get("description")
+        params = fn.get("parameters")
+
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"Tool[{i}]: missing 'name'")
+        if not isinstance(description, str) or not description.strip():
+            errors.append(f"Tool[{i}]: missing 'description'")
+
+        if isinstance(name, str) and name.strip():
+            if name in seen_names:
+                errors.append(
+                    f"Tool[{i}]: duplicate tool name '{name}' "
+                    f"(also at index {seen_names[name]})"
+                )
+            else:
+                seen_names[name] = i
+
+        if not isinstance(params, dict) or params.get("type") != "object":
+            errors.append(
+                f"Tool[{i}] '{name if isinstance(name, str) else ''}': "
+                f"'parameters' must be a JSON Schema object with type='object'"
+            )
+
+    return errors
+
+
+def to_a2a_agent_card(
+    tools: list[dict[str, Any]],
+    *,
+    name: str,
+    url: str,
+    description: str = "",
+    version: str = "0.1.0",
+) -> dict[str, Any]:
+    """Convert NAIL tools to an A2A Agent Card."""
+    effect_tag = {
+        "FS": "storage",
+        "NET": "web",
+        "PROC": "execution",
+        "TIME": "scheduling",
+        "RAND": "generation",
+        "IO": "interface",
+        "PURE": "computation",
+    }
+
+    skills: list[dict[str, Any]] = []
+    for tool in tools:
+        fn = tool.get("function") if isinstance(tool, dict) else None
+        if not isinstance(fn, dict):
+            fn = tool if isinstance(tool, dict) else {}
+
+        tool_name = fn.get("name", "")
+        tool_desc = fn.get("description", "")
+        effects = fn.get("effects", [])
+        primary_effect = "PURE" if not effects else effects[0]
+        tag = effect_tag.get(primary_effect, "interface")
+
+        skills.append(
+            {
+                "id": tool_name,
+                "name": tool_name,
+                "description": tool_desc,
+                "tags": [tag],
+                "examples": [],
+                "inputModes": ["text"],
+                "outputModes": ["text"],
+            }
+        )
+
+    return {
+        "name": name,
+        "description": description,
+        "url": url,
+        "version": version,
+        "capabilities": {
+            "streaming": False,
+            "pushNotifications": False,
+            "stateTransitionHistory": False,
+        },
+        "skills": skills,
+    }

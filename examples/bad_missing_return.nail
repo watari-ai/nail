@@ -1,1 +1,1 @@
-{"body":[{"cond":{"ref":"b"},"else":[],"op":"if","then":[{"op":"return","val":{"lit":1}}]}],"effects":[],"id":"bad_missing_return","kind":"fn","nail":"0.2","params":[{"id":"b","type":{"type":"bool"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}
+{"body":[{"cond":{"ref":"b"},"else":[],"op":"if","then":[{"op":"return","val":{"lit":1}}]}],"effects":[],"id":"bad_missing_return","kind":"fn","meta":{"spec_version":"0.9.0"},"nail":"0.2","params":[{"id":"b","type":{"type":"bool"}}],"returns":{"bits":64,"overflow":"panic","type":"int"}}
