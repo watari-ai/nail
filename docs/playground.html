@@ -1210,6 +1210,9 @@ async function initPyodide() {
       pyodide.FS.writeFile(`/interpreter/${fileName}`, text);
     }
 
+    // Pre-create demo files used by playground examples
+    pyodide.FS.writeFile("/tmp/nail_demo.txt", "Hello from NAIL v0.4 fine-grained FS effect!\n");
+
     // Verify the interpreter loads correctly
     await pyodide.runPythonAsync(`
 import sys
