@@ -40,6 +40,26 @@ nail fc import openai_tools.json --from openai
 
 Try it now → [naillang.com](https://naillang.com)
 
+## Inspect & Validate with nail-lens
+
+`nail-lens` is a companion CLI for human-readable inspection and validation of NAIL spec files — useful for reviewing LLM-generated specs before running them.
+
+```bash
+# Inspect a spec file (human-readable summary)
+nail-lens inspect tools.nail
+
+# Validate spec version and effects (default: L2)
+nail-lens validate tools.nail
+
+# Show all effects declared
+nail-lens effects tools.nail
+
+# Diff two spec files
+nail-lens diff v1.nail v2.nail
+```
+
+Installed automatically with `nail-lang` (`pipx install nail-lang`).
+
 ## Why NAIL?
 
 Function calling schemas differ across providers:
@@ -60,6 +80,16 @@ $ nail fc check tools.nail --provider openai
 ✗ tools.nail  [3 tool(s)]  provider=openai
   ERROR: Tool 'exfil_data': declared as PURE but has side-effect labels: ['NET']
 ```
+
+### Spec versioning with `meta.spec_version`
+
+Every NAIL spec file can declare its specification version via the `meta.spec_version` field:
+
+```json
+{"nail": "0.1.0", "kind": "fn", "id": "add", "meta": {"spec_version": "0.9.0"}, ...}
+```
+
+The checker validates this field at L0: unknown formats produce `CheckError(code="UNSUPPORTED_SPEC_VERSION")`. Specs without the field run in `legacy_mode` (warning only — backward-compatible). This allows tooling and alternative implementations to assert which specification guarantees apply.
 
 ## How is NAIL different from...?
 
