@@ -1,36 +1,138 @@
 """
-NAIL Checker — v0.1
-L0: JSON schema validation
+NAIL Checker — v0.8
+L0: JSON schema validation (jsonschema + hand-rolled)
 L1: Type checking
 L2: Effect checking
 """
 
 import json
+from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 from .types import (
     NailType, NailTypeError, NailEffectError,
-    parse_type, types_equal,
-    IntType, FloatType, BoolType, StringType, UnitType, OptionType,
+    parse_type, types_equal, substitute_type, unify_types,
+    IntType, FloatType, BoolType, StringType, UnitType, OptionType, ResultType, ListType, MapType, EnumType, FnType, TypeParam,
     VALID_EFFECTS,
 )
+from .type_resolver import TypeResolver
 
 
 class CheckError(Exception):
-    pass
+    """Structured check-time error with JSON representation.
+
+    Backward compatible: str(err) and err.args[0] still return the human message.
+    New: err.to_json() returns a machine-parseable dict.
+    """
+    def __init__(self, message: str, code: str = "CHECK_ERROR", location: dict = None, **extra):
+        super().__init__(message)
+        self.message = message
+        self.code = code
+        self.location: dict = location or {}
+        self._extra = extra
+
+    def to_json(self) -> dict:
+        """Return a machine-parseable representation of this error."""
+        result = {
+            "error": "CheckError",
+            "code": self.code,
+            "message": self.message,
+            "location": self.location,
+        }
+        result.update(self._extra)
+        return result
+
+
+# Intermediate types used during Result construction (ok/err ops)
+class _ResultOkIntermediate:
+    def __init__(self, ok_type): self.ok_type = ok_type
+    def __repr__(self): return f"<ok({self.ok_type})>"
+
+class _ResultErrIntermediate:
+    def __init__(self, err_type): self.err_type = err_type
+    def __repr__(self): return f"<err({self.err_type})>"
 
 
 class Checker:
-    def __init__(self, spec: dict):
+    def __init__(
+        self,
+        spec: dict,
+        raw_text: str | None = None,
+        strict: bool = False,
+        modules: dict | None = None,   # {module_id: module_spec} for cross-module imports
+        level: int = 2,
+        source_path: "Path | None" = None,  # file path of the spec, for resolving "from" imports
+    ):
         self.spec = spec
+        self.level = level
+        self._termination_proofs: dict[str, list] = {}
         self.env: dict[str, NailType] = {}
         self.declared_effects: set[str] = set()
+        self.declared_effect_caps: dict[str, list[dict]] = {}
+        self.fn_registry: dict[str, dict] = {}
+        self.call_graph: dict[str, set[str]] = {}
+        self.raw_text = raw_text
+        self.strict = strict
+        self.source_path: "Path | None" = Path(source_path) if source_path else None
+        self.modules: dict[str, dict] = dict(modules or {})
+        # Ensure the entry module itself is registered for circular import detection
+        _entry_id = spec.get("id")
+        if _entry_id and _entry_id not in self.modules:
+            self.modules[_entry_id] = spec
+        # module_fn_registry: {module_id: {fn_id: fn_spec}}
+        self.module_fn_registry: dict[str, dict[str, dict]] = {}
+        # Type aliases for the current module and imported modules
+        self.type_aliases: dict[str, dict] = {}
+        self._alias_spec_cache: dict[str, dict] = {}
+        self._enum_type_cache: dict[str, EnumType] = {}
+        self.module_type_aliases: dict[str, dict[str, dict]] = {}
+        self._module_alias_spec_cache: dict[str, dict[str, dict]] = {}
+        self._module_enum_type_cache: dict[str, dict[str, EnumType]] = {}
+        # Track which imported modules have already been body-checked (Bug 2 fix)
+        self._checked_module_ids: set[str] = set()
+        # Track the resolved file path for each imported module (for nested source_path resolution)
+        self._module_source_paths: dict[str, "Path | None"] = {}
+        # Current function's in-scope type parameters (for generics support, v0.7)
+        self._current_type_params: frozenset[str] = frozenset()
+        # L3.1: Track which recursive edges had their call-site measures verified
+        self._call_site_verified: set[tuple[str, str]] = set()
+        # L3.1: Store call-site args for each (caller, callee) edge for mutual recursion checks
+        self._call_edges: dict[tuple[str, str], list[list]] = {}
+        # Shared type-alias resolver (Issue #95 DRY refactor)
+        self._type_resolver = TypeResolver(CheckError)
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
     # -----------------------------------------------------------------------
 
     def check_l0(self):
-        """Validate basic required fields."""
+        """Validate basic required fields (jsonschema L0 + strict canonical check)."""
+        # Strict mode: verify canonical form (JCS / RFC 8785 subset)
+        if self.strict and self.raw_text is not None:
+            # NAIL uses an RFC 8785-inspired canonical subset: sorted keys + compact separators
+            # (does not claim full RFC 8785 compliance).
+            # --strict requires byte-exact match: no leading/trailing whitespace or newlines allowed.
+            canonical = json.dumps(self.spec, sort_keys=True, ensure_ascii=False, separators=(',', ':'))
+            if self.raw_text != canonical:
+                raise CheckError(
+                    "Input is not in canonical form. Run 'nail canonicalize' to fix.",
+                    code="NOT_CANONICAL",
+                )
+
+        # Real L0: JSON Schema validation via jsonschema
+        _schema_path = Path(__file__).resolve().parents[1] / "schema" / "nail-l0.json"
+        if _schema_path.exists():
+            try:
+                from jsonschema import validate as _jv, ValidationError as _VE
+                with open(_schema_path) as _f:
+                    _schema = json.load(_f)
+                try:
+                    _jv(instance=self.spec, schema=_schema)
+                except _VE as e:
+                    raise CheckError(f"L0 schema violation: {e.message}") from e
+            except ImportError:
+                pass  # jsonschema not installed; fall through to hand-rolled checks
+
         if "nail" not in self.spec:
             raise CheckError("Missing 'nail' version field")
         if "kind" not in self.spec:
@@ -53,12 +155,105 @@ class Checker:
         if not isinstance(fn["effects"], list):
             raise CheckError(f"'effects' must be a list")
         for eff in fn["effects"]:
-            if eff not in VALID_EFFECTS:
-                raise CheckError(f"Unknown effect: {eff}. Valid: {VALID_EFFECTS}")
+            self._validate_effect_decl(eff, fn.get("id", "?"))
         if not isinstance(fn["params"], list):
             raise CheckError(f"'params' must be a list")
         if not isinstance(fn["body"], list):
             raise CheckError(f"'body' must be a list")
+
+    def _set_module_type_aliases(self, mod: dict):
+        raw_types = mod.get("types", {})
+        if raw_types is None:
+            raw_types = {}
+        if not isinstance(raw_types, dict):
+            raise CheckError("Module 'types' must be a dict")
+        for alias_name, alias_spec in raw_types.items():
+            if not isinstance(alias_name, str) or not alias_name:
+                raise CheckError("Type alias names must be non-empty strings")
+            if not isinstance(alias_spec, dict):
+                raise CheckError(f"Type alias '{alias_name}' must map to a type dict")
+        self.type_aliases = raw_types
+        self._alias_spec_cache = {}
+        self._enum_type_cache = {}
+        module_id = mod.get("id", "<module>")
+        for alias_name in self.type_aliases:
+            alias_spec = self.type_aliases[alias_name]
+            # Generic aliases (have type_params) are resolved lazily at each
+            # instantiation site; skip eager resolution to avoid missing args.
+            if alias_spec.get("type_params"):
+                continue
+            self._resolve_alias_spec(
+                alias_name,
+                aliases=self.type_aliases,
+                cache=self._alias_spec_cache,
+                stack=[],
+                module_id=module_id,
+            )
+            resolved_spec = self._alias_spec_cache[alias_name]
+            if resolved_spec.get("type") == "enum":
+                self._enum_type_cache[alias_name] = parse_type(resolved_spec)
+
+    @staticmethod
+    def _substitute_params_in_spec(spec: dict, subst: dict[str, dict]) -> dict:
+        """Delegate to shared TypeResolver (Issue #95 DRY refactor)."""
+        return TypeResolver.substitute_params_in_spec(spec, subst)
+
+    def _resolve_alias_spec(
+        self,
+        alias_name: str,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+        type_args: list[dict] | None = None,
+    ) -> dict:
+        """Delegate to shared TypeResolver (Issue #95 DRY refactor)."""
+        return self._type_resolver.resolve_alias_spec(
+            alias_name,
+            aliases=aliases,
+            cache=cache,
+            stack=stack,
+            module_id=module_id,
+            type_args=type_args,
+        )
+
+    def _resolve_type_spec(
+        self,
+        type_spec: dict,
+        *,
+        aliases: dict[str, dict],
+        cache: dict[str, dict],
+        stack: list[str],
+        module_id: str,
+    ) -> dict:
+        """Delegate to shared TypeResolver (Issue #95 DRY refactor)."""
+        return self._type_resolver.resolve_type_spec(
+            type_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=stack,
+            module_id=module_id,
+        )
+
+    def _parse_type(self, type_spec: dict, module_id: str | None = None) -> NailType:
+        if module_id is None:
+            aliases = self.type_aliases
+            cache = self._alias_spec_cache
+            target_module_id = self.spec.get("id", "<module>")
+        else:
+            aliases = self.module_type_aliases.get(module_id, {})
+            cache = self._module_alias_spec_cache.setdefault(module_id, {})
+            target_module_id = module_id
+        resolved = self._resolve_type_spec(
+            type_spec,
+            aliases=aliases,
+            cache=cache,
+            stack=[],
+            module_id=target_module_id,
+        )
+        tp = self._current_type_params if self._current_type_params else None
+        return parse_type(resolved, type_params=tp)
 
     # -----------------------------------------------------------------------
     # L1 + L2: Type and effect checking
@@ -78,11 +273,19 @@ class Checker:
         defs = mod.get("defs", [])
         if not isinstance(defs, list):
             raise CheckError("Module 'defs' must be a list")
+        self.fn_registry = {}
+        self.call_graph = {}
+        self._set_module_type_aliases(mod)
+
+        # Process imports: validate and build module_fn_registry
+        self._process_imports(mod)
+
+        self._collect_fn_registry(defs)
         for fn in defs:
             if not isinstance(fn, dict):
                 raise CheckError(f"Module def must be a dict, got {type(fn)}")
-            self._check_fn_schema(fn)
             self._check_fn(fn)
+        self._detect_recursive_calls()
         # Validate exports
         exports = mod.get("exports", [])
         defined_ids = {fn["id"] for fn in defs if "id" in fn}
@@ -90,64 +293,486 @@ class Checker:
             if exp not in defined_ids:
                 raise CheckError(f"Exported function '{exp}' not defined in module")
 
+    def _process_imports(self, mod: dict):
+        """Validate import declarations and populate module_fn_registry."""
+        imports = mod.get("imports", [])
+        if not imports:
+            return
+        # Circular import detection: track visiting set
+        this_id = mod.get("id", "<entrypoint>")
+        self._detect_circular_imports(this_id, set())
+
+        for imp in imports:
+            module_id = imp.get("module")
+            fns = imp.get("fns", [])
+            from_path = imp.get("from")
+            if not module_id:
+                raise CheckError("Import declaration missing 'module' field")
+            if module_id not in self.modules:
+                # Try loading from the "from" file path if provided
+                if from_path:
+                    resolved = self._resolve_module_path(from_path)
+                    if resolved is None or not resolved.exists():
+                        raise CheckError(
+                            f"Imported module '{module_id}' not found. "
+                            f"File '{from_path}' does not exist.",
+                            code="MODULE_NOT_FOUND",
+                        )
+                    try:
+                        loaded = json.loads(resolved.read_text(encoding="utf-8"))
+                    except (json.JSONDecodeError, OSError) as exc:
+                        raise CheckError(
+                            f"Failed to load module '{module_id}' from '{from_path}': {exc}",
+                            code="MODULE_LOAD_ERROR",
+                        )
+                    self.modules[module_id] = loaded
+                    self._module_source_paths[module_id] = resolved
+                else:
+                    raise CheckError(
+                        f"Imported module '{module_id}' not found. "
+                        f"Pass it via modules={{'{module_id}': ...}}, --modules CLI flag, "
+                        f"or add a \"from\": \"path/to/module.nail\" field to the import declaration."
+                    )
+            imported_mod = self.modules[module_id]
+            imported_aliases = imported_mod.get("types", {})
+            if imported_aliases is None:
+                imported_aliases = {}
+            if not isinstance(imported_aliases, dict):
+                raise CheckError(f"Module '{module_id}' has invalid 'types' field (must be dict)")
+            self.module_type_aliases[module_id] = imported_aliases
+            self._module_alias_spec_cache[module_id] = {}
+            self._module_enum_type_cache[module_id] = {}
+            for alias_name, alias_spec in imported_aliases.items():
+                if not isinstance(alias_name, str) or not alias_name:
+                    raise CheckError(f"Module '{module_id}' has invalid type alias name")
+                if not isinstance(alias_spec, dict):
+                    raise CheckError(f"Module '{module_id}' type alias '{alias_name}' must be a type dict")
+                # Generic aliases (have type_params) are resolved lazily at each
+                # instantiation site; skip eager resolution to avoid missing args.
+                if alias_spec.get("type_params"):
+                    continue
+                self._resolve_alias_spec(
+                    alias_name,
+                    aliases=imported_aliases,
+                    cache=self._module_alias_spec_cache[module_id],
+                    stack=[],
+                    module_id=module_id,
+                )
+                resolved_spec = self._module_alias_spec_cache[module_id][alias_name]
+                if resolved_spec.get("type") == "enum":
+                    self._module_enum_type_cache[module_id][alias_name] = parse_type(resolved_spec)
+            # Build fn lookup for the imported module
+            imported_fns = {fn["id"]: fn for fn in imported_mod.get("defs", []) if "id" in fn}
+            for fn_id in fns:
+                if fn_id not in imported_fns:
+                    raise CheckError(
+                        f"Function '{fn_id}' not found in module '{module_id}'"
+                    )
+            self.module_fn_registry[module_id] = imported_fns
+            # Bug 2 fix: also validate the body of the imported module, not just its signatures
+            self._check_imported_module_body(module_id)
+
+    def _resolve_module_path(self, from_path: str) -> "Path | None":
+        """Resolve a module "from" path.
+
+        Resolution order:
+        1. Absolute path → use as-is
+        2. Relative to source_path's parent (if source_path was provided)
+        3. Relative to CWD
+        """
+        p = Path(from_path)
+        if p.is_absolute():
+            return p
+        if self.source_path is not None:
+            candidate = self.source_path.parent / p
+            if candidate.exists():
+                return candidate
+        return Path.cwd() / p
+
+    def _check_imported_module_body(self, module_id: str):
+        """Recursively validate the body of an imported module (Bug 2 fix).
+
+        Uses _checked_module_ids to prevent infinite recursion on circular
+        structures (circular imports are caught first by _detect_circular_imports).
+
+        Propagates level and source_path from the parent checker so that L3
+        termination proofs and path-relative import resolution work correctly
+        for nested imports (#72).
+        """
+        if module_id in self._checked_module_ids:
+            return
+        self._checked_module_ids.add(module_id)
+        imported_mod = self.modules.get(module_id)
+        if imported_mod is None:
+            return
+        # Resolve the source_path for the imported module (enables relative "from" paths)
+        mod_source_path = self._module_source_paths.get(module_id)
+        sub = Checker(
+            imported_mod,
+            modules=self.modules,
+            level=self.level,          # propagate L3 (or any level) to sub-checker (#72)
+            source_path=mod_source_path,  # propagate file path for nested relative imports
+        )
+        sub._checked_module_ids = self._checked_module_ids  # share the visited set
+        sub._module_source_paths = self._module_source_paths  # share path registry
+        sub.check()
+
+    def _detect_circular_imports(self, module_id: str, visiting: set[str]):
+        """DFS to detect import cycles."""
+        if module_id in visiting:
+            path = " → ".join(sorted(visiting)) + f" → {module_id}"
+            raise CheckError(f"Circular import detected: {path}")
+        if module_id not in self.modules:
+            return
+        mod = self.modules[module_id]
+        visiting = visiting | {module_id}
+        for imp in mod.get("imports", []):
+            dep = imp.get("module")
+            if dep:
+                self._detect_circular_imports(dep, visiting)
+
+    def _collect_fn_registry(self, defs: list[dict]):
+        for fn in defs:
+            if not isinstance(fn, dict):
+                raise CheckError(f"Module def must be a dict, got {type(fn)}")
+            self._check_fn_schema(fn)
+            fn_id = fn.get("id")
+            if not fn_id:
+                raise CheckError("Function definition missing 'id'")
+            if fn_id in self.fn_registry:
+                raise CheckError(f"Duplicate function id in module: '{fn_id}'")
+            self.fn_registry[fn_id] = fn
+            self.call_graph[fn_id] = set()
+
+    def _detect_recursive_calls(self):
+        WHITE, GRAY, BLACK = 0, 1, 2
+        state: dict[str, int] = {fn_id: WHITE for fn_id in self.call_graph}
+        stack: list[str] = []
+
+        def dfs(node: str):
+            state[node] = GRAY
+            stack.append(node)
+            for nxt in self.call_graph.get(node, set()):
+                nxt_state = state.get(nxt, WHITE)
+                if nxt_state == WHITE:
+                    dfs(nxt)
+                elif nxt_state == GRAY:
+                    cycle_start = stack.index(nxt)
+                    cycle = stack[cycle_start:] + [nxt]
+                    cycle_text = " -> ".join(cycle)
+                    if self.level >= 3:
+                        # L3: allow recursion if all cycle members have termination annotation
+                        for fn_id_in_cycle in cycle[:-1]:  # last element is duplicate of first
+                            fn = self.fn_registry.get(fn_id_in_cycle, {})
+                            termination = fn.get("termination")
+                            if not termination:
+                                raise CheckError(
+                                    f"Recursive call detected: {cycle_text}. "
+                                    f"At L3, add 'termination': {{\"measure\": \"<param>\"}} to all recursive functions."
+                                )
+                            measure = termination.get("measure")
+                            if not measure:
+                                raise CheckError(
+                                    f"[{fn_id_in_cycle}] L3: 'termination.measure' must specify a decreasing parameter name"
+                                )
+                            # Verify measure parameter exists
+                            fn_spec = self.fn_registry.get(fn_id_in_cycle, {})
+                            param_ids = [p["id"] for p in fn_spec.get("params", [])]
+                            if measure not in param_ids:
+                                raise CheckError(
+                                    f"[{fn_id_in_cycle}] L3: termination measure '{measure}' is not a parameter. "
+                                    f"Available: {param_ids}"
+                                )
+
+                        # L3.1: Verify call-site measures for ALL edges in the cycle
+                        # (covers both direct self-recursion and mutual recursion)
+                        cycle_members = set(cycle[:-1])
+                        for edge_src, edge_dst in zip(cycle[:-1], cycle[1:]):
+                            if (edge_src, edge_dst) not in self._call_site_verified and edge_dst in cycle_members:
+                                all_edge_args = self._call_edges.get((edge_src, edge_dst))
+                                if all_edge_args is not None:
+                                    callee_fn = self.fn_registry.get(edge_dst, {})
+                                    for edge_args in all_edge_args:
+                                        self._verify_call_site_measure(edge_src, edge_dst, callee_fn, edge_args)
+
+                        # Record proofs for each cycle member
+                        for fn_id_in_cycle in cycle[:-1]:
+                            fn = self.fn_registry.get(fn_id_in_cycle, {})
+                            measure = fn.get("termination", {}).get("measure")
+                            proof_kind = (
+                                "decreasing_measure_verified"
+                                if any((fn_id_in_cycle, dst) in self._call_site_verified for dst in cycle_members)
+                                else "decreasing_measure_annotation"
+                            )
+                            self._termination_proofs.setdefault(fn_id_in_cycle, []).append({
+                                "kind": "recursion",
+                                "measure": measure,
+                                "verdict": "terminates",
+                                "proof": proof_kind,
+                            })
+                    else:
+                        raise CheckError(f"Recursive call detected: {cycle_text}")
+            stack.pop()
+            state[node] = BLACK
+
+        for fn_id in self.call_graph:
+            if state[fn_id] == WHITE:
+                dfs(fn_id)
+
+    def _check_loop_termination(self, fn_id: str, stmt: dict) -> dict:
+        """L3: Prove that a loop is guaranteed to terminate."""
+        step_expr = stmt["step"]
+
+        # step must be a literal integer
+        if "lit" not in step_expr:
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' must be a literal integer for termination proof "
+                f"(got a variable expression). Use a literal: {{\"lit\": 1}}."
+            )
+
+        step_val = step_expr["lit"]
+        if not isinstance(step_val, int):
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' must be an integer literal, got {type(step_val).__name__}"
+            )
+
+        if step_val == 0:
+            raise CheckError(
+                f"[{fn_id}] L3: loop 'step' is zero — this would be an infinite loop. "
+                f"Termination proof requires non-zero step."
+            )
+
+        # Direction check (only when both from/to are literals)
+        from_expr = stmt["from"]
+        to_expr = stmt["to"]
+        contradiction = None
+        if "lit" in from_expr and "lit" in to_expr:
+            from_val = from_expr["lit"]
+            to_val = to_expr["lit"]
+            if step_val > 0 and from_val > to_val:
+                contradiction = "step is positive but from > to (loop never executes — trivially terminates)"
+            elif step_val < 0 and from_val < to_val:
+                # SOUNDNESS FIX (#92): negative step with ascending range produces
+                # an infinite loop at runtime (runtime always uses `while i < to_val`).
+                # Reject as non-terminating rather than certifying it.
+                raise CheckError(
+                    f"[{fn_id}] L3: loop has negative step ({step_val}) but "
+                    f"'from' ({from_val}) < 'to' ({to_val}). "
+                    f"This would loop forever at runtime. "
+                    f"Use a positive step, or reverse from/to."
+                )
+
+        return {
+            "kind": "loop",
+            "bind": stmt["bind"],
+            "step": step_val,
+            "step_literal": True,
+            "verdict": "terminates",
+            "proof": "step_nonzero_literal",
+            "note": contradiction,
+        }
+
+    def _is_decreasing_measure_expr(self, expr: object, measure_name: str) -> bool:
+        """L3.1: Return True if *expr* is of the form ``measure_name - k`` (k > 0, int literal).
+
+        Accepts the canonical decreasing pattern:
+            {"op": "-", "l": {"ref": "<measure_name>"}, "r": {"lit": k}}  where k is int > 0
+
+        This is the verifiable evidence that the recursive argument strictly decreases.
+        More complex expressions (e.g. nested arithmetic, function calls) are not yet
+        supported and will cause the check to fail — users must rewrite the call-site
+        to use an explicit literal subtraction.
+        """
+        if not isinstance(expr, dict):
+            return False
+        if expr.get("op") != "-":
+            return False
+        l = expr.get("l")
+        r = expr.get("r")
+        if not isinstance(l, dict) or l.get("ref") != measure_name:
+            return False
+        if not isinstance(r, dict):
+            return False
+        lit = r.get("lit")
+        return isinstance(lit, int) and not isinstance(lit, bool) and lit > 0
+
+    def _verify_call_site_measure(
+        self, fn_id: str, callee_id: str, callee: dict, args: list
+    ) -> None:
+        """L3.1: Verify that the measure argument decreases at a recursive call-site.
+
+        Called from ``_check_call_expr`` when level >= 3 and callee_id == fn_id
+        (direct self-recursion with a termination annotation).
+
+        Raises CheckError with code MEASURE_NOT_DECREASING if the argument
+        corresponding to the measure parameter is not of the form
+        ``measure - k`` (k > 0).
+        """
+        termination = callee.get("termination") or {}
+        measure = termination.get("measure")
+        if not measure:
+            return  # no measure annotation — trust-based (already rejected in _detect_recursive_calls)
+
+        params_list = callee.get("params", [])
+        measure_idx = next(
+            (i for i, p in enumerate(params_list) if isinstance(p, dict) and p.get("id") == measure),
+            None,
+        )
+        if measure_idx is None or measure_idx >= len(args):
+            return  # param resolution issue — caught elsewhere
+
+        measure_arg = args[measure_idx]
+        if not self._is_decreasing_measure_expr(measure_arg, measure):
+            raise CheckError(
+                f"[{fn_id}] L3.1: recursive call to '{callee_id}': "
+                f"argument '{measure}' (position {measure_idx}) must strictly decrease — "
+                f"expected '{measure} - k' (k > 0 integer literal), "
+                f"got: {measure_arg}",
+                code="MEASURE_NOT_DECREASING",
+                location={"fn": fn_id, "callee": callee_id},
+                measure=measure,
+                measure_idx=measure_idx,
+            )
+
+        # Mark this edge as having a verified call-site
+        self._call_site_verified.add((fn_id, callee_id))
+
+    def get_termination_certificate(self) -> dict:
+        """L3: Return the termination proof certificate after a successful check()."""
+        return {
+            "level": 3,
+            "verdict": "all_loops_terminate",
+            "functions_verified": len(self._termination_proofs),
+            "proofs": self._termination_proofs,
+        }
+
     def _check_fn(self, fn: dict):
         fn_id = fn["id"]
+        self.call_graph.setdefault(fn_id, set())
 
-        # L2: collect declared effects
-        self.declared_effects = set(fn["effects"])
+        # v0.7: Set up type parameters for generics support
+        raw_type_params = fn.get("type_params", [])
+        if not isinstance(raw_type_params, list):
+            raise CheckError(f"[{fn_id}] 'type_params' must be a list of strings")
+        for tp in raw_type_params:
+            if not isinstance(tp, str) or not tp:
+                raise CheckError(f"[{fn_id}] Each type_param must be a non-empty string")
+        prev_type_params = self._current_type_params
+        self._current_type_params = frozenset(raw_type_params)
 
-        # L1: parse return type
         try:
-            return_type = parse_type(fn["returns"])
-        except Exception as e:
-            raise CheckError(f"[{fn_id}] Invalid return type: {e}")
+            # L2: collect declared effects
+            self.declared_effects, self.declared_effect_caps = self._collect_declared_effects(
+                fn.get("effects", []), fn_id
+            )
 
-        # L1: parse param types and build env
-        env = {}
-        for param in fn["params"]:
-            if "id" not in param or "type" not in param:
-                raise CheckError(f"[{fn_id}] Param must have 'id' and 'type'")
+            # L1: parse return type
             try:
-                t = parse_type(param["type"])
+                return_type = self._parse_type(fn["returns"])
             except Exception as e:
-                raise CheckError(f"[{fn_id}] Param '{param['id']}' invalid type: {e}")
-            env[param["id"]] = t
+                raise CheckError(f"[{fn_id}] Invalid return type: {e}")
 
-        # Check body
-        actual_return = self._check_body(fn_id, fn["body"], env, return_type)
+            # L1: parse param types and build env
+            env = {}
+            for param in fn["params"]:
+                if "id" not in param or "type" not in param:
+                    raise CheckError(f"[{fn_id}] Param must have 'id' and 'type'")
+                try:
+                    t = self._parse_type(param["type"])
+                except Exception as e:
+                    raise CheckError(f"[{fn_id}] Param '{param['id']}' invalid type: {e}")
+                env[param["id"]] = t
 
-    def _check_body(self, fn_id: str, body: list, env: dict, expected_return: NailType) -> NailType:
+            # Register fn signature (enables generic callees to be validated)
+            self.fn_registry[fn_id] = fn
+
+            # Check body
+            guaranteed = self._check_body(fn_id, fn["body"], env, set(), return_type)
+            if not guaranteed and not isinstance(return_type, UnitType):
+                raise CheckError(
+                    f"[{fn_id}] Not all code paths return a value (return type: {return_type})"
+                )
+        finally:
+            # Restore previous type param scope
+            self._current_type_params = prev_type_params
+
+    def _check_body(self, fn_id: str, body: list, env: dict, mut_set: set, expected_return: NailType) -> bool:
+        """Check body statements; return True if all paths are guaranteed to return."""
         local_env = dict(env)
-        has_return = False
+        local_mut = set(mut_set)
+        guaranteed_return = False
 
         for stmt in body:
             if "op" not in stmt:
                 raise CheckError(f"[{fn_id}] Statement missing 'op': {stmt}")
             op = stmt["op"]
 
-            if op == "return":
+            if op == "return_void":
+                # return_void: exits the function with unit; no value expression needed.
+                # Valid only when the declared return type is unit.
+                if not isinstance(expected_return, UnitType):
+                    raise CheckError(
+                        f"[{fn_id}] 'return_void' used in function with non-unit return type {expected_return}"
+                    )
+                guaranteed_return = True
+
+            elif op == "return":
                 val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
-                if not types_equal(val_type, expected_return):
+                # Handle Result construction (ok/err ops)
+                if isinstance(expected_return, ResultType):
+                    if isinstance(val_type, _ResultOkIntermediate):
+                        if not types_equal(val_type.ok_type, expected_return.ok):
+                            raise CheckError(
+                                f"[{fn_id}] ok() value type {val_type.ok_type} does not match "
+                                f"result<ok={expected_return.ok}, err={expected_return.err}>"
+                            )
+                    elif isinstance(val_type, _ResultErrIntermediate):
+                        if not types_equal(val_type.err_type, expected_return.err):
+                            raise CheckError(
+                                f"[{fn_id}] err() value type {val_type.err_type} does not match "
+                                f"result<ok={expected_return.ok}, err={expected_return.err}>"
+                            )
+                    elif not types_equal(val_type, expected_return):
+                        raise CheckError(
+                            f"[{fn_id}] Return type mismatch: expected {expected_return}, got {val_type}"
+                        )
+                elif not types_equal(val_type, expected_return):
                     raise CheckError(
                         f"[{fn_id}] Return type mismatch: expected {expected_return}, got {val_type}"
                     )
-                has_return = True
+                guaranteed_return = True
 
             elif op == "let":
                 if "id" not in stmt or "val" not in stmt:
                     raise CheckError(f"[{fn_id}] 'let' requires 'id' and 'val'")
                 val_type = self._check_expr(fn_id, stmt["val"], local_env)
                 if "type" in stmt:
-                    declared = parse_type(stmt["type"])
-                    if not types_equal(val_type, declared):
+                    declared = self._parse_type(stmt["type"])
+                    # Handle Result construction in let bindings
+                    if isinstance(declared, ResultType) and isinstance(val_type, _ResultOkIntermediate):
+                        if not types_equal(val_type.ok_type, declared.ok):
+                            raise CheckError(
+                                f"[{fn_id}] Let '{stmt['id']}': ok() value {val_type.ok_type} != result.ok {declared.ok}"
+                            )
+                        val_type = declared
+                    elif isinstance(declared, ResultType) and isinstance(val_type, _ResultErrIntermediate):
+                        if not types_equal(val_type.err_type, declared.err):
+                            raise CheckError(
+                                f"[{fn_id}] Let '{stmt['id']}': err() value {val_type.err_type} != result.err {declared.err}"
+                            )
+                        val_type = declared
+                    elif not types_equal(val_type, declared):
                         raise CheckError(
                             f"[{fn_id}] Let '{stmt['id']}' type mismatch: declared {declared}, got {val_type}"
                         )
                 local_env[stmt["id"]] = val_type
+                # Track mutability: variables are immutable by default
+                if stmt.get("mut", False):
+                    local_mut.add(stmt["id"])
 
             elif op == "print":
                 # L2: requires IO
-                eff = stmt.get("effect")
+                eff = self._normalize_effect_kind(stmt.get("effect"))
                 if eff != "IO":
                     raise CheckError(f"[{fn_id}] 'print' must declare effect: IO")
                 if "IO" not in self.declared_effects:
@@ -159,6 +784,178 @@ class Checker:
                 if not isinstance(val_type, StringType):
                     raise CheckError(f"[{fn_id}] 'print' expects string, got {val_type}")
 
+            elif op == "read_file":
+                # L2: requires FS effect; "path" must be string; result stored via let
+                eff = self._normalize_effect_kind(stmt.get("effect"))
+                if eff != "FS":
+                    raise CheckError(f"[{fn_id}] 'read_file' must declare effect: FS")
+                if "FS" not in self.declared_effects:
+                    raise NailEffectError(
+                        f"[{fn_id}] 'read_file' uses FS effect, but function does not declare it"
+                    )
+                if "path" not in stmt:
+                    raise CheckError(f"[{fn_id}] 'read_file' requires 'path'")
+                path_type = self._check_expr(fn_id, stmt["path"], local_env)
+                if not isinstance(path_type, StringType):
+                    raise CheckError(f"[{fn_id}] 'read_file' path must be string, got {path_type}")
+                self._check_fs_constraints(fn_id, stmt["path"])
+                # If result bound via 'into', add to env
+                if "into" in stmt:
+                    local_env[stmt["into"]] = StringType()
+
+            elif op == "http_get":
+                # L2: requires NET effect; "url" must be string; result stored via 'into'
+                eff = self._normalize_effect_kind(stmt.get("effect"))
+                if eff != "NET":
+                    raise CheckError(f"[{fn_id}] 'http_get' must declare effect: NET")
+                if "NET" not in self.declared_effects:
+                    raise NailEffectError(
+                        f"[{fn_id}] 'http_get' uses NET effect, but function does not declare it"
+                    )
+                if "url" not in stmt:
+                    raise CheckError(f"[{fn_id}] 'http_get' requires 'url'")
+                url_type = self._check_expr(fn_id, stmt["url"], local_env)
+                if not isinstance(url_type, StringType):
+                    raise CheckError(f"[{fn_id}] 'http_get' url must be string, got {url_type}")
+                self._check_net_constraints(fn_id, stmt["url"])
+                if "into" in stmt:
+                    local_env[stmt["into"]] = StringType()
+
+            elif op == "match_result":
+                # L1: exhaustive pattern match on result<Ok, Err>
+                val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
+                if not isinstance(val_type, ResultType):
+                    raise CheckError(
+                        f"[{fn_id}] 'match_result' expects result<Ok, Err>, got {val_type}"
+                    )
+                ok_bind = stmt.get("ok_bind")
+                err_bind = stmt.get("err_bind")
+                # ok branch
+                ok_env = dict(local_env)
+                if ok_bind:
+                    ok_env[ok_bind] = val_type.ok
+                ok_guaranteed = self._check_body(fn_id, stmt.get("ok_body", []), ok_env, local_mut, expected_return)
+                # err branch
+                err_env = dict(local_env)
+                if err_bind:
+                    err_env[err_bind] = val_type.err
+                err_guaranteed = self._check_body(fn_id, stmt.get("err_body", []), err_env, local_mut, expected_return)
+                if ok_guaranteed and err_guaranteed:
+                    guaranteed_return = True
+
+            elif op == "enum_make":
+                enum_type = self._resolve_enum_type_for_make(fn_id, stmt, local_env)
+                variant = enum_type.variant_for(stmt.get("tag"))
+                if variant is None:
+                    raise CheckError(f"[{fn_id}] Unknown enum tag '{stmt.get('tag')}' for enum_make")
+                fields_expr = stmt.get("fields", {})
+                if fields_expr is None:
+                    fields_expr = {}
+                if not isinstance(fields_expr, dict):
+                    raise CheckError(f"[{fn_id}] 'enum_make.fields' must be an object")
+                expected_names = {field.name for field in variant.fields}
+                actual_names = set(fields_expr.keys())
+                if actual_names != expected_names:
+                    missing = sorted(expected_names - actual_names)
+                    extra = sorted(actual_names - expected_names)
+                    problems = []
+                    if missing:
+                        problems.append(f"missing fields {missing}")
+                    if extra:
+                        problems.append(f"unknown fields {extra}")
+                    raise CheckError(
+                        f"[{fn_id}] enum_make for tag '{variant.tag}' has invalid fields: {', '.join(problems)}"
+                    )
+                for field in variant.fields:
+                    value_type = self._check_expr(fn_id, fields_expr[field.name], local_env)
+                    if not types_equal(value_type, field.type):
+                        raise CheckError(
+                            f"[{fn_id}] enum_make field '{field.name}' type mismatch: expected {field.type}, got {value_type}"
+                        )
+                into = stmt.get("into")
+                if not isinstance(into, str) or not into:
+                    raise CheckError(f"[{fn_id}] 'enum_make' requires non-empty string field 'into'")
+                local_env[into] = enum_type
+
+            elif op == "match_enum":
+                val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
+                if not isinstance(val_type, EnumType):
+                    raise CheckError(f"[{fn_id}] 'match_enum' expects enum value, got {val_type}")
+                cases = stmt.get("cases")
+                if not isinstance(cases, list):
+                    raise CheckError(f"[{fn_id}] 'match_enum.cases' must be a list")
+                enum_tags = {variant.tag for variant in val_type.variants}
+                case_tags: set[str] = set()
+                case_guaranteed: list[bool] = []
+                for case in cases:
+                    if not isinstance(case, dict):
+                        raise CheckError(f"[{fn_id}] each match_enum case must be an object")
+                    tag = case.get("tag")
+                    if not isinstance(tag, str) or not tag:
+                        raise CheckError(f"[{fn_id}] each match_enum case requires non-empty string 'tag'")
+                    if tag in case_tags:
+                        raise CheckError(f"[{fn_id}] duplicate match_enum case tag: '{tag}'")
+                    case_tags.add(tag)
+                    variant = val_type.variant_for(tag)
+                    if variant is None:
+                        raise CheckError(f"[{fn_id}] match_enum case tag '{tag}' is not in target enum")
+                    binds = case.get("binds", {})
+                    if binds is None:
+                        binds = {}
+                    if not isinstance(binds, dict):
+                        raise CheckError(f"[{fn_id}] match_enum case '{tag}' binds must be an object")
+                    variant_fields = {field.name: field.type for field in variant.fields}
+                    for field_name, bind_name in binds.items():
+                        if field_name not in variant_fields:
+                            raise CheckError(
+                                f"[{fn_id}] match_enum case '{tag}' bind '{field_name}' is not a field of the variant"
+                            )
+                        if not isinstance(bind_name, str) or not bind_name:
+                            raise CheckError(
+                                f"[{fn_id}] match_enum case '{tag}' bind target must be non-empty string"
+                            )
+                    case_env = dict(local_env)
+                    for field_name, bind_name in binds.items():
+                        case_env[bind_name] = variant_fields[field_name]
+                    case_guaranteed.append(
+                        self._check_body(fn_id, case.get("body", []), case_env, local_mut, expected_return)
+                    )
+
+                default_body = stmt.get("default")
+                has_default = default_body is not None
+                if has_default and not isinstance(default_body, list):
+                    raise CheckError(f"[{fn_id}] 'match_enum.default' must be a list when present")
+                missing_tags = enum_tags - case_tags
+                if missing_tags and not has_default:
+                    raise CheckError(
+                        f"[{fn_id}] non-exhaustive match_enum: missing tags {sorted(missing_tags)} and no default"
+                    )
+                default_guaranteed = False
+                if has_default:
+                    default_guaranteed = self._check_body(fn_id, default_body, local_env, local_mut, expected_return)
+                if has_default:
+                    if all(case_guaranteed) and default_guaranteed:
+                        guaranteed_return = True
+                else:
+                    if case_guaranteed and all(case_guaranteed):
+                        guaranteed_return = True
+
+            elif op == "call":
+                # Call can be used as a statement (discard return value)
+                self._check_op_expr(fn_id, stmt, local_env)
+
+            elif op == "list_push":
+                # list_push mutates and returns unit; valid as statement
+                self._check_op_expr(fn_id, stmt, local_env)
+
+            elif op == "map_set":
+                # map_set mutates a map entry and returns unit; valid as statement
+                self._check_op_expr(fn_id, stmt, local_env)
+
+            elif op in ("list_map", "list_filter", "list_fold", "map_values"):
+                # Higher-order collection ops may be used as statements (result discarded)
+                self._check_op_expr(fn_id, stmt, local_env)
+
             elif op == "if":
                 cond_type = self._check_expr(fn_id, stmt.get("cond"), local_env)
                 if not isinstance(cond_type, BoolType):
@@ -167,8 +964,10 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'if' missing 'then'")
                 if "else" not in stmt:
                     raise CheckError(f"[{fn_id}] 'if' missing 'else' (required by NAIL spec)")
-                self._check_body(fn_id, stmt["then"], local_env, expected_return)
-                self._check_body(fn_id, stmt["else"], local_env, expected_return)
+                then_guaranteed = self._check_body(fn_id, stmt["then"], local_env, local_mut, expected_return)
+                else_guaranteed = self._check_body(fn_id, stmt["else"], local_env, local_mut, expected_return)
+                if then_guaranteed and else_guaranteed:
+                    guaranteed_return = True
 
             elif op == "assign":
                 if "id" not in stmt or "val" not in stmt:
@@ -176,6 +975,12 @@ class Checker:
                 # Verify variable exists in scope
                 if stmt["id"] not in local_env:
                     raise CheckError(f"[{fn_id}] 'assign' to undeclared variable: '{stmt['id']}'")
+                # Verify variable is mutable (declared with mut: true)
+                if stmt["id"] not in local_mut:
+                    raise CheckError(
+                        f"[{fn_id}] 'assign' to immutable variable: '{stmt['id']}' "
+                        f"(declare with \"mut\": true to make it mutable)"
+                    )
                 val_type = self._check_expr(fn_id, stmt["val"], local_env)
                 declared = local_env[stmt["id"]]
                 if not types_equal(val_type, declared):
@@ -194,13 +999,54 @@ class Checker:
                     raise CheckError(f"[{fn_id}] 'loop' from/to/step must be int")
                 loop_env = dict(local_env)
                 loop_env[stmt["bind"]] = from_type
-                self._check_body(fn_id, stmt["body"], loop_env, expected_return)
+                # loop bind variable is immutable; propagate outer mut_set
+                self._check_body(fn_id, stmt["body"], loop_env, local_mut, expected_return)
+                # L3: termination proof
+                if self.level >= 3:
+                    proof = self._check_loop_termination(fn_id, stmt)
+                    self._termination_proofs.setdefault(fn_id, []).append(proof)
 
             else:
-                # Unknown op — not necessarily an error for effects ops we don't handle yet
-                pass
+                raise CheckError(
+                    f"[{fn_id}] Unknown op: '{op}'",
+                    code="UNKNOWN_OP",
+                    location={"fn": fn_id},
+                    op=op,
+                )
 
-        return expected_return
+        return guaranteed_return
+
+    def _resolve_enum_type_for_make(self, fn_id: str, stmt: dict, env: dict[str, NailType]) -> EnumType:
+        into = stmt.get("into")
+        if isinstance(into, str) and into in env:
+            existing = env[into]
+            if not isinstance(existing, EnumType):
+                raise CheckError(f"[{fn_id}] enum_make.into '{into}' already exists and is not an enum")
+            return existing
+
+        explicit_type_spec = stmt.get("type")
+        if explicit_type_spec is not None:
+            explicit = self._parse_type(explicit_type_spec)
+            if not isinstance(explicit, EnumType):
+                raise CheckError(f"[{fn_id}] enum_make.type must resolve to enum, got {explicit}")
+            return explicit
+
+        tag = stmt.get("tag")
+        if not isinstance(tag, str) or not tag:
+            raise CheckError(f"[{fn_id}] 'enum_make' requires non-empty string field 'tag'")
+
+        candidates = [enum_t for enum_t in self._enum_type_cache.values() if enum_t.variant_for(tag) is not None]
+        if not candidates:
+            raise CheckError(
+                f"[{fn_id}] Cannot infer enum type for tag '{tag}'. "
+                f"Declare module type aliases with enum definitions or set enum_make.type."
+            )
+        if len(candidates) > 1:
+            raise CheckError(
+                f"[{fn_id}] Ambiguous enum tag '{tag}' across multiple enums. "
+                f"Specify enum_make.type explicitly."
+            )
+        return candidates[0]
 
     def _check_expr(self, fn_id: str, expr: Any, env: dict) -> NailType:
         if expr is None:
@@ -232,7 +1078,7 @@ class Checker:
             # Typed null — must have type annotation
             if "type" not in expr:
                 raise CheckError(f"[{fn_id}] null literal requires 'type' annotation")
-            t = parse_type(expr["type"])
+            t = self._parse_type(expr["type"])
             if not isinstance(t, (UnitType, OptionType)):
                 raise CheckError(f"[{fn_id}] null can only be unit or option type")
             return t
@@ -261,6 +1107,19 @@ class Checker:
                 raise CheckError(f"[{fn_id}] Op '{op}' type mismatch: {l_type} vs {r_type}")
             if not isinstance(l_type, (IntType, FloatType)):
                 raise CheckError(f"[{fn_id}] Op '{op}' requires numeric type, got {l_type}")
+            # v0.3: expression-level overflow override
+            expr_overflow = expr.get("overflow")
+            if expr_overflow is not None:
+                VALID_EXPR_OVERFLOWS = {"panic", "wrap", "sat"}
+                if expr_overflow not in VALID_EXPR_OVERFLOWS:
+                    raise CheckError(
+                        f"[{fn_id}] Invalid overflow mode '{expr_overflow}' on op '{op}'. "
+                        f"Must be one of: {sorted(VALID_EXPR_OVERFLOWS)}"
+                    )
+                if not isinstance(l_type, IntType):
+                    raise CheckError(
+                        f"[{fn_id}] overflow mode '{expr_overflow}' is only valid for integer types, got {l_type}"
+                    )
             return l_type
 
         elif op in COMPARE_OPS:
@@ -310,5 +1169,678 @@ class Checker:
                 raise CheckError(f"[{fn_id}] 'concat' requires two strings, got {l_type} and {r_type}")
             return StringType()
 
+        elif op == "str_len":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_len' requires string, got {val_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "str_split":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            sep_type = self._check_expr(fn_id, expr.get("sep"), env)
+            if not isinstance(val_type, StringType) or not isinstance(sep_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_split' requires string val and sep, got {val_type} and {sep_type}")
+            return ListType(inner=StringType(), length="dynamic")
+
+        elif op == "str_trim":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_trim' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_upper":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_upper' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_lower":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, StringType):
+                raise CheckError(f"[{fn_id}] 'str_lower' requires string, got {val_type}")
+            return StringType()
+
+        elif op == "str_contains":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            sub_type = self._check_expr(fn_id, expr.get("sub"), env)
+            if not isinstance(val_type, StringType) or not isinstance(sub_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_contains' requires string val and sub, got {val_type} and {sub_type}"
+                )
+            return BoolType()
+
+        elif op == "str_starts_with":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            prefix_type = self._check_expr(fn_id, expr.get("prefix"), env)
+            if not isinstance(val_type, StringType) or not isinstance(prefix_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_starts_with' requires string val and prefix, got {val_type} and {prefix_type}"
+                )
+            return BoolType()
+
+        elif op == "str_replace":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            from_type = self._check_expr(fn_id, expr.get("from"), env)
+            to_type = self._check_expr(fn_id, expr.get("to"), env)
+            if not isinstance(val_type, StringType) or not isinstance(from_type, StringType) or not isinstance(to_type, StringType):
+                raise CheckError(
+                    f"[{fn_id}] 'str_replace' requires string val/from/to, got {val_type}, {from_type}, {to_type}"
+                )
+            return StringType()
+
+        # Math ops (v0.5)
+        elif op == "abs":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'abs' requires numeric value, got {val_type}")
+            return val_type
+
+        elif op == "min2":
+            l_type = self._check_expr(fn_id, expr.get("l"), env)
+            r_type = self._check_expr(fn_id, expr.get("r"), env)
+            if not types_equal(l_type, r_type):
+                raise CheckError(f"[{fn_id}] 'min2' type mismatch: {l_type} vs {r_type}")
+            if not isinstance(l_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'min2' requires numeric operands, got {l_type}")
+            return l_type
+
+        elif op == "max2":
+            l_type = self._check_expr(fn_id, expr.get("l"), env)
+            r_type = self._check_expr(fn_id, expr.get("r"), env)
+            if not types_equal(l_type, r_type):
+                raise CheckError(f"[{fn_id}] 'max2' type mismatch: {l_type} vs {r_type}")
+            if not isinstance(l_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'max2' requires numeric operands, got {l_type}")
+            return l_type
+
+        elif op == "clamp":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            lo_type = self._check_expr(fn_id, expr.get("lo"), env)
+            hi_type = self._check_expr(fn_id, expr.get("hi"), env)
+            if not (types_equal(val_type, lo_type) and types_equal(lo_type, hi_type)):
+                raise CheckError(f"[{fn_id}] 'clamp' val/lo/hi types must all match: {val_type}, {lo_type}, {hi_type}")
+            if not isinstance(val_type, (IntType, FloatType)):
+                raise CheckError(f"[{fn_id}] 'clamp' requires numeric operands, got {val_type}")
+            return val_type
+
+        elif op == "bool_to_int":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, BoolType):
+                raise CheckError(f"[{fn_id}] 'bool_to_int' requires bool, got {val_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "int_to_bool":
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not isinstance(val_type, IntType):
+                raise CheckError(f"[{fn_id}] 'int_to_bool' requires int, got {val_type}")
+            return BoolType()
+
+        # Collection ops (v0.4)
+        elif op == "list_get":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_get.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_get' requires list, got {list_type}")
+            index_type = self._check_expr(fn_id, expr.get("index"), env)
+            if not isinstance(index_type, IntType):
+                raise CheckError(f"[{fn_id}] 'list_get.index' must be int, got {index_type}")
+            return list_type.inner
+
+        elif op == "list_push":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_push.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_push' requires list, got {list_type}")
+            value_type = self._check_expr(fn_id, expr.get("value"), env)
+            if not types_equal(value_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_push.value' type mismatch: expected {list_type.inner}, got {value_type}"
+                )
+            return UnitType()
+
+        elif op == "list_len":
+            list_expr = expr.get("list")
+            if not isinstance(list_expr, dict) or "ref" not in list_expr:
+                raise CheckError(f"[{fn_id}] 'list_len.list' must be a variable reference")
+            list_type = self._check_expr(fn_id, list_expr, env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_len' requires list, got {list_type}")
+            return IntType(bits=64, overflow="panic")
+
+        elif op == "list_slice":
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_slice' requires list, got {list_type}")
+            from_type = self._check_expr(fn_id, expr.get("from"), env)
+            to_type = self._check_expr(fn_id, expr.get("to"), env)
+            if not isinstance(from_type, IntType) or not isinstance(to_type, IntType):
+                raise CheckError(f"[{fn_id}] 'list_slice.from/to' must be int, got {from_type} and {to_type}")
+            return ListType(inner=list_type.inner, length="dynamic")
+
+        elif op == "list_contains":
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_contains' requires list, got {list_type}")
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            if not types_equal(val_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_contains.val' type mismatch: expected {list_type.inner}, got {val_type}"
+                )
+            return BoolType()
+
+        elif op == "map_get":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise CheckError(f"[{fn_id}] 'map_get.map' must be a variable reference")
+            map_type = self._check_expr(fn_id, map_expr, env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_get' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_get.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            return map_type.value
+
+        elif op == "map_has":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_has' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_has.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            return BoolType()
+
+        elif op == "map_keys":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_keys' requires map, got {map_type}")
+            return ListType(inner=map_type.key, length="dynamic")
+
+        # ── v0.4 collection ops ──────────────────────────────────────────────
+
+        elif op == "map_values":
+            map_type = self._check_expr(fn_id, expr.get("map"), env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_values' requires map, got {map_type}")
+            return ListType(inner=map_type.value, length="dynamic")
+
+        elif op == "map_set":
+            map_expr = expr.get("map")
+            if not isinstance(map_expr, dict) or "ref" not in map_expr:
+                raise CheckError(f"[{fn_id}] 'map_set.map' must be a variable reference")
+            map_type = self._check_expr(fn_id, map_expr, env)
+            if not isinstance(map_type, MapType):
+                raise CheckError(f"[{fn_id}] 'map_set' requires map, got {map_type}")
+            key_type = self._check_expr(fn_id, expr.get("key"), env)
+            if not types_equal(key_type, map_type.key):
+                raise CheckError(
+                    f"[{fn_id}] 'map_set.key' type mismatch: expected {map_type.key}, got {key_type}"
+                )
+            val_type = self._check_expr(fn_id, expr.get("value"), env)
+            if not types_equal(val_type, map_type.value):
+                raise CheckError(
+                    f"[{fn_id}] 'map_set.value' type mismatch: expected {map_type.value}, got {val_type}"
+                )
+            return UnitType()
+
+        elif op == "list_map":
+            # list_map: apply a single-argument function to every element of a list,
+            # returning a new list of the function's return type.
+            #
+            # JSON form:
+            #   {"op": "list_map", "list": <expr>, "fn": "<fn_id>"}
+            #
+            # Requires kind:module (function lookup via fn_registry).
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_map' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_map' requires list, got {list_type}")
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_map' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_map' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 1:
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' fn '{callee_id}' must take exactly 1 parameter, "
+                    f"got {len(callee_params)}"
+                )
+            param_type = self._parse_type(callee_params[0]["type"])
+            if not types_equal(param_type, list_type.inner):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type="<any>")
+                actual_sig = FnType(param_types=(param_type,), return_type=self._parse_type(callee["returns"]))
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' fn '{callee_id}' signature mismatch: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            # Effect propagation: callee effects must be a subset of caller effects
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_map' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ListType(inner=ret_type, length="dynamic")
+
+        elif op == "list_filter":
+            # list_filter: keep only elements for which a predicate function returns true.
+            #
+            # JSON form:
+            #   {"op": "list_filter", "list": <expr>, "fn": "<fn_id>"}
+            #
+            # The fn must take one argument of type list.inner and return bool.
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_filter' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_filter' requires list, got {list_type}")
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_filter' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_filter' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 1:
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' must take exactly 1 parameter, "
+                    f"got {len(callee_params)}"
+                )
+            param_type = self._parse_type(callee_params[0]["type"])
+            if not types_equal(param_type, list_type.inner):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type=BoolType())
+                actual_sig = FnType(param_types=(param_type,), return_type=self._parse_type(callee["returns"]))
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' signature mismatch: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            if not isinstance(ret_type, BoolType):
+                expected_sig = FnType(param_types=(list_type.inner,), return_type=BoolType())
+                actual_sig = FnType(param_types=(param_type,), return_type=ret_type)
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' fn '{callee_id}' must return bool: "
+                    f"expected {expected_sig}, got {actual_sig}"
+                )
+            # Effect propagation
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_filter' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ListType(inner=list_type.inner, length="dynamic")
+
+        elif op == "list_fold":
+            # list_fold: left-fold a list into a single accumulator value.
+            #
+            # JSON form:
+            #   {"op": "list_fold", "list": <expr>, "init": <expr>, "fn": "<fn_id>"}
+            #
+            # The fn must take two arguments:
+            #   param[0]: accumulator type (same as init)
+            #   param[1]: element type    (same as list.inner)
+            # and return the accumulator type.
+            if self.spec.get("kind") != "module":
+                raise CheckError(f"[{fn_id}] 'list_fold' is only allowed in kind:'module'")
+            list_type = self._check_expr(fn_id, expr.get("list"), env)
+            if not isinstance(list_type, ListType):
+                raise CheckError(f"[{fn_id}] 'list_fold' requires list, got {list_type}")
+            init_type = self._check_expr(fn_id, expr.get("init"), env)
+            callee_id = expr.get("fn")
+            if not isinstance(callee_id, str) or not callee_id:
+                raise CheckError(f"[{fn_id}] 'list_fold' requires string field 'fn'")
+            if callee_id not in self.fn_registry:
+                raise CheckError(f"[{fn_id}] 'list_fold' references unknown function: '{callee_id}'")
+            callee = self.fn_registry[callee_id]
+            callee_params = callee.get("params", [])
+            if len(callee_params) != 2:
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' must take exactly 2 parameters, "
+                    f"got {len(callee_params)}"
+                )
+            accum_param_type = self._parse_type(callee_params[0]["type"])
+            elem_param_type = self._parse_type(callee_params[1]["type"])
+            if not types_equal(accum_param_type, init_type):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' first param (accumulator) "
+                    f"type {accum_param_type} != init type {init_type}"
+                )
+            if not types_equal(elem_param_type, list_type.inner):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' second param (element) "
+                    f"type {elem_param_type} != list element type {list_type.inner}"
+                )
+            ret_type = self._parse_type(callee["returns"])
+            if not types_equal(ret_type, init_type):
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' fn '{callee_id}' return type {ret_type} "
+                    f"!= accumulator type {init_type}"
+                )
+            # Effect propagation
+            callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] 'list_fold' with fn '{callee_id}' requires effects "
+                    f"{{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only declares "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            self.call_graph.setdefault(fn_id, set()).add(callee_id)
+            return ret_type
+
+        elif op == "ok":
+            # Result::Ok constructor — returns _ResultOkIntermediate for return-site checking
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            return _ResultOkIntermediate(val_type)
+
+        elif op == "err":
+            # Result::Err constructor — returns _ResultErrIntermediate for return-site checking
+            val_type = self._check_expr(fn_id, expr.get("val"), env)
+            return _ResultErrIntermediate(val_type)
+
+        elif op == "call":
+            return self._check_call_expr(fn_id, expr, env)
+
         else:
-            raise CheckError(f"[{fn_id}] Unknown op in expression: '{op}'")
+            raise CheckError(
+                f"[{fn_id}] Unknown op in expression: '{op}'",
+                code="UNKNOWN_OP",
+                location={"fn": fn_id},
+                op=op,
+            )
+
+    def _check_call_expr(self, fn_id: str, expr: dict, env: dict) -> NailType:
+        if self.spec.get("kind") != "module":
+            raise CheckError(f"[{fn_id}] Function call is only allowed in kind:'module'")
+
+        callee_id = expr.get("fn")
+        if not isinstance(callee_id, str) or not callee_id:
+            raise CheckError(f"[{fn_id}] 'call' requires string field 'fn'")
+
+        # Cross-module call: resolve from module_fn_registry
+        cross_module = expr.get("module")
+        if cross_module:
+            if cross_module not in self.module_fn_registry:
+                raise CheckError(
+                    f"[{fn_id}] Module '{cross_module}' not imported. "
+                    f"Add it to imports[] and pass modules={{'{cross_module}': ...}}."
+                )
+            mod_fns = self.module_fn_registry[cross_module]
+            if callee_id not in mod_fns:
+                raise CheckError(f"[{fn_id}] Function '{callee_id}' not found in module '{cross_module}'")
+            callee = mod_fns[callee_id]
+            # Effect propagation across module boundary
+            callee_effects, _ = self._collect_declared_effects(
+                callee.get("effects", []), f"{cross_module}.{callee_id}"
+            )
+            missing_effects = callee_effects - self.declared_effects
+            if missing_effects:
+                raise CheckError(
+                    f"[{fn_id}] Cross-module call to '{cross_module}.{callee_id}' requires "
+                    f"effects {{{', '.join(sorted(missing_effects))}}}, but '{fn_id}' only has "
+                    f"{{{', '.join(sorted(self.declared_effects))}}}"
+                )
+            args = expr.get("args", [])
+            params = callee.get("params", [])
+            if len(args) != len(params):
+                raise CheckError(
+                    f"[{fn_id}] '{cross_module}.{callee_id}' expects {len(params)} args, got {len(args)}"
+                )
+            for i, (arg_expr, param) in enumerate(zip(args, params)):
+                arg_type = self._check_expr(fn_id, arg_expr, env)
+                param_type = self._parse_type(param["type"], module_id=cross_module)
+                if not types_equal(arg_type, param_type):
+                    raise CheckError(
+                        f"[{fn_id}] Arg {i} to '{cross_module}.{callee_id}': expected {param_type}, got {arg_type}"
+                    )
+            return self._parse_type(callee["returns"], module_id=cross_module)
+
+        if callee_id not in self.fn_registry:
+            raise CheckError(f"[{fn_id}] Unknown function: '{callee_id}'")
+
+        callee = self.fn_registry[callee_id]
+        self.call_graph.setdefault(fn_id, set()).add(callee_id)
+
+        callee_effects, _ = self._collect_declared_effects(callee.get("effects", []), callee_id)
+        missing_effects = callee_effects - self.declared_effects
+        if missing_effects:
+            missing_text = ", ".join(sorted(missing_effects))
+            declared_text = ", ".join(sorted(self.declared_effects))
+            raise CheckError(
+                f"[{fn_id}] Calling '{callee_id}' requires effects {{{missing_text}}}, "
+                f"but '{fn_id}' declares {{{declared_text}}}",
+                code="EFFECT_VIOLATION",
+                location={"fn": fn_id, "callee": callee_id},
+                missing=sorted(missing_effects),
+                declared=sorted(self.declared_effects),
+                required=sorted(callee_effects),
+            )
+
+        args = expr.get("args", [])
+        if not isinstance(args, list):
+            raise CheckError(f"[{fn_id}] 'call.args' must be a list")
+
+        params = callee.get("params", [])
+        if len(args) != len(params):
+            raise CheckError(
+                f"[{fn_id}] '{callee_id}' expects {len(params)} args, got {len(args)}"
+            )
+
+        # v0.7: Generic function instantiation
+        callee_type_params = callee.get("type_params", [])
+        if callee_type_params:
+            return self._check_generic_call(fn_id, callee_id, callee, args, env)
+
+        for i, (arg_expr, param) in enumerate(zip(args, params)):
+            arg_type = self._check_expr(fn_id, arg_expr, env)
+            param_type = self._parse_type(param["type"])
+            if not types_equal(arg_type, param_type):
+                raise CheckError(
+                    f"[{fn_id}] Arg {i} to '{callee_id}' type mismatch: expected {param_type}, got {arg_type}"
+                )
+
+        # L3.1: Call-site measure verification for recursive calls
+        if self.level >= 3 and callee.get("termination", {}).get("measure"):
+            self._call_edges.setdefault((fn_id, callee_id), []).append(args)
+            if callee_id == fn_id:
+                self._verify_call_site_measure(fn_id, callee_id, callee, args)
+
+        return self._parse_type(callee["returns"])
+
+    def _check_generic_call(
+        self,
+        fn_id: str,
+        callee_id: str,
+        callee: dict,
+        args: list,
+        env: dict,
+    ) -> NailType:
+        """Type-check a call to a generic function (one with 'type_params').
+
+        Infers a concrete type substitution from the argument types, then returns
+        the substituted return type.
+
+        Example:
+            generic fn:  identity[T](x: T) -> T
+            call:        identity(42)         (arg type: int64)
+            inference:   T ← int64
+            result type: int64
+        """
+        callee_type_params = frozenset(callee.get("type_params", []))
+        params = callee.get("params", [])
+        args_list = args if isinstance(args, list) else []
+
+        if len(args_list) != len(params):
+            raise CheckError(
+                f"[{fn_id}] '{callee_id}' expects {len(params)} args, got {len(args_list)}"
+            )
+
+        # Temporarily enter callee's type param scope for parsing callee's types
+        prev_tp = self._current_type_params
+        self._current_type_params = callee_type_params
+        try:
+            subst: dict[str, NailType] = {}
+            for i, (arg_expr, param) in enumerate(zip(args_list, params)):
+                arg_type = self._check_expr(fn_id, arg_expr, env)
+                # Restore caller scope temporarily to parse the arg expression
+                # (already done by _check_expr using caller scope above)
+
+                # Parse param type with callee's type params in scope
+                param_type = self._parse_type(param["type"])
+
+                # Unify to build substitution
+                try:
+                    unify_types(param_type, arg_type, subst)
+                except NailTypeError as e:
+                    raise CheckError(
+                        f"[{fn_id}] Generic arg {i} to '{callee_id}': {e}",
+                        code="GENERIC_TYPE_MISMATCH",
+                    )
+
+            # Check all type params were resolved
+            for tp_name in callee_type_params:
+                if tp_name not in subst:
+                    raise CheckError(
+                        f"[{fn_id}] Could not infer type for '{tp_name}' in generic call to '{callee_id}'. "
+                        f"All type params must appear in the parameter list.",
+                        code="TYPE_PARAM_UNRESOLVED",
+                    )
+
+            # Get concrete return type via substitution
+            raw_return_type = self._parse_type(callee["returns"])
+            return substitute_type(raw_return_type, subst)
+
+        finally:
+            self._current_type_params = prev_tp
+
+    def _normalize_effect_kind(self, kind: Any) -> str:
+        if not isinstance(kind, str):
+            return ""
+        if kind == "Net":
+            return "NET"
+        return kind
+
+    def _validate_effect_decl(self, effect_decl: Any, fn_id: str) -> None:
+        kind, cap = self._parse_effect_decl(effect_decl, fn_id)
+        if kind not in VALID_EFFECTS:
+            raise CheckError(f"[{fn_id}] Unknown effect kind: {kind}. Valid: {VALID_EFFECTS}")
+        if cap is None:
+            return
+        allow = cap.get("allow")
+        if "allow" not in cap or not isinstance(allow, list) or not allow:
+            raise CheckError(f"[{fn_id}] Structured effect '{kind}' requires non-empty 'allow' list")
+        if any(not isinstance(item, str) for item in allow):
+            raise CheckError(f"[{fn_id}] Structured effect '{kind}'.allow must be list[string]")
+        ops = cap.get("ops")
+        if ops is not None:
+            if not isinstance(ops, list) or any(not isinstance(op, str) for op in ops):
+                raise CheckError(f"[{fn_id}] Structured effect '{kind}'.ops must be list[string]")
+
+    def _parse_effect_decl(self, effect_decl: Any, fn_id: str) -> tuple[str, dict | None]:
+        if isinstance(effect_decl, str):
+            return self._normalize_effect_kind(effect_decl), None
+        if isinstance(effect_decl, dict):
+            kind = self._normalize_effect_kind(effect_decl.get("kind"))
+            if not kind:
+                raise CheckError(f"[{fn_id}] Structured effect requires string field 'kind'")
+            cap = dict(effect_decl)
+            cap["kind"] = kind
+            return kind, cap
+        raise CheckError(f"[{fn_id}] Effect declarations must be string or object, got {type(effect_decl)}")
+
+    def _collect_declared_effects(self, effect_decls: list[Any], fn_id: str) -> tuple[set[str], dict[str, list[dict]]]:
+        kinds: set[str] = set()
+        caps: dict[str, list[dict]] = {}
+        for effect_decl in effect_decls:
+            kind, cap = self._parse_effect_decl(effect_decl, fn_id)
+            if kind not in VALID_EFFECTS:
+                raise CheckError(f"[{fn_id}] Unknown effect kind: {kind}. Valid: {VALID_EFFECTS}")
+            kinds.add(kind)
+            if cap is not None:
+                caps.setdefault(kind, []).append(cap)
+        return kinds, caps
+
+    def _string_literal(self, expr: Any) -> str | None:
+        if isinstance(expr, dict) and isinstance(expr.get("lit"), str):
+            return expr["lit"]
+        return None
+
+    def _check_fs_constraints(self, fn_id: str, path_expr: Any) -> None:
+        caps = self.declared_effect_caps.get("FS", [])
+        if not caps:
+            return
+        path_value = self._string_literal(path_expr)
+        if path_value is None:
+            raise CheckError(f"[{fn_id}] 'read_file' path must be a string literal when granular FS constraints are declared")
+        for cap in caps:
+            if self._fs_capability_allows(cap, path_value):
+                return
+        raise CheckError(f"[{fn_id}] read_file path not allowed by declared FS capabilities: {path_value!r}")
+
+    def _check_net_constraints(self, fn_id: str, url_expr: Any) -> None:
+        # Scheme validation for literal URLs (defence-in-depth; runtime always validates).
+        url_literal = self._string_literal(url_expr)
+        if url_literal is not None:
+            from urllib.parse import urlparse as _up
+            parsed = _up(url_literal)
+            if parsed.scheme not in ("http", "https"):
+                raise CheckError(
+                    f"[{fn_id}] http_get blocked: scheme {parsed.scheme!r} not allowed (only 'http' and 'https' are permitted)"
+                )
+        caps = self.declared_effect_caps.get("NET", [])
+        if not caps:
+            return
+        url_value = self._string_literal(url_expr)
+        if url_value is None:
+            raise CheckError(f"[{fn_id}] 'http_get' url must be a string literal when granular NET constraints are declared")
+        for cap in caps:
+            if self._net_capability_allows(cap, url_value):
+                return
+        raise CheckError(f"[{fn_id}] http_get url not allowed by declared NET capabilities: {url_value!r}")
+
+    def _fs_capability_allows(self, cap: dict, path_value: str) -> bool:
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "read" not in ops:
+            return False
+        allow_entries = cap.get("allow", [])
+        target = (Path.cwd() / Path(path_value)).resolve(strict=False) if not Path(path_value).is_absolute() else Path(path_value).resolve(strict=False)
+        for allowed in allow_entries:
+            allowed_path = Path(allowed)
+            base = (Path.cwd() / allowed_path).resolve(strict=False) if not allowed_path.is_absolute() else allowed_path.resolve(strict=False)
+            try:
+                target.relative_to(base)
+                return True
+            except ValueError:
+                continue
+        return False
+
+    def _net_capability_allows(self, cap: dict, url_value: str) -> bool:
+        parsed = urlparse(url_value)
+        if parsed.scheme not in ("http", "https"):
+            return False
+        host = (parsed.hostname or "").lower()
+        if not host:
+            return False
+        ops = cap.get("ops")
+        if isinstance(ops, list) and "get" not in ops:
+            return False
+        allow_domains = cap.get("allow", [])
+        return host in {str(domain).lower() for domain in allow_domains}
