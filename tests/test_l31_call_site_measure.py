@@ -498,5 +498,94 @@ class TestMutualRecursionCallSiteMeasure(unittest.TestCase):
             self.assertEqual(rec_proofs[0]["proof"], "decreasing_measure_verified")
 
 
+class TestMultipleCallSitesSameCallee(unittest.TestCase):
+    """Issue #99: multiple recursive calls to same callee must ALL be verified."""
+
+    def _branched_self_recursion(self, then_arg, else_arg):
+        """f(n) with two branches each calling f with different args."""
+        body = [
+            {"op": "if",
+             "cond": {"op": "gt", "l": {"ref": "n"}, "r": {"lit": 0}},
+             "then": [{"op": "return", "val": {"op": "call", "fn": "f", "args": [then_arg]}}],
+             "else": [{"op": "return", "val": {"op": "call", "fn": "f", "args": [else_arg]}}]}
+        ]
+        fn_f = fn_spec("f",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=body,
+            termination={"measure": "n"},
+        )
+        return module_spec("branch_rec", [fn_f], exports=["f"])
+
+    def test_both_decreasing_accepted(self):
+        """Both branches call f(n-1) → ACCEPT."""
+        spec = self._branched_self_recursion(
+            then_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            else_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+        )
+        check_l3(spec)
+
+    def test_one_non_decreasing_rejected(self):
+        """then: f(n-1), else: f(n) → REJECT (else branch non-decreasing)."""
+        spec = self._branched_self_recursion(
+            then_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            else_arg={"ref": "n"},
+        )
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def test_other_non_decreasing_rejected(self):
+        """then: f(n), else: f(n-1) → REJECT (then branch non-decreasing)."""
+        spec = self._branched_self_recursion(
+            then_arg={"ref": "n"},
+            else_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+        )
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def _branched_mutual_recursion(self, a_then_arg, a_else_arg):
+        """a(n) calls b in two branches; b(n) always calls a(n-1)."""
+        a_body = [
+            {"op": "if",
+             "cond": {"op": "gt", "l": {"ref": "n"}, "r": {"lit": 0}},
+             "then": [{"op": "return", "val": {"op": "call", "fn": "b", "args": [a_then_arg]}}],
+             "else": [{"op": "return", "val": {"op": "call", "fn": "b", "args": [a_else_arg]}}]}
+        ]
+        b_body = [
+            {"op": "if",
+             "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+             "then": [{"op": "return", "val": {"lit": 0}}],
+             "else": [{"op": "return", "val": {"op": "call", "fn": "a",
+                        "args": [{"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}]}}]}
+        ]
+        fn_a = fn_spec("a",
+            params=[{"id": "n", "type": INT64}], returns=INT64,
+            body=a_body, termination={"measure": "n"})
+        fn_b = fn_spec("b",
+            params=[{"id": "n", "type": INT64}], returns=INT64,
+            body=b_body, termination={"measure": "n"})
+        return module_spec("branch_mutual", [fn_a, fn_b], exports=["a", "b"])
+
+    def test_mutual_one_branch_non_decreasing_rejected(self):
+        """a calls b(n-1) in then, b(n) in else → REJECT."""
+        spec = self._branched_mutual_recursion(
+            a_then_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            a_else_arg={"ref": "n"},
+        )
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def test_mutual_both_branches_decreasing_accepted(self):
+        """a calls b(n-1) in both branches → ACCEPT."""
+        spec = self._branched_mutual_recursion(
+            a_then_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            a_else_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 2}},
+        )
+        check_l3(spec)
+
+
 if __name__ == "__main__":
     unittest.main()

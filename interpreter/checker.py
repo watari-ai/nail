@@ -96,7 +96,7 @@ class Checker:
         # L3.1: Track which recursive functions had their call-site measures verified
         self._call_site_verified: set[str] = set()
         # L3.1: Store call-site args for each (caller, callee) edge for mutual recursion checks
-        self._call_edges: dict[tuple[str, str], list] = {}
+        self._call_edges: dict[tuple[str, str], list[list]] = {}
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -626,10 +626,11 @@ class Checker:
                         cycle_members = set(cycle[:-1])
                         for edge_src, edge_dst in zip(cycle[:-1], cycle[1:]):
                             if edge_src not in self._call_site_verified and edge_dst in cycle_members:
-                                edge_args = self._call_edges.get((edge_src, edge_dst))
-                                if edge_args is not None:
+                                all_edge_args = self._call_edges.get((edge_src, edge_dst))
+                                if all_edge_args is not None:
                                     callee_fn = self.fn_registry.get(edge_dst, {})
-                                    self._verify_call_site_measure(edge_src, edge_dst, callee_fn, edge_args)
+                                    for edge_args in all_edge_args:
+                                        self._verify_call_site_measure(edge_src, edge_dst, callee_fn, edge_args)
 
                         # Record proofs for each cycle member
                         for fn_id_in_cycle in cycle[:-1]:
@@ -1795,7 +1796,7 @@ class Checker:
 
         # L3.1: Call-site measure verification for recursive calls
         if self.level >= 3 and callee.get("termination", {}).get("measure"):
-            self._call_edges[(fn_id, callee_id)] = args
+            self._call_edges.setdefault((fn_id, callee_id), []).append(args)
             if callee_id == fn_id:
                 self._verify_call_site_measure(fn_id, callee_id, callee, args)
 
