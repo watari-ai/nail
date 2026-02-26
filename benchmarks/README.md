@@ -146,3 +146,89 @@ Results are saved to:
 ---
 
 *Generated with `tiktoken:cl100k_base` (GPT-4 compatible tokenizer). Run `python benchmarks/token_efficiency.py` to reproduce.*
+
+
+---
+
+## Multi-LLM Verify-Fix Loop Benchmark (`verify_fix_loop.py`)
+
+Issue #103 — Demonstrates NAIL's verifiability advantage over bare LLM output.
+
+The benchmark runs a **verify → feedback → fix** loop for each (model, task) pair:
+
+```
+LLM ──► generate spec ──► NAIL Checker
+                              │
+                        [FAIL] │ error message
+                              ▼
+                          LLM (retry, max 3×)
+                              │
+                        [PASS] │
+                              ▼
+                          record result
+```
+
+### Tasks
+
+| Task | Functions | Effects | Checker Level |
+|------|-----------|---------|---------------|
+| `simple_calculator` | `add`, `sub`, `mul` | none | L2 |
+| `user_auth` | `login`, `logout`, `check_session` | `NET`, `IO` | L2 |
+| `data_pipeline` | `fetch`, `transform`, `save` | `NET`, `FS`; loop termination proof | L3 |
+
+Reference (correct) specs live in `benchmarks/tasks/*.json.template`.
+
+### Running
+
+```bash
+# Mock mode (no API keys required — default)
+python benchmarks/verify_fix_loop.py
+
+# Save results to benchmarks/results/
+python benchmarks/verify_fix_loop.py --save
+
+# JSON output
+python benchmarks/verify_fix_loop.py --output json
+
+# Real API mode (set API keys first)
+export ANTHROPIC_API_KEY=sk-...
+export OPENAI_API_KEY=sk-...
+export GEMINI_API_KEY=AI...
+NAIL_REAL_API=1 python benchmarks/verify_fix_loop.py --save
+```
+
+### Reading Results
+
+```bash
+# Summarise all saved CSVs
+python benchmarks/summarize_results.py
+
+# JSON output
+python benchmarks/summarize_results.py --output json
+
+# Specific file
+python benchmarks/summarize_results.py --input benchmarks/results/verify_fix_loop_20260227_000000.csv
+```
+
+**Metrics:**
+
+| Metric | Description |
+|--------|-------------|
+| `pass_rate` | Fraction of tasks where model eventually produced a valid spec |
+| `avg_attempts` | Average number of attempts (1 = passed first try) |
+| `consensus_rate` | Fraction of tasks where all models reached the same verdict |
+
+### Mock vs Real API
+
+| Mode | Controlled by | Notes |
+|------|--------------|-------|
+| **Mock** (default) | Built-in `MockLLM` | 4 mock models: perfect (1st try), slow (2nd), stubborn (3rd), failing (never). No API keys needed. |
+| **Real** | `NAIL_REAL_API=1` | Uses Anthropic / OpenAI / Gemini. Falls back to mock if key missing. |
+
+### Results Directory
+
+`benchmarks/results/` — output CSVs are saved here.
+Only `.gitkeep` is committed; actual result files are in `.gitignore`.
+
+CSV schema: `model, task, attempts, final_pass, error_codes, latency_ms`
+
