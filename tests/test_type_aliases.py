@@ -386,9 +386,10 @@ class TestTypeAliasCycleDetection(unittest.TestCase):
                 "A": {"type": "alias", "name": "A"},
             },
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('Circular', str(ctx.exception))
     def test_cycle_inside_nested_type(self):
         """Cycle via option wrapper: A = option<alias(B)>, B = alias(A)."""
         spec = module_spec(
@@ -399,9 +400,10 @@ class TestTypeAliasCycleDetection(unittest.TestCase):
                 "B": {"type": "alias", "name": "A"},
             },
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('Circular', str(ctx.exception))
     def test_cycle_in_list_inner(self):
         """Cycle via list inner: A = list<alias(B)>, B = alias(A)."""
         spec = module_spec(
@@ -412,10 +414,11 @@ class TestTypeAliasCycleDetection(unittest.TestCase):
                 "B": {"type": "alias", "name": "A"},
             },
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
 
+        self.assertIn('Circular', str(ctx.exception))
 class TestTypeAliasErrors(unittest.TestCase):
     """Error cases for unknown aliases and type mismatches."""
 
@@ -428,9 +431,10 @@ class TestTypeAliasErrors(unittest.TestCase):
                 "A": {"type": "alias", "name": "DoesNotExist"},
             },
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('DoesNotExist', str(ctx.exception))
     def test_unknown_alias_in_param_type_raises(self):
         """Using an alias name that is not declared raises CheckError."""
         spec = module_spec(
@@ -446,9 +450,10 @@ class TestTypeAliasErrors(unittest.TestCase):
             exports=["f"],
             types={},  # "Ghost" not declared
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('Ghost', str(ctx.exception))
     def test_alias_type_mismatch_in_return_raises(self):
         """Returning a string when alias resolves to int64 must raise."""
         spec = module_spec(
@@ -464,10 +469,11 @@ class TestTypeAliasErrors(unittest.TestCase):
             exports=["f"],
             types={"UserId": INT64},
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
 
+        self.assertIn('Return type mismatch', str(ctx.exception))
 class TestTypeAliasMultiFunction(unittest.TestCase):
     """Multiple functions in one module sharing type aliases."""
 

@@ -227,9 +227,10 @@ class TestListMap(unittest.TestCase):
             ],
         )
         spec = module_spec("test_list_map_bad", [STR_LEN_FN, main_fn], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('signature mismatch', str(ctx.exception))
     def test_list_map_checker_unknown_fn_raises(self):
         """Checker rejects list_map that references an undefined function."""
         main_fn = fn_def(
@@ -246,10 +247,11 @@ class TestListMap(unittest.TestCase):
             ],
         )
         spec = module_spec("test_list_map_unknown", [main_fn], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
 
+        self.assertIn('nonexistent_fn', str(ctx.exception))
 # ═══════════════════════════════════════════════════════════════════════════════
 # 3. list_filter — keep elements matching a predicate
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -331,10 +333,11 @@ class TestListFilter(unittest.TestCase):
             ],
         )
         spec = module_spec("test_list_filter_bad2", [IS_POSITIVE_FN, main_fn], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
 
+        self.assertIn('signature mismatch', str(ctx.exception))
 # ═══════════════════════════════════════════════════════════════════════════════
 # 4. list_fold — left-fold / reduce a list
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -817,9 +820,10 @@ class TestCollectionOpsEdgeCases(unittest.TestCase):
             ],
         )
         spec = module_spec("test_list_fold_no_fn", [main_fn], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as ctx:
             Checker(spec).check()
 
+        self.assertIn('list_fold', str(ctx.exception))
     def test_list_filter_preserves_element_type(self):
         """After list_filter, the element type is unchanged (no coercion)."""
         # filter → fold should type-check cleanly
