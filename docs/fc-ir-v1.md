@@ -1,7 +1,7 @@
 # fc_ir_v1 — NAIL Tool-Calling IR Specification
 
 **Spec version**: v0.9 (freeze candidate)  
-**Status**: Draft — Pending final review (Issue #88)  
+**Status**: Draft — Implementation in progress (Issue #88)  
 **Created**: 2026-02-25  
 **Target NAIL version**: 0.9.x
 
