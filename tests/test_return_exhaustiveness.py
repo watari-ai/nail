@@ -108,6 +108,89 @@ class TestMatchEnumExhaustiveness:
             Checker(spec).check()
 
 
+class TestReturnVoid:
+    def test_return_void_in_unit_fn_passes(self):
+        """return_void in a unit-return function is valid."""
+        spec = {
+            "nail": "0.4",
+            "kind": "fn",
+            "id": "test_fn",
+            "effects": [],
+            "params": [],
+            "returns": {"type": "unit"},
+            "body": [{"op": "return_void"}],
+        }
+        Checker(spec).check()  # should not raise
+
+    def test_return_void_guarantees_return(self):
+        """return_void counts as a guaranteed return path."""
+        spec = {
+            "nail": "0.4",
+            "kind": "fn",
+            "id": "test_fn",
+            "effects": [],
+            "params": [{"id": "x", "type": {"type": "bool"}}],
+            "returns": {"type": "unit"},
+            "body": [
+                {
+                    "op": "if",
+                    "cond": {"ref": "x"},
+                    "then": [{"op": "return_void"}],
+                    "else": [{"op": "return_void"}],
+                }
+            ],
+        }
+        Checker(spec).check()  # should not raise
+
+    def test_return_void_in_non_unit_fn_fails(self):
+        """return_void in a function that returns int is rejected."""
+        spec = {
+            "nail": "0.4",
+            "kind": "fn",
+            "id": "test_fn",
+            "effects": [],
+            "params": [],
+            "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+            "body": [{"op": "return_void"}],
+        }
+        with pytest.raises(CheckError, match="non-unit return type"):
+            Checker(spec).check()
+
+    def test_return_void_produces_unit_return_type(self):
+        """A unit-return fn using return_void satisfies the unit return constraint."""
+        # Build a module where main calls a helper that uses return_void.
+        spec = {
+            "nail": "0.4",
+            "kind": "module",
+            "id": "test_mod",
+            "exports": ["run"],
+            "defs": [
+                {
+                    "nail": "0.4",
+                    "kind": "fn",
+                    "id": "helper",
+                    "effects": [],
+                    "params": [],
+                    "returns": {"type": "unit"},
+                    "body": [{"op": "return_void"}],
+                },
+                {
+                    "nail": "0.4",
+                    "kind": "fn",
+                    "id": "run",
+                    "effects": [],
+                    "params": [],
+                    "returns": {"type": "unit"},
+                    "body": [
+                        {"op": "call", "fn": "helper", "args": []},
+                        {"op": "return_void"},
+                    ],
+                },
+            ],
+        }
+        Checker(spec).check()  # should not raise
+
+
 class TestUnitReturnExemption:
     def test_unit_fn_if_without_else_still_fails(self):
         """Even unit-return functions need explicit else (NAIL zero-ambiguity)."""

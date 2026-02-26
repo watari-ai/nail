@@ -827,7 +827,16 @@ class Checker:
                 raise CheckError(f"[{fn_id}] Statement missing 'op': {stmt}")
             op = stmt["op"]
 
-            if op == "return":
+            if op == "return_void":
+                # return_void: exits the function with unit; no value expression needed.
+                # Valid only when the declared return type is unit.
+                if not isinstance(expected_return, UnitType):
+                    raise CheckError(
+                        f"[{fn_id}] 'return_void' used in function with non-unit return type {expected_return}"
+                    )
+                guaranteed_return = True
+
+            elif op == "return":
                 val_type = self._check_expr(fn_id, stmt.get("val"), local_env)
                 # Handle Result construction (ok/err ops)
                 if isinstance(expected_return, ResultType):
