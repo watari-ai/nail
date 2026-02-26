@@ -3,1452 +3,933 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>NAIL Playground — AI-Native Programming Language</title>
-  <meta name="description" content="Try NAIL in your browser. NAIL is an AI-native programming language with JSON syntax and zero ambiguity." />
+  <title>NAIL — The typed IR for AI agents</title>
+  <meta name="description" content="Define tools once. Export to OpenAI, Anthropic, Gemini — with effect-safe filtering built in." />
+  <meta property="og:title" content="NAIL — The typed IR for AI agents" />
+  <meta property="og:description" content="Define tools once. Export to OpenAI, Anthropic, Gemini — with effect-safe filtering built in." />
+  <meta property="og:url" content="https://naillang.com" />
 
   <style>
     /* ── Reset & Base ─────────────────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:         #0d0d1a;
-      --bg-panel:   #12121f;
-      --bg-panel2:  #0f0f1c;
-      --bg-hover:   #1a1a2e;
-      --border:     #1e1e38;
-      --accent:     #e94560;
-      --accent-dim: #b03347;
-      --text:       #e0e0f0;
-      --text-dim:   #8888aa;
-      --text-muted: #555577;
-      --green:      #39d353;
-      --red:        #e94560;
-      --yellow:     #f9c74f;
-      --font-mono:  'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+      --bg:        #0d0d1a;
+      --bg-panel:  #12121f;
+      --bg-panel2: #0f0f1c;
+      --border:    #1e1e38;
+      --accent:    #e94560;
+      --text:      #e0e0f0;
+      --text-dim:  #8888aa;
+      --green:     #39d353;
+      --yellow:    #f9c74f;
+      --blue:      #58a6ff;
+      --purple:    #bc8cff;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
     }
 
-    html, body {
-      height: 100%;
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
       background: var(--bg);
       color: var(--text);
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      font-size: 14px;
-      line-height: 1.5;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    a {
+      color: var(--text);
+      text-decoration: none;
     }
 
     /* ── Layout ───────────────────────────────────────────────────── */
-    .app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      overflow: hidden;
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
     }
 
     /* ── Header ───────────────────────────────────────────────────── */
-    .header {
+    .site-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: rgba(13, 13, 26, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .site-header .container {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 0 16px;
-      height: 52px;
-      background: var(--bg-panel);
-      border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+      justify-content: space-between;
+      height: 56px;
     }
 
     .logo {
-      font-size: 17px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      color: var(--accent);
-      white-space: nowrap;
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
       font-family: var(--font-mono);
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: -0.5px;
     }
-    .logo span {
+
+    .logo-version {
+      font-size: 12px;
       color: var(--text-dim);
       font-weight: 400;
     }
 
-    .header-github {
+    .header-nav {
       display: flex;
       align-items: center;
-      gap: 6px;
+      gap: 24px;
+    }
+
+    .header-nav a {
+      font-size: 14px;
       color: var(--text-dim);
-      text-decoration: none;
-      font-size: 12px;
-      padding: 4px 8px;
-      border-radius: 4px;
-      border: 1px solid var(--border);
-      transition: color .15s, border-color .15s;
-    }
-    .header-github:hover { color: var(--text); border-color: var(--accent); }
-
-    .header-spacer { flex: 1; }
-
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      transition: color 0.15s;
     }
 
-    .example-group {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .example-group label {
-      color: var(--text-dim);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    select {
-      background: var(--bg);
+    .header-nav a:hover {
       color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
-      cursor: pointer;
-      outline: none;
-      transition: border-color .15s;
     }
-    select:focus { border-color: var(--accent); }
 
-    .args-group {
-      display: flex;
+    .header-nav a.nav-cta {
+      color: var(--accent);
+    }
+
+    /* ── Hero ─────────────────────────────────────────────────────── */
+    .hero {
+      padding: 140px 0 80px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
       align-items: center;
-      gap: 6px;
-    }
-    .args-group label {
-      color: var(--text-dim);
-      font-size: 12px;
-      white-space: nowrap;
-    }
-
-    .args-input {
-      background: var(--bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      padding: 4px 8px;
-      font-size: 13px;
+      gap: 8px;
       font-family: var(--font-mono);
-      width: 140px;
-      outline: none;
-      transition: border-color .15s;
+      font-size: 12px;
+      color: var(--text-dim);
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px 14px;
+      margin-bottom: 32px;
+      letter-spacing: 0.05em;
     }
-    .args-input:focus { border-color: var(--accent); }
-    .args-input::placeholder { color: var(--text-muted); }
 
-    /* ── Buttons ──────────────────────────────────────────────────── */
+    .hero-eyebrow .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .hero h1 {
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 700;
+      letter-spacing: -1.5px;
+      line-height: 1.1;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .hero h1 em {
+      font-style: normal;
+      color: var(--accent);
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2.5vw, 20px);
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto 40px;
+      line-height: 1.5;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+    }
+
     .btn {
       display: inline-flex;
       align-items: center;
-      gap: 5px;
-      padding: 6px 14px;
-      border-radius: 5px;
-      font-size: 13px;
+      gap: 6px;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 15px;
       font-weight: 500;
       cursor: pointer;
-      border: none;
-      transition: background .15s, opacity .15s;
-      outline: none;
-      white-space: nowrap;
+      transition: all 0.15s;
+      text-decoration: none;
+      border: 1px solid transparent;
     }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-    .btn-run {
+    .btn-primary {
       background: var(--accent);
       color: #fff;
-      padding: 6px 18px;
-      font-size: 14px;
-      font-weight: 600;
+      border-color: var(--accent);
     }
-    .btn-run:hover:not(:disabled) { background: var(--accent-dim); }
 
-    .btn-ghost {
+    .btn-primary:hover {
+      background: #d63a52;
+      border-color: #d63a52;
+    }
+
+    .btn-outline {
       background: transparent;
-      color: var(--text-dim);
-      border: 1px solid var(--border);
+      color: var(--text);
+      border-color: var(--border);
     }
-    .btn-ghost:hover { background: var(--bg-hover); color: var(--text); }
 
-    /* ── Loading Overlay ──────────────────────────────────────────── */
-    #loading-overlay {
-      position: fixed;
-      inset: 0;
-      background: var(--bg);
-      display: flex;
-      flex-direction: column;
+    .btn-outline:hover {
+      border-color: var(--text-dim);
+      background: var(--bg-panel);
+    }
+
+    /* ── Install box ──────────────────────────────────────────────── */
+    .install-box {
+      display: inline-flex;
       align-items: center;
-      justify-content: center;
-      gap: 20px;
-      z-index: 1000;
-    }
-    #loading-overlay.hidden { display: none; }
-
-    .loading-logo {
+      gap: 12px;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px 10px 20px;
       font-family: var(--font-mono);
-      font-size: 32px;
-      font-weight: 700;
-      color: var(--accent);
-      letter-spacing: 0.08em;
-    }
-
-    .loading-msg {
-      color: var(--text-dim);
       font-size: 14px;
     }
 
-    .loading-bar-wrap {
-      width: 240px;
-      height: 3px;
-      background: var(--border);
-      border-radius: 3px;
-      overflow: hidden;
-    }
-    .loading-bar {
-      height: 100%;
-      background: var(--accent);
-      border-radius: 3px;
-      animation: loading-anim 1.8s ease-in-out infinite;
-    }
-    @keyframes loading-anim {
-      0%   { width: 0%;   margin-left: 0; }
-      50%  { width: 60%;  margin-left: 20%; }
-      100% { width: 0%;   margin-left: 100%; }
+    .install-box .prompt {
+      color: var(--text-dim);
+      user-select: none;
     }
 
-    /* ── Panels ───────────────────────────────────────────────────── */
-    .panels {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-      min-height: 0;
+    .install-box .cmd {
+      color: var(--text);
     }
 
-    .panel {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      overflow: hidden;
-      min-width: 0;
+    .copy-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-family: var(--font-mono);
+      padding: 3px 10px;
+      cursor: pointer;
+      transition: all 0.15s;
     }
 
-    .panel-header {
+    .copy-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .copy-btn.copied {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    /* ── Section common ───────────────────────────────────────────── */
+    section {
+      padding: 80px 0;
+    }
+
+    section + section {
+      border-top: 1px solid var(--border);
+    }
+
+    .section-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 12px;
+    }
+
+    .section-title {
+      font-size: clamp(24px, 4vw, 38px);
+      font-weight: 700;
+      letter-spacing: -0.8px;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+
+    .section-sub {
+      color: var(--text-dim);
+      font-size: 16px;
+      max-width: 560px;
+      margin-bottom: 48px;
+    }
+
+    /* ── Problem cards ────────────────────────────────────────────── */
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 24px;
+      transition: border-color 0.15s;
+    }
+
+    .card:hover {
+      border-color: #2a2a4a;
+    }
+
+    .card-icon {
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card-title {
+      font-weight: 600;
+      font-size: 15px;
+      margin-bottom: 10px;
+      color: var(--text);
+    }
+
+    .card-desc {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    .card-solve {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 13px;
+      color: var(--green);
+      font-family: var(--font-mono);
+    }
+
+    /* ── Code blocks ──────────────────────────────────────────────── */
+    .code-block {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .code-block-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 6px 14px;
-      background: var(--bg-panel);
+      padding: 10px 16px;
       border-bottom: 1px solid var(--border);
-      flex-shrink: 0;
+      background: var(--bg-panel);
     }
 
-    .panel-title {
-      font-size: 11px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-    }
-
-    .panel-actions {
-      display: flex;
-      gap: 6px;
-    }
-
-    .panel-divider {
-      width: 4px;
-      background: var(--border);
-      cursor: col-resize;
-      flex-shrink: 0;
-      transition: background .15s;
-    }
-    .panel-divider:hover, .panel-divider.dragging { background: var(--accent); }
-
-    /* ── Editor ───────────────────────────────────────────────────── */
-    #editor {
-      flex: 1;
-      width: 100%;
-      padding: 16px;
-      background: var(--bg-panel2);
-      color: var(--text);
+    .code-block-header .lang {
       font-family: var(--font-mono);
-      font-size: 13px;
-      line-height: 1.6;
-      border: none;
-      resize: none;
-      outline: none;
-      tab-size: 2;
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
-    #editor::placeholder { color: var(--text-muted); }
 
-    /* ── Output ───────────────────────────────────────────────────── */
-    .output-panel {
-      flex: 1;
-      padding: 16px;
-      background: var(--bg-panel2);
+    .code-block pre {
+      padding: 20px;
       font-family: var(--font-mono);
       font-size: 13px;
       line-height: 1.7;
-      overflow: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-      color: var(--text-dim);
+      overflow-x: auto;
+      color: var(--text);
     }
-    .output-panel.success { color: var(--green); }
-    .output-panel.error   { color: var(--red); }
 
-    .output-placeholder { color: var(--text-muted); font-style: italic; }
+    /* ── Syntax highlight colors ──────────────────────────────────── */
+    .sh-kw   { color: var(--purple); }   /* keyword: fn, let, type */
+    .sh-type { color: var(--blue); }     /* types: String, Int, Bool */
+    .sh-str  { color: var(--green); }    /* strings */
+    .sh-cmt  { color: var(--text-dim); font-style: italic; } /* comments */
+    .sh-fn   { color: #79c0ff; }         /* function names */
+    .sh-num  { color: #f78166; }         /* numbers */
+    .sh-eff  { color: #ffa657; }         /* effects */
+    .sh-py-kw { color: var(--purple); }  /* python keywords */
+    .sh-py-fn { color: #79c0ff; }        /* python builtins */
+    .sh-py-str { color: var(--green); }  /* python strings */
+    .sh-py-cmt { color: var(--text-dim); font-style: italic; }
+    .sh-bash-cmd { color: var(--yellow); }
+    .sh-bash-flag { color: var(--blue); }
+    .sh-bash-cmt { color: var(--text-dim); font-style: italic; }
+    .sh-red { color: var(--accent); }
+    .sh-dim { color: var(--text-dim); }
 
-    /* ── Status bar ───────────────────────────────────────────────── */
-    .status-bar {
-      padding: 4px 14px;
-      font-size: 11px;
+    /* ── FC Demo comparison ───────────────────────────────────────── */
+    .demo-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
       background: var(--bg-panel);
-      border-top: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 13px;
+      font-family: var(--font-mono);
       color: var(--text-dim);
-      flex-shrink: 0;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn.active {
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+
+    .tab-btn:hover:not(.active) {
+      color: var(--text);
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .compare-grid .code-block:first-child {
+      border-radius: 0 0 0 8px;
+      border-right: none;
+    }
+
+    .compare-grid .code-block:last-child {
+      border-radius: 0 0 8px 0;
+    }
+
+    @media (max-width: 660px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+      .compare-grid .code-block:first-child {
+        border-radius: 0;
+        border-right: 1px solid var(--border);
+        border-bottom: none;
+      }
+      .compare-grid .code-block:last-child {
+        border-radius: 0 0 8px 8px;
+      }
+    }
+
+    /* ── Verify table ─────────────────────────────────────────────── */
+    .verify-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .verify-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .verify-card .level-badge {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      background: rgba(233, 69, 96, 0.12);
+      border: 1px solid rgba(233, 69, 96, 0.3);
+      border-radius: 4px;
+      padding: 2px 8px;
+      margin-bottom: 12px;
+    }
+
+    .verify-card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .verify-card p {
+      font-size: 13px;
+      color: var(--text-dim);
+      line-height: 1.5;
+    }
+
+    /* ── Quickstart ───────────────────────────────────────────────── */
+    .quickstart-block {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .quickstart-block .qs-header {
       display: flex;
       align-items: center;
       gap: 8px;
-    }
-    .status-bar.ok     { color: var(--green); }
-    .status-bar.error  { color: var(--red); }
-    .status-bar.warn   { color: var(--yellow); }
-
-    /* ── About bar ────────────────────────────────────────────────── */
-    .about-bar {
-      padding: 5px 16px;
+      padding: 12px 20px;
       background: var(--bg-panel);
       border-bottom: 1px solid var(--border);
-      font-size: 12px;
-      color: var(--text-muted);
-      flex-shrink: 0;
     }
-    .about-bar a { color: var(--text-dim); text-decoration: none; }
-    .about-bar a:hover { color: var(--accent); }
 
-    /* ── Tag badge ────────────────────────────────────────────────── */
-    .tag {
-      display: inline-block;
-      background: rgba(233, 69, 96, 0.12);
+    .qs-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--border);
+    }
+
+    .qs-dot:nth-child(1) { background: #ff5f57; }
+    .qs-dot:nth-child(2) { background: #ffbd2e; }
+    .qs-dot:nth-child(3) { background: #28ca41; }
+
+    .qs-title {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-left: 4px;
+    }
+
+    .quickstart-block pre {
+      padding: 24px;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      line-height: 1.9;
+      overflow-x: auto;
+    }
+
+    /* ── Footer ───────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 48px 0;
+      text-align: center;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .footer-links a {
+      font-size: 14px;
+      color: var(--text-dim);
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text);
+    }
+
+    .footer-links .sep {
+      color: var(--border);
+    }
+
+    .footer-meta {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-bottom: 8px;
+    }
+
+    .footer-tagline {
+      font-family: var(--font-mono);
+      font-size: 12px;
       color: var(--accent);
-      border: 1px solid rgba(233, 69, 96, 0.3);
-      border-radius: 3px;
-      font-size: 10px;
-      font-weight: 600;
-      padding: 1px 5px;
-      letter-spacing: 0.05em;
-      vertical-align: middle;
+      opacity: 0.7;
+    }
+
+    /* ── Responsive ───────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      .header-nav { gap: 16px; }
+      .header-nav a:not(.nav-cta) { display: none; }
+      .hero { padding: 120px 0 60px; }
+      section { padding: 60px 0; }
     }
   </style>
 </head>
 <body>
 
-<!-- Loading Overlay -->
-<div id="loading-overlay">
-  <div class="loading-logo">NAIL</div>
-  <div class="loading-msg" id="loading-msg">Loading NAIL interpreter…</div>
-  <div class="loading-bar-wrap"><div class="loading-bar"></div></div>
-</div>
-
-<div class="app" id="app" style="display:none">
-
-  <!-- Header -->
-  <header class="header">
-    <div class="logo">NAIL <span>playground</span></div>
-    <span class="tag">v0.8.0</span>
-
-    <div class="header-spacer"></div>
-
-    <div class="toolbar">
-      <div class="example-group">
-        <label for="example-select">Example:</label>
-        <select id="example-select"></select>
-      </div>
-      <div class="args-group">
-        <label for="args-input">Args:</label>
-        <input
-          id="args-input"
-          class="args-input"
-          type="text"
-          placeholder="n=10, x=42"
-          title="Comma-separated name=value pairs"
-        />
-      </div>
+  <!-- ── Header ──────────────────────────────────────────────────── -->
+  <header class="site-header">
+    <div class="container">
+      <a href="/" class="logo">
+        NAIL
+        <span class="logo-version">v0.9</span>
+      </a>
+      <nav class="header-nav">
+        <a href="/playground.html" class="nav-cta">Playground →</a>
+        <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">GitHub ↗</a>
+        <a href="https://pypi.org/project/nail-lang/" target="_blank" rel="noopener">PyPI ↗</a>
+      </nav>
     </div>
-
-    <button id="run-btn" class="btn btn-run" title="Run (⌘Enter / Ctrl+Enter)">▶ Run</button>
-    <button id="share-btn" class="btn btn-ghost" title="Copy shareable link">Share</button>
-
-    <a class="header-github" href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
-        <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-      </svg>
-      GitHub
-    </a>
   </header>
 
-  <!-- About -->
-  <div class="about-bar">
-    NAIL is an AI-native programming language — JSON syntax, zero ambiguity, designed for LLMs to generate correct code first time.
-    &nbsp;·&nbsp;
-    <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">watari-ai/nail</a>
-    &nbsp;·&nbsp;
-    Runs entirely in your browser via <a href="https://pyodide.org" target="_blank" rel="noopener">Pyodide</a>
-  </div>
+  <!-- ── Hero ────────────────────────────────────────────────────── -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-eyebrow">
+        <span class="dot"></span>
+        v0.9.0 · experimental
+      </div>
+      <h1>The typed IR for <em>AI agents.</em></h1>
+      <p class="hero-sub">
+        Define tools once. Export to OpenAI, Anthropic, Gemini —
+        with effect-safe filtering built in.
+      </p>
+      <div class="hero-actions">
+        <a href="/playground.html" class="btn btn-primary">Try in Playground →</a>
+        <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener" class="btn btn-outline">View on GitHub ↗</a>
+      </div>
+      <div class="install-box">
+        <span class="prompt">$</span>
+        <span class="cmd">pip install nail-lang</span>
+        <button class="copy-btn" id="copyInstall" onclick="copyInstall()">copy</button>
+      </div>
+    </div>
+  </section>
 
-  <!-- Main panels -->
-  <div class="panels" id="panels">
-
-    <!-- Left: Editor -->
-    <div class="panel" id="left-panel">
-      <div class="panel-header">
-        <span class="panel-title">Program (JSON)</span>
-        <div class="panel-actions">
-          <button id="format-btn" class="btn btn-ghost" title="Format JSON">{ }</button>
+  <!-- ── Problem → Solution ──────────────────────────────────────── -->
+  <section id="why">
+    <div class="container">
+      <div class="section-label">Why NAIL</div>
+      <h2 class="section-title">Three problems. One solution.</h2>
+      <p class="section-sub">
+        Building tool-using AI agents today means fighting the ecosystem.
+        NAIL is the missing layer.
+      </p>
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon">🔀</div>
+          <div class="card-title">Provider chaos</div>
+          <div class="card-desc">
+            OpenAI, Anthropic, Gemini — three schemas, three formats,
+            three different ways to define the same tool.
+            Maintaining all three is dead weight.
+          </div>
+          <div class="card-solve">→ NAIL converts from one source.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔒</div>
+          <div class="card-title">No permission model</div>
+          <div class="card-desc">
+            MCP servers can do anything. There's no built-in way to
+            say "this agent can read files, but not hit the network."
+          </div>
+          <div class="card-solve">→ Effect labels (NET/FS/IO) block at check time, not runtime.</div>
+        </div>
+        <div class="card">
+          <div class="card-icon">❓</div>
+          <div class="card-title">Ambiguous AI output</div>
+          <div class="card-desc">
+            Tool schemas generated by different prompts look different.
+            Canonical form doesn't exist — until you enforce it.
+          </div>
+          <div class="card-solve">→ The same spec generates token-identical output. Every time.</div>
         </div>
       </div>
-      <textarea
-        id="editor"
-        class="editor"
-        spellcheck="false"
-        autocorrect="off"
-        autocapitalize="off"
-        autocomplete="off"
-        placeholder='Paste a NAIL program here, or select an example above…'
-      ></textarea>
     </div>
+  </section>
 
-    <div class="panel-divider" id="divider"></div>
+  <!-- ── FC Standard Demo ─────────────────────────────────────────── -->
+  <section id="demo">
+    <div class="container">
+      <div class="section-label">FC Standard</div>
+      <h2 class="section-title">One definition. Three providers.</h2>
+      <p class="section-sub">
+        Write your tool spec in NAIL once. <code style="font-family:var(--font-mono);font-size:14px;color:var(--text-dim);">nail fc convert</code>
+        outputs the correct schema for any provider.
+      </p>
 
-    <!-- Right: Output -->
-    <div class="panel" id="right-panel">
-      <div class="panel-header">
-        <span class="panel-title">Output</span>
-        <div class="panel-actions">
-          <button id="copy-btn" class="btn btn-ghost" title="Copy output">Copy</button>
-          <button id="clear-btn" class="btn btn-ghost" title="Clear output">Clear</button>
+      <div class="code-block" style="border-radius:10px;">
+        <!-- Tabs -->
+        <div class="demo-tabs">
+          <button class="tab-btn active" onclick="switchTab('nail')">NAIL source</button>
+          <button class="tab-btn" onclick="switchTab('openai')">OpenAI</button>
+          <button class="tab-btn" onclick="switchTab('anthropic')">Anthropic</button>
+          <button class="tab-btn" onclick="switchTab('gemini')">Gemini</button>
+        </div>
+
+        <!-- NAIL source -->
+        <div class="tab-pane active" id="tab-nail">
+          <pre><span class="sh-cmt"># tools.nail</span>
+
+<span class="sh-kw">fn</span> <span class="sh-fn">search_web</span>(
+  query: <span class="sh-type">String</span>,
+  max_results: <span class="sh-type">Int</span> = <span class="sh-num">10</span>
+) <span class="sh-eff">@NET</span> -> <span class="sh-type">List[Result]</span> {
+  <span class="sh-str">"Search the web and return ranked results."</span>
+}
+
+<span class="sh-kw">fn</span> <span class="sh-fn">read_file</span>(
+  path: <span class="sh-type">String</span>,
+  encoding: <span class="sh-type">String</span> = <span class="sh-str">"utf-8"</span>
+) <span class="sh-eff">@FS</span> -> <span class="sh-type">String</span> {
+  <span class="sh-str">"Read a file from disk and return its contents."</span>
+}</pre>
+        </div>
+
+        <!-- OpenAI output -->
+        <div class="tab-pane" id="tab-openai">
+          <pre><span class="sh-cmt"># nail fc convert tools.nail --provider openai</span>
+
+[
+  {
+    <span class="sh-str">"type"</span>: <span class="sh-str">"function"</span>,
+    <span class="sh-str">"function"</span>: {
+      <span class="sh-str">"name"</span>: <span class="sh-str">"search_web"</span>,
+      <span class="sh-str">"description"</span>: <span class="sh-str">"Search the web and return ranked results."</span>,
+      <span class="sh-str">"parameters"</span>: {
+        <span class="sh-str">"type"</span>: <span class="sh-str">"object"</span>,
+        <span class="sh-str">"properties"</span>: {
+          <span class="sh-str">"query"</span>:       { <span class="sh-str">"type"</span>: <span class="sh-str">"string"</span> },
+          <span class="sh-str">"max_results"</span>: { <span class="sh-str">"type"</span>: <span class="sh-str">"integer"</span>, <span class="sh-str">"default"</span>: <span class="sh-num">10</span> }
+        },
+        <span class="sh-str">"required"</span>: [<span class="sh-str">"query"</span>]
+      }
+    }
+  }
+]</pre>
+        </div>
+
+        <!-- Anthropic output -->
+        <div class="tab-pane" id="tab-anthropic">
+          <pre><span class="sh-cmt"># nail fc convert tools.nail --provider anthropic</span>
+
+[
+  {
+    <span class="sh-str">"name"</span>: <span class="sh-str">"search_web"</span>,
+    <span class="sh-str">"description"</span>: <span class="sh-str">"Search the web and return ranked results."</span>,
+    <span class="sh-str">"input_schema"</span>: {
+      <span class="sh-str">"type"</span>: <span class="sh-str">"object"</span>,
+      <span class="sh-str">"properties"</span>: {
+        <span class="sh-str">"query"</span>:       { <span class="sh-str">"type"</span>: <span class="sh-str">"string"</span> },
+        <span class="sh-str">"max_results"</span>: { <span class="sh-str">"type"</span>: <span class="sh-str">"integer"</span>, <span class="sh-str">"default"</span>: <span class="sh-num">10</span> }
+      },
+      <span class="sh-str">"required"</span>: [<span class="sh-str">"query"</span>]
+    }
+  }
+]</pre>
+        </div>
+
+        <!-- Gemini output -->
+        <div class="tab-pane" id="tab-gemini">
+          <pre><span class="sh-cmt"># nail fc convert tools.nail --provider gemini</span>
+
+{
+  <span class="sh-str">"function_declarations"</span>: [
+    {
+      <span class="sh-str">"name"</span>: <span class="sh-str">"search_web"</span>,
+      <span class="sh-str">"description"</span>: <span class="sh-str">"Search the web and return ranked results."</span>,
+      <span class="sh-str">"parameters"</span>: {
+        <span class="sh-str">"type"</span>: <span class="sh-str">"OBJECT"</span>,
+        <span class="sh-str">"properties"</span>: {
+          <span class="sh-str">"query"</span>:       { <span class="sh-str">"type"</span>: <span class="sh-str">"STRING"</span> },
+          <span class="sh-str">"max_results"</span>: { <span class="sh-str">"type"</span>: <span class="sh-str">"INTEGER"</span> }
+        },
+        <span class="sh-str">"required"</span>: [<span class="sh-str">"query"</span>]
+      }
+    }
+  ]
+}</pre>
         </div>
       </div>
-      <pre id="output" class="output-panel"><span class="output-placeholder">Run a program to see output here…</span></pre>
     </div>
+  </section>
 
-  </div>
+  <!-- ── Effect System ────────────────────────────────────────────── -->
+  <section id="effects">
+    <div class="container">
+      <div class="section-label">Effect System</div>
+      <h2 class="section-title">Sandbox your agents.</h2>
+      <p class="section-sub">
+        Declare what your tools can do. Block everything else — at check time,
+        before a single token is generated.
+      </p>
 
-  <!-- Status bar -->
-  <div id="status-bar" class="status-bar">
-    <span id="status-text">Ready · ⌘Enter or Ctrl+Enter to run</span>
-  </div>
+      <div class="code-block" style="border-radius:10px; margin-bottom: 32px;">
+        <div class="code-block-header">
+          <span class="lang">python</span>
+        </div>
+        <pre><span class="sh-py-kw">from</span> nail_lang <span class="sh-py-kw">import</span> filter_by_effects
 
-</div><!-- /.app -->
+<span class="sh-py-cmt"># Allow only file system and I/O — block network and process calls</span>
+safe_tools = <span class="sh-py-fn">filter_by_effects</span>(all_tools, allowed=[<span class="sh-py-str">"FS"</span>, <span class="sh-py-str">"IO"</span>])
+<span class="sh-py-cmt"># → Blocks NET, PROC. Unannotated tools excluded by default.</span>
 
+response = client.chat.completions.create(
+    tools=safe_tools,
+    messages=messages,
+    <span class="sh-dim">...</span>
+)</pre>
+      </div>
 
-<!-- Pyodide CDN -->
-<script src="https://cdn.jsdelivr.net/pyodide/v0.27.0/full/pyodide.js"></script>
+      <div class="cards" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+        <div class="card">
+          <div class="card-title" style="font-family:var(--font-mono); color:var(--accent);">@NET</div>
+          <div class="card-desc">External network access. HTTP, DNS, WebSocket.</div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="font-family:var(--font-mono); color:var(--accent);">@FS</div>
+          <div class="card-desc">File system read or write. Local paths only.</div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="font-family:var(--font-mono); color:var(--accent);">@IO</div>
+          <div class="card-desc">General I/O. Stdin, stdout, device access.</div>
+        </div>
+        <div class="card">
+          <div class="card-title" style="font-family:var(--font-mono); color:var(--accent);">@PROC</div>
+          <div class="card-desc">Subprocess or shell execution. Highest risk.</div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<script>
-// ════════════════════════════════════════════════════════════════════════════
-// NAIL Playground — Pyodide (static GitHub Pages edition)
-// ════════════════════════════════════════════════════════════════════════════
+  <!-- ── Verification Layers ──────────────────────────────────────── -->
+  <section id="verify">
+    <div class="container">
+      <div class="section-label">Verification</div>
+      <h2 class="section-title">Verify before you run.</h2>
+      <p class="section-sub">
+        NAIL checks your tool specs at four levels before they ever reach a model.
+      </p>
 
-// ── Example Programs ─────────────────────────────────────────────────────────
+      <div class="verify-grid">
+        <div class="verify-card">
+          <span class="level-badge">L0</span>
+          <h3>Schema validation</h3>
+          <p>JSON schema conformance check. Malformed specs are rejected immediately.</p>
+        </div>
+        <div class="verify-card">
+          <span class="level-badge">L1</span>
+          <h3>Type checker</h3>
+          <p>Parameter types resolved: <code style="font-family:var(--font-mono);font-size:12px;">int</code> / <code style="font-family:var(--font-mono);font-size:12px;">string</code> / <code style="font-family:var(--font-mono);font-size:12px;">bool</code>. No implicit coercions.</p>
+        </div>
+        <div class="verify-card">
+          <span class="level-badge">L2</span>
+          <h3>Effect checker</h3>
+          <p>IO in a pure function is a compile error. Effects must be declared explicitly.</p>
+        </div>
+        <div class="verify-card">
+          <span class="level-badge">L3</span>
+          <h3>Termination proof</h3>
+          <p>Any loop in a tool spec must provably halt. Infinite loops are rejected at compile time.</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-const EXAMPLES = {
-  hello: {
-    label: "Hello, NAIL",
-    description: "Prints a greeting. No arguments needed.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "main",
-      "effects": ["IO"],
-      "params": [],
-      "returns": { "type": "unit" },
-      "body": [
-        { "op": "print", "val": { "lit": "Hello, NAIL" }, "effect": "IO" },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
+  <!-- ── Quickstart ───────────────────────────────────────────────── -->
+  <section id="quickstart">
+    <div class="container">
+      <div class="section-label">Get Started</div>
+      <h2 class="section-title">Up in 60 seconds.</h2>
+      <p class="section-sub">
+        Install, check your existing tools, and convert to any provider — all from the CLI.
+      </p>
 
-  fibonacci: {
-    label: "Fibonacci(n)",
-    description: "Computes the Nth Fibonacci number. Set Args: n=10",
-    args: { n: 10 },
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "fibonacci",
-      "effects": [],
-      "params": [
-        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
-      ],
-      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
-      "body": [
-        { "op": "let", "id": "a", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
-        { "op": "let", "id": "b", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 1 }, "mut": true },
-        { "op": "let", "id": "tmp", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
-        {
-          "op": "loop",
-          "bind": "i",
-          "from": { "lit": 0 },
-          "to": { "ref": "n" },
-          "step": { "lit": 1 },
-          "body": [
-            { "op": "assign", "id": "tmp", "val": { "op": "+", "l": { "ref": "a" }, "r": { "ref": "b" } } },
-            { "op": "assign", "id": "a", "val": { "ref": "b" } },
-            { "op": "assign", "id": "b", "val": { "ref": "tmp" } }
-          ]
-        },
-        { "op": "return", "val": { "ref": "a" } }
-      ]
-    }
-  },
+      <div class="quickstart-block">
+        <div class="qs-header">
+          <div class="qs-dot"></div>
+          <div class="qs-dot"></div>
+          <div class="qs-dot"></div>
+          <span class="qs-title">terminal</span>
+        </div>
+        <pre><span class="sh-bash-cmd">pip install</span> nail-lang
 
-  factorial: {
-    label: "Factorial(n)",
-    description: "Computes n! iteratively. Set Args: n=10",
-    args: { n: 10 },
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "factorial",
-      "effects": [],
-      "params": [
-        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
-      ],
-      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
-      "body": [
-        { "op": "let", "id": "result", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 1 }, "mut": true },
-        {
-          "op": "loop",
-          "bind": "i",
-          "from": { "lit": 1 },
-          "to": { "op": "+", "l": { "ref": "n" }, "r": { "lit": 1 } },
-          "step": { "lit": 1 },
-          "body": [
-            { "op": "assign", "id": "result", "val": { "op": "*", "l": { "ref": "result" }, "r": { "ref": "i" } } }
-          ]
-        },
-        { "op": "return", "val": { "ref": "result" } }
-      ]
-    }
-  },
+<span class="sh-bash-cmt"># Check tools against a provider</span>
+<span class="sh-bash-cmd">nail fc check</span> tools.nail <span class="sh-bash-flag">--provider</span> openai
 
-  countdown: {
-    label: "Countdown",
-    description: "Counts down 5→1, then prints Liftoff!",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "main",
-      "effects": ["IO"],
-      "params": [],
-      "returns": { "type": "unit" },
-      "body": [
-        { "op": "let", "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 5 } },
-        {
-          "op": "loop",
-          "bind": "i",
-          "from": { "lit": 0 },
-          "to": { "lit": 5 },
-          "step": { "lit": 1 },
-          "body": [
-            {
-              "op": "print",
-              "val": { "op": "int_to_str", "v": { "op": "-", "l": { "ref": "n" }, "r": { "ref": "i" } } },
-              "effect": "IO"
-            }
-          ]
-        },
-        { "op": "print", "val": { "lit": "Liftoff!" }, "effect": "IO" },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
+<span class="sh-bash-cmt"># Convert to any provider</span>
+<span class="sh-bash-cmd">nail fc convert</span> tools.nail <span class="sh-bash-flag">--provider</span> anthropic <span class="sh-bash-flag">></span> tools.json
+<span class="sh-bash-cmd">nail fc convert</span> tools.nail <span class="sh-bash-flag">--provider</span> gemini   <span class="sh-bash-flag">></span> tools.json
 
-  sum_loop: {
-    label: "Sum 1..10",
-    description: "Sums integers from 1 to 10 using a loop.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "main",
-      "effects": ["IO"],
-      "params": [],
-      "returns": { "type": "unit" },
-      "body": [
-        { "op": "let", "id": "total", "type": { "type": "int", "bits": 64, "overflow": "panic" }, "val": { "lit": 0 }, "mut": true },
-        {
-          "op": "loop",
-          "bind": "i",
-          "from": { "lit": 1 },
-          "to": { "lit": 11 },
-          "step": { "lit": 1 },
-          "body": [
-            { "op": "assign", "id": "total", "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } } }
-          ]
-        },
-        {
-          "op": "print",
-          "val": { "op": "concat", "l": { "lit": "Sum 1..10 = " }, "r": { "op": "int_to_str", "v": { "ref": "total" } } },
-          "effect": "IO"
-        },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
+<span class="sh-bash-cmt"># Import existing schemas</span>
+<span class="sh-bash-cmd">nail fc import</span> openai_tools.json <span class="sh-bash-flag">--from</span> openai</pre>
+      </div>
 
-  is_even: {
-    label: "Is Even?",
-    description: "Returns true if n is even. Set Args: n=42",
-    args: { n: 42 },
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "is_even",
-      "effects": [],
-      "params": [
-        { "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
-      ],
-      "returns": { "type": "bool" },
-      "body": [
-        {
-          "op": "return",
-          "val": {
-            "op": "eq",
-            "l": { "op": "%", "l": { "ref": "n" }, "r": { "lit": 2 } },
-            "r": { "lit": 0 }
-          }
-        }
-      ]
-    }
-  },
+      <div style="margin-top:32px; display:flex; gap:12px; flex-wrap:wrap;">
+        <a href="/playground.html" class="btn btn-primary">Try in Playground →</a>
+        <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener" class="btn btn-outline">Read the docs ↗</a>
+      </div>
+    </div>
+  </section>
 
-  effect_violation: {
-    label: "✗ Effect violation: IO in pure function",
-    description: "Fails at L2: pure function (`effects: []`) cannot call `print` with IO effect.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "pure_but_prints",
-      "effects": [],
-      "params": [],
-      "returns": { "type": "unit" },
-      "body": [
-        { "op": "print", "val": { "lit": "This must fail at check-time." }, "effect": "IO" },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
+  <!-- ── Footer ───────────────────────────────────────────────────── -->
+  <footer>
+    <div class="container">
+      <div class="footer-links">
+        <a href="https://github.com/watari-ai/nail" target="_blank" rel="noopener">GitHub</a>
+        <span class="sep">·</span>
+        <a href="https://pypi.org/project/nail-lang/" target="_blank" rel="noopener">PyPI</a>
+        <span class="sep">·</span>
+        <a href="/playground.html">Playground</a>
+        <span class="sep">·</span>
+        <a href="https://naillang.com">naillang.com</a>
+      </div>
+      <div class="footer-meta">NAIL is experimental · v0.9.0 · MIT License</div>
+      <div class="footer-tagline">Built by AI, for AI.</div>
+    </div>
+  </footer>
 
-  type_mismatch: {
-    label: "✗ Type mismatch: string where int is expected",
-    description: "Fails at L1: passes a string into integer addition.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "bad_add",
-      "effects": [],
-      "params": [],
-      "returns": { "type": "int", "bits": 64, "overflow": "panic" },
-      "body": [
-        {
-          "op": "return",
-          "val": {
-            "op": "+",
-            "l": { "lit": 1 },
-            "r": { "lit": "hello" }
-          }
-        }
-      ]
-    }
-  },
-
-  // ── v0.4 Examples ──────────────────────────────────────────────────────────
-
-  type_aliases: {
-    label: "Type Aliases",
-    group: "v0.4",
-    description: "Demonstrates module-level type aliases (v0.4). UserId, Score, and Username are aliases. The rank_label function accepts a Score alias and returns a Username alias.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "module",
-      "id": "type_aliases_demo",
-      "types": {
-        "UserId":   { "type": "int", "bits": 64, "overflow": "panic" },
-        "Score":    { "type": "int", "bits": 64, "overflow": "panic" },
-        "Username": { "type": "string" }
-      },
-      "exports": ["main"],
-      "defs": [
-        {
-          "nail": "0.4.0",
-          "kind": "fn",
-          "id": "rank_label",
-          "effects": [],
-          "params": [
-            { "id": "score", "type": { "type": "alias", "name": "Score" } }
-          ],
-          "returns": { "type": "alias", "name": "Username" },
-          "body": [
-            {
-              "op": "if",
-              "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 90 } },
-              "then": [ { "op": "return", "val": { "lit": "Gold" } } ],
-              "else": [
-                {
-                  "op": "if",
-                  "cond": { "op": "gte", "l": { "ref": "score" }, "r": { "lit": 70 } },
-                  "then": [ { "op": "return", "val": { "lit": "Silver" } } ],
-                  "else": [ { "op": "return", "val": { "lit": "Bronze" } } ]
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "nail": "0.4.0",
-          "kind": "fn",
-          "id": "main",
-          "effects": ["IO"],
-          "params": [],
-          "returns": { "type": "unit" },
-          "body": [
-            { "op": "let", "id": "uid",   "type": { "type": "alias", "name": "UserId"   }, "val": { "lit": 42 } },
-            { "op": "let", "id": "score", "type": { "type": "alias", "name": "Score"    }, "val": { "lit": 85 } },
-            {
-              "op": "let", "id": "label",
-              "type": { "type": "alias", "name": "Username" },
-              "val": { "op": "call", "fn": "rank_label", "args": [ { "ref": "score" } ] }
-            },
-            {
-              "op": "print",
-              "val": {
-                "op": "concat", "l": { "lit": "User #" },
-                "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "uid" } },
-                  "r": { "op": "concat", "l": { "lit": " \u2014 Score: " },
-                    "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "score" } },
-                      "r": { "op": "concat", "l": { "lit": " \u2192 Rank: " }, "r": { "ref": "label" } }
-                    }
-                  }
-                }
-              },
-              "effect": "IO"
-            },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      ]
-    }
-  },
-
-  fine_grained_effect: {
-    label: "Fine-grained FS Effect",
-    group: "v0.4",
-    description: "Demonstrates structured effect capabilities (v0.4). The function declares { kind: 'FS', allow: ['/tmp/'], ops: ['read'] } — read-only access restricted to /tmp/.",
-    args: {},
-    program: {
-      "nail": "0.4.0",
-      "kind": "fn",
-      "id": "read_demo",
-      "effects": [
-        { "kind": "FS", "allow": ["/tmp/"], "ops": ["read"] },
-        "IO"
-      ],
-      "params": [],
-      "returns": { "type": "unit" },
-      "body": [
-        {
-          "op": "read_file",
-          "path": { "lit": "/tmp/nail_demo.txt" },
-          "effect": "FS",
-          "into": "contents"
-        },
-        {
-          "op": "print",
-          "val": { "op": "concat", "l": { "lit": "File says: " }, "r": { "ref": "contents" } },
-          "effect": "IO"
-        },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
-
-  // ── v0.5 Examples ──────────────────────────────────────────────────────────
-
-  enum_adt: {
-    label: "Enum / ADT",
-    group: "v0.5",
-    description: "Algebraic Data Types (v0.5). Defines a Shape enum with Circle and Rectangle variants. enum_make constructs a variant; match_enum dispatches exhaustively with field binding.",
-    args: {},
-    program: {
-      "nail": "0.5.0",
-      "kind": "module",
-      "id": "shape_demo",
-      "exports": ["main"],
-      "types": {
-        "Shape": {
-          "type": "enum",
-          "variants": [
-            { "tag": "Circle",    "fields": [{ "name": "radius", "type": { "type": "float", "bits": 64 } }] },
-            { "tag": "Rectangle", "fields": [{ "name": "w", "type": { "type": "float", "bits": 64 } },
-                                              { "name": "h", "type": { "type": "float", "bits": 64 } }] }
-          ]
-        }
-      },
-      "defs": [
-        {
-          "nail": "0.5.0",
-          "kind": "fn",
-          "id": "main",
-          "effects": ["IO"],
-          "params": [],
-          "returns": { "type": "unit" },
-          "body": [
-            { "op": "enum_make", "tag": "Circle", "fields": { "radius": { "lit": 3.0 } }, "into": "shape" },
-            {
-              "op": "match_enum",
-              "val": { "ref": "shape" },
-              "cases": [
-                {
-                  "tag": "Circle",
-                  "bind": { "r": "radius" },
-                  "body": [
-                    { "op": "print", "effect": "IO",
-                      "val": { "op": "concat", "l": { "lit": "Circle: radius=" },
-                               "r": { "op": "int_to_str", "v": { "lit": 3 } } } },
-                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-                  ]
-                },
-                {
-                  "tag": "Rectangle",
-                  "bind": { "width": "w", "height": "h" },
-                  "body": [
-                    { "op": "print", "effect": "IO", "val": { "lit": "Rectangle" } },
-                    { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-                  ]
-                }
-              ]
-            }
-          ]
-        }
-      ]
-    }
-  },
-
-  stdlib_math: {
-    label: "Core StdLib",
-    group: "v0.5",
-    description: "Core standard library math functions (v0.5): abs, clamp, min2, max2. Pass a negative number to see abs() at work.",
-    args: { n: -42 },
-    program: {
-      "nail": "0.5.0",
-      "kind": "fn",
-      "id": "main",
-      "effects": ["IO"],
-      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
-      "returns": { "type": "unit" },
-      "body": [
-        {
-          "op": "let", "id": "a",
-          "type": { "type": "int", "bits": 64, "overflow": "panic" },
-          "val": { "op": "abs", "val": { "ref": "n" } }
-        },
-        {
-          "op": "let", "id": "clamped",
-          "type": { "type": "int", "bits": 64, "overflow": "panic" },
-          "val": { "op": "clamp", "val": { "ref": "a" }, "lo": { "lit": 0 }, "hi": { "lit": 100 } }
-        },
-        {
-          "op": "let", "id": "small",
-          "type": { "type": "int", "bits": 64, "overflow": "panic" },
-          "val": { "op": "min2", "l": { "ref": "a" }, "r": { "lit": 50 } }
-        },
-        {
-          "op": "print", "effect": "IO",
-          "val": { "op": "concat", "l": { "lit": "abs(" },
-                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
-                          "r": { "op": "concat", "l": { "lit": ") = " },
-                                 "r": { "op": "int_to_str", "v": { "ref": "a" } } } } }
-        },
-        {
-          "op": "print", "effect": "IO",
-          "val": { "op": "concat", "l": { "lit": "clamp(a, 0, 100) = " },
-                   "r": { "op": "int_to_str", "v": { "ref": "clamped" } } }
-        },
-        {
-          "op": "print", "effect": "IO",
-          "val": { "op": "concat", "l": { "lit": "min(a, 50) = " },
-                   "r": { "op": "int_to_str", "v": { "ref": "small" } } }
-        },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
-
-  // ── v0.6 Examples ──────────────────────────────────────────────────────────
-
-  l3_termination: {
-    label: "L3 Termination Proof",
-    group: "v0.6",
-    description: "Level 3 Termination Proof (v0.6). This loop sums 1..n. At L3, NAIL proves the loop terminates because step=1 is a non-zero literal. Run `nail check --level 3` to see the termination certificate.",
-    args: { n: 10 },
-    program: {
-      "nail": "0.6.0",
-      "kind": "fn",
-      "id": "main",
-      "effects": ["IO"],
-      "params": [{ "id": "n", "type": { "type": "int", "bits": 64, "overflow": "panic" } }],
-      "returns": { "type": "unit" },
-      "body": [
-        {
-          "op": "let", "id": "total",
-          "type": { "type": "int", "bits": 64, "overflow": "panic" },
-          "val": { "lit": 0 }, "mut": true
-        },
-        {
-          "op": "loop",
-          "bind": "i",
-          "from": { "lit": 1 },
-          "to": { "ref": "n" },
-          "step": { "lit": 1 },
-          "body": [
-            {
-              "op": "assign", "id": "total",
-              "val": { "op": "+", "l": { "ref": "total" }, "r": { "ref": "i" } }
-            }
-          ]
-        },
-        {
-          "op": "print", "effect": "IO",
-          "val": { "op": "concat", "l": { "lit": "sum(1.." },
-                   "r": { "op": "concat", "l": { "op": "int_to_str", "v": { "ref": "n" } },
-                          "r": { "op": "concat", "l": { "lit": ") = " },
-                                 "r": { "op": "int_to_str", "v": { "ref": "total" } } } } }
-        },
-        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-      ]
-    }
-  },
-
-  // ── v0.7 Examples ──────────────────────────────────────────────────────────
-
-  generics_identity: {
-    label: "Generics — identity[T]",
-    group: "v0.7",
-    description: "Generic function (v0.7). identity[T](x: T) -> T works for any type. Called twice: once with int, once with string. The checker infers T from the argument — no type annotations at call sites.",
-    args: {},
-    program: {
-      "nail": "0.7.0",
-      "kind": "module",
-      "id": "generics_demo",
-      "exports": ["main"],
-      "defs": [
-        {
-          "nail": "0.7.0",
-          "kind": "fn",
-          "id": "identity",
-          "type_params": ["T"],
-          "effects": [],
-          "params": [
-            { "id": "x", "type": { "type": "param", "name": "T" } }
-          ],
-          "returns": { "type": "param", "name": "T" },
-          "body": [
-            { "op": "return", "val": { "ref": "x" } }
-          ]
-        },
-        {
-          "nail": "0.7.0",
-          "kind": "fn",
-          "id": "main",
-          "effects": ["IO"],
-          "params": [],
-          "returns": { "type": "unit" },
-          "body": [
-            {
-              "op": "let", "id": "n",
-              "type": { "type": "int", "bits": 64, "overflow": "panic" },
-              "val": { "op": "call", "fn": "identity", "args": [{ "lit": 42 }] }
-            },
-            {
-              "op": "let", "id": "s",
-              "type": { "type": "string" },
-              "val": { "op": "call", "fn": "identity", "args": [{ "lit": "NAIL" }] }
-            },
-            {
-              "op": "print", "effect": "IO",
-              "val": { "op": "concat", "l": { "lit": "identity(42) = " },
-                       "r": { "op": "int_to_str", "v": { "ref": "n" } } }
-            },
-            {
-              "op": "print", "effect": "IO",
-              "val": { "op": "concat", "l": { "lit": "identity(\"NAIL\") = " }, "r": { "ref": "s" } }
-            },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      ]
-    }
-  },
-
-  mcp_bridge: {
-    label: "MCP Bridge",
-    group: "v0.7",
-    description: "MCP Bridge (v0.7). from_mcp() converts MCP tool definitions to NAIL effect-annotated format; to_mcp() strips NAIL extensions back to MCP format. Enables seamless interop between MCP servers and NAIL-verified agents.",
-    args: {},
-    program: {
-      "nail": "0.8.0",
-      "kind": "module",
-      "id": "mcp_bridge_demo",
-      "fns": {
-        "demo": {
-          "params": [],
-          "returns": { "type": "unit" },
-          "effects": ["IO"],
-          "body": [
-            { "op": "print", "val": { "lit": "MCP Bridge: from_mcp() converts MCP tools to NAIL effect-annotated format" }, "effect": "IO" },
-            { "op": "print", "val": { "lit": "to_mcp() strips NAIL extensions back to MCP format" }, "effect": "IO" },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      }
-    }
-  },
-
-  // ── v0.8 Examples ──────────────────────────────────────────────────────────
-
-  fc_standard: {
-    label: "FC Standard",
-    group: "v0.8",
-    description: "FC Standard (v0.8). convert_tools() converts tool definitions between OpenAI, Anthropic, and Gemini formats. Effects are preserved as NAIL annotations across all providers — enabling portable, verifiable AI tool calls.",
-    args: {},
-    program: {
-      "nail": "0.8.0",
-      "kind": "module",
-      "id": "fc_standard_demo",
-      "fns": {
-        "demo": {
-          "params": [],
-          "returns": { "type": "unit" },
-          "effects": ["IO"],
-          "body": [
-            { "op": "print", "val": { "lit": "FC Standard: convert_tools() converts between OpenAI/Anthropic/Gemini formats" }, "effect": "IO" },
-            { "op": "print", "val": { "lit": "Effects are preserved as NAIL annotations across all providers" }, "effect": "IO" },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      }
-    }
-  }
-};
-
-// ── DOM Refs ─────────────────────────────────────────────────────────────────
-
-const editorEl    = document.getElementById("editor");
-const argsEl      = document.getElementById("args-input");
-const outputEl    = document.getElementById("output");
-const runBtn      = document.getElementById("run-btn");
-const shareBtn    = document.getElementById("share-btn");
-const exampleSel  = document.getElementById("example-select");
-const statusText  = document.getElementById("status-text");
-const statusBar   = document.getElementById("status-bar");
-const formatBtn   = document.getElementById("format-btn");
-const copyBtn     = document.getElementById("copy-btn");
-const clearBtn    = document.getElementById("clear-btn");
-const loadingEl   = document.getElementById("loading-overlay");
-const loadingMsg  = document.getElementById("loading-msg");
-const appEl       = document.getElementById("app");
-
-// ── State ─────────────────────────────────────────────────────────────────────
-
-let pyodide = null;
-let pyodideReady = false;
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function setStatus(msg, kind = "info") {
-  statusText.textContent = msg;
-  statusBar.className = "status-bar " + kind;
-}
-
-function showOutput(text, mode = "neutral") {
-  outputEl.textContent = text;
-  outputEl.className = "output-panel " + mode;
-}
-
-function showOutputHTML(html) {
-  outputEl.innerHTML = html;
-  outputEl.className = "output-panel";
-}
-
-function parseArgs(raw) {
-  const args = {};
-  if (!raw || !raw.trim()) return args;
-  for (const part of raw.split(",")) {
-    const eq = part.indexOf("=");
-    if (eq < 1) continue;
-    const key = part.slice(0, eq).trim();
-    const val = part.slice(eq + 1).trim();
-    if (!key) continue;
-    if (val === "true")  { args[key] = true;  continue; }
-    if (val === "false") { args[key] = false; continue; }
-    const asInt = parseInt(val, 10);
-    if (!isNaN(asInt) && String(asInt) === val) { args[key] = asInt; continue; }
-    const asFloat = parseFloat(val);
-    if (!isNaN(asFloat)) { args[key] = asFloat; continue; }
-    args[key] = val;
-  }
-  return args;
-}
-
-function argsToString(args) {
-  if (!args || Object.keys(args).length === 0) return "";
-  return Object.entries(args).map(([k, v]) => `${k}=${v}`).join(", ");
-}
-
-function formatErrorMsg(raw) {
-  // Make interpreter error messages user-friendly
-  if (!raw) return "Unknown error";
-  let msg = String(raw);
-  // Strip Python traceback boilerplate, keep the actual message
-  const lines = msg.split("\n");
-  // Find the last non-empty line for single-line errors
-  const lastMeaningful = lines.filter(l => l.trim()).pop() || msg;
-  // Unwrap common Python exception prefixes
-  const unwrap = lastMeaningful
-    .replace(/^(nail\.interpreter\.\w+Error|CheckError|NailTypeError|NailEffectError|NailRuntimeError):\s*/i, "")
-    .replace(/^Exception:\s*/i, "");
-  return unwrap;
-}
-
-// ── Pyodide Bootstrap ─────────────────────────────────────────────────────────
-
-async function initPyodide() {
-  try {
-    loadingMsg.textContent = "Loading Pyodide runtime… (first load ~5–10s)";
-    pyodide = await loadPyodide();
-
-    loadingMsg.textContent = "Loading NAIL interpreter…";
-
-    // Fetch all interpreter files and write to Pyodide FS
-    const files = [
-      "interpreter/__init__.py",
-      "interpreter/types.py",
-      "interpreter/checker.py",
-      "interpreter/runtime.py",
-    ];
-
-    // Create the interpreter directory in Pyodide's virtual FS
-    pyodide.FS.mkdir("/interpreter");
-
-    for (const filePath of files) {
-      const fileName = filePath.split("/").pop();
-      const res = await fetch(filePath);
-      if (!res.ok) throw new Error(`Failed to fetch ${filePath}: ${res.status} ${res.statusText}`);
-      const text = await res.text();
-      pyodide.FS.writeFile(`/interpreter/${fileName}`, text);
+  <script>
+    // ── Copy install command ──────────────────────────────────────
+    function copyInstall() {
+      navigator.clipboard.writeText('pip install nail-lang').then(() => {
+        const btn = document.getElementById('copyInstall');
+        btn.textContent = 'copied!';
+        btn.classList.add('copied');
+        setTimeout(() => {
+          btn.textContent = 'copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
     }
 
-    // Verify the interpreter loads correctly
-    await pyodide.runPythonAsync(`
-import sys
-sys.path.insert(0, '/')
-from interpreter import Checker, Runtime
-from interpreter.runtime import UNIT
-`);
-
-    pyodideReady = true;
-    loadingEl.classList.add("hidden");
-    appEl.style.display = "flex";
-    setStatus("Ready · ⌘Enter or Ctrl+Enter to run");
-
-  } catch (err) {
-    loadingMsg.textContent = `❌ Failed to initialize: ${err.message}`;
-    loadingMsg.style.color = "#e94560";
-    console.error("Pyodide init error:", err);
-  }
-}
-
-// ── Run ───────────────────────────────────────────────────────────────────────
-
-async function runProgram() {
-  if (!pyodideReady) {
-    setStatus("⚠ Interpreter not ready yet — please wait", "warn");
-    return;
-  }
-
-  // Parse JSON
-  let program;
-  try {
-    program = JSON.parse(editorEl.value);
-  } catch (e) {
-    showOutput(`❌ JSON parse error: ${e.message}`, "error");
-    setStatus("Invalid JSON", "error");
-    return;
-  }
-
-  const args = parseArgs(argsEl.value);
-  const programJson = JSON.stringify(program);
-  const argsJson    = JSON.stringify(args);
-
-  runBtn.disabled = true;
-  runBtn.textContent = "Running…";
-  setStatus("Running…", "info");
-
-  const startMs = Date.now();
-
-  try {
-    const result = await pyodide.runPythonAsync(`
-import sys, io, json
-from contextlib import redirect_stdout
-
-# Ensure interpreter is on path
-if '/' not in sys.path:
-    sys.path.insert(0, '/')
-
-from interpreter import Checker, Runtime
-from interpreter.runtime import UNIT
-
-_spec = json.loads(${JSON.stringify(programJson)})
-_args = json.loads(${JSON.stringify(argsJson)})
-
-_output = ""
-_return_val = None
-_error = None
-
-try:
-    _checker = Checker(_spec)
-    _checker.check()
-
-    _captured = io.StringIO()
-    _runtime = Runtime(_spec)
-    with redirect_stdout(_captured):
-        _result = _runtime.run(_args if _args else None)
-
-    _output = _captured.getvalue()
-
-    # Format return value for display
-    if _result is UNIT or _result is None:
-        _return_val = None
-    else:
-        _return_val = repr(_result)
-
-except Exception as _e:
-    _error = str(_e)
-
-# Return a JSON-serialisable dict
-import json as _json
-_json.dumps({"output": _output, "return_val": _return_val, "error": _error})
-`);
-
-    const elapsed = Date.now() - startMs;
-    const data = JSON.parse(result);
-
-    if (data.error) {
-      const friendly = formatErrorMsg(data.error);
-      const partial = data.output ? data.output.trimEnd() + "\n\n" : "";
-      showOutput(`${partial}❌ ${friendly}`, "error");
-      setStatus(`Error · ${elapsed}ms`, "error");
-    } else {
-      let out = "";
-      if (data.output && data.output.trim()) {
-        out = data.output.trimEnd();
-      }
-      if (data.return_val !== null && data.return_val !== undefined) {
-        out += (out ? "\n\n" : "") + `→ ${data.return_val}`;
-      }
-      if (!out) out = "(no output)";
-      showOutput(out, "success");
-      setStatus(`Done · ${elapsed}ms`, "ok");
+    // ── Tab switcher ─────────────────────────────────────────────
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+      document.querySelector(`[onclick="switchTab('${name}')"]`).classList.add('active');
+      document.getElementById('tab-' + name).classList.add('active');
     }
+  </script>
 
-  } catch (err) {
-    const elapsed = Date.now() - startMs;
-    showOutput(`❌ Runtime error: ${err.message}`, "error");
-    setStatus(`Error · ${elapsed}ms`, "error");
-    console.error("Run error:", err);
-  } finally {
-    runBtn.disabled = false;
-    runBtn.textContent = "▶ Run";
-  }
-}
-
-// ── Share / URL ───────────────────────────────────────────────────────────────
-
-function shareProgram() {
-  const program = editorEl.value.trim();
-  const args    = argsEl.value.trim();
-  if (!program) { setStatus("Nothing to share", "warn"); return; }
-  try { JSON.parse(program); } catch (_) {
-    setStatus("Cannot share: invalid JSON in editor", "error"); return;
-  }
-  let hash = "program=" + btoa(unescape(encodeURIComponent(program)));
-  if (args) hash += "&args=" + encodeURIComponent(args);
-  const url = window.location.origin + window.location.pathname + "#" + hash;
-  navigator.clipboard.writeText(url).then(() => {
-    setStatus("Share link copied to clipboard!", "ok");
-    shareBtn.textContent = "✓ Copied!";
-    setTimeout(() => { shareBtn.textContent = "Share"; }, 2000);
-  }).catch(() => {
-    window.history.replaceState(null, "", "#" + hash);
-    setStatus("URL updated — copy from address bar", "info");
-  });
-}
-
-function loadFromUrl() {
-  const hash = window.location.hash.slice(1);
-  if (!hash) return false;
-  const params = new URLSearchParams(hash);
-  const encoded = params.get("program");
-  if (!encoded) return false;
-  try {
-    const program = decodeURIComponent(escape(atob(encoded)));
-    JSON.parse(program); // validate
-    editorEl.value = program;
-    const args = params.get("args");
-    if (args) argsEl.value = decodeURIComponent(args);
-    showOutputHTML(`<span class="output-placeholder">Program loaded from shared link.</span>`);
-    setStatus("Program loaded from shared link", "info");
-    return true;
-  } catch (_) {
-    return false; // malformed — fall back to default
-  }
-}
-
-// ── Format JSON ───────────────────────────────────────────────────────────────
-
-function formatJSON() {
-  try {
-    const parsed = JSON.parse(editorEl.value);
-    editorEl.value = JSON.stringify(parsed, null, 2);
-    setStatus("Formatted", "ok");
-  } catch (e) {
-    setStatus(`Cannot format: ${e.message}`, "error");
-  }
-}
-
-// ── Example Load ──────────────────────────────────────────────────────────────
-
-function loadExample(key) {
-  const ex = EXAMPLES[key];
-  if (!ex) return;
-  editorEl.value = JSON.stringify(ex.program, null, 2);
-  argsEl.value   = argsToString(ex.args);
-  showOutputHTML(`<span class="output-placeholder">${ex.description}</span>`);
-  setStatus(`Loaded: ${ex.label}`, "info");
-}
-
-// ── Copy / Clear ──────────────────────────────────────────────────────────────
-
-function copyOutput() {
-  const text = outputEl.textContent;
-  if (!text) return;
-  navigator.clipboard.writeText(text).then(() => setStatus("Copied to clipboard", "ok"));
-}
-
-function clearOutput() {
-  showOutputHTML(`<span class="output-placeholder">Run a program to see output here…</span>`);
-  setStatus("Cleared", "info");
-}
-
-// ── Resizable Divider ─────────────────────────────────────────────────────────
-
-(function initDivider() {
-  const divider    = document.getElementById("divider");
-  const leftPanel  = document.getElementById("left-panel");
-  const rightPanel = document.getElementById("right-panel");
-  const panels     = document.getElementById("panels");
-  let dragging = false;
-
-  divider.addEventListener("mousedown", (e) => {
-    dragging = true;
-    divider.classList.add("dragging");
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = "col-resize";
-  });
-
-  document.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    const rect = panels.getBoundingClientRect();
-    const offset = e.clientX - rect.left;
-    const total  = rect.width - divider.offsetWidth;
-    const pct    = Math.max(20, Math.min(80, (offset / total) * 100));
-    leftPanel.style.flex  = `0 0 ${pct}%`;
-    rightPanel.style.flex = `0 0 ${100 - pct}%`;
-  });
-
-  document.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = false;
-    divider.classList.remove("dragging");
-    document.body.style.userSelect = "";
-    document.body.style.cursor = "";
-  });
-})();
-
-// ── Keyboard Shortcut ─────────────────────────────────────────────────────────
-
-document.addEventListener("keydown", (e) => {
-  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-    e.preventDefault();
-    runProgram();
-  }
-});
-
-// ── Wire Up Events ────────────────────────────────────────────────────────────
-
-runBtn.addEventListener("click",    runProgram);
-shareBtn.addEventListener("click",  shareProgram);
-formatBtn.addEventListener("click", formatJSON);
-copyBtn.addEventListener("click",   copyOutput);
-clearBtn.addEventListener("click",  clearOutput);
-exampleSel.addEventListener("change", () => loadExample(exampleSel.value));
-
-// ── Populate Dropdown & Load Default ─────────────────────────────────────────
-
-(function init() {
-  // Group examples by their optional `group` property; ungrouped go into "Core"
-  const groups = {};
-  for (const [key, ex] of Object.entries(EXAMPLES)) {
-    const g = ex.group || "Core";
-    if (!groups[g]) groups[g] = [];
-    groups[g].push([key, ex]);
-  }
-
-  for (const [groupName, items] of Object.entries(groups)) {
-    const grp = document.createElement("optgroup");
-    grp.label = groupName;
-    for (const [key, ex] of items) {
-      const opt = document.createElement("option");
-      opt.value       = key;
-      opt.textContent = ex.label;
-      grp.appendChild(opt);
-    }
-    exampleSel.appendChild(grp);
-  }
-
-  // Load from URL hash (shareable link) or fall back to first example
-  if (!loadFromUrl()) {
-    const firstKey = Object.keys(EXAMPLES)[0];
-    exampleSel.value = firstKey;
-    loadExample(firstKey);
-  }
-
-  // Start Pyodide boot
-  initPyodide();
-})();
-</script>
 </body>
 </html>
