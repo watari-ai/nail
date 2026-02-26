@@ -61,6 +61,67 @@ $ nail fc check tools.nail --provider openai
   ERROR: Tool 'exfil_data': declared as PURE but has side-effect labels: ['NET']
 ```
 
+## How is NAIL different from...?
+
+> These questions come up constantly. Here are direct answers.
+
+### vs. TypeSpec (Microsoft)
+
+| | TypeSpec | NAIL |
+|---|---|---|
+| Primary goal | Define REST/GraphQL APIs | Define AI tool schemas + enforce effect isolation |
+| Syntax | TypeScript-like text | JSON (AI-writable, no parser needed) |
+| Effect system | ❌ None | ✅ IO/NET/FS tracked at type level |
+| Cross-provider FC | ❌ Not applicable | ✅ OpenAI / Anthropic / Gemini from one source |
+| AI-native | ❌ Human-first | ✅ Designed for LLMs to generate/consume |
+
+TypeSpec is excellent for API-first development by human engineers. NAIL is designed for AI agents to *write* and *verify* their own tool definitions — a different problem.
+
+---
+
+### vs. OpenAPI / JSON Schema
+
+| | OpenAPI / JSON Schema | NAIL |
+|---|---|---|
+| Describes | REST endpoints / data structures | AI function calls (tool use) |
+| Effect system | ❌ None | ✅ Effect isolation enforced |
+| Verification layers | ❌ Schema validation only | ✅ L0 (schema) → L1 (types) → L2 (effects) → L3 (termination) |
+| Multi-provider | ❌ No concept of "providers" | ✅ Native OpenAI / Anthropic / Gemini converters |
+| Termination proofs | ❌ Not applicable | ✅ L3 emits a halt certificate |
+
+OpenAPI describes *what a service exposes*. NAIL describes *what an agent can call* — and proves it's safe to call.
+
+---
+
+### vs. Pydantic
+
+| | Pydantic | NAIL |
+|---|---|---|
+| Language | Python-specific | Language-agnostic (JSON) |
+| Effect system | ❌ None | ✅ First-class, enforced at check time |
+| Multi-provider FC | ❌ Manual adapters needed | ✅ Built-in converters |
+| AI-writable | ❌ Python syntax required | ✅ Pure JSON, no parser |
+| Termination proofs | ❌ Not applicable | ✅ L3 checker |
+
+Pydantic validates Python objects at runtime. NAIL validates *AI tool schemas* — across providers, before execution, including effect isolation.
+
+---
+
+### vs. Rego / OPA
+
+| | Rego / OPA | NAIL |
+|---|---|---|
+| Domain | Policy enforcement (access control) | AI tool definitions + effect typing |
+| Effect system | ❌ Policy rules, not typed effects | ✅ IO/NET/FS in function signatures |
+| Multi-provider FC | ❌ Not applicable | ✅ Native converters |
+| AI-native | ❌ Human-authored policies | ✅ Designed for LLMs |
+
+Rego excels at answering "is this action allowed?" NAIL answers "does this tool *declaration* have the right effect signature?" — a static, pre-execution guarantee.
+
+---
+
+**TL;DR:** NAIL occupies a gap none of these fill: *AI-native, effect-typed, multi-provider function calling with static verification.*
+
 ## How It Works
 
 | Layer | What it checks |
