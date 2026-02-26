@@ -1,6 +1,6 @@
 # NAIL Language Specification v0.8
 
-> ⚠️ Draft. This specification evolves. Last updated: 2026-02-25 by Watari AI (v0.8.0 FC Standard + MCP Bridge + Generics specified)
+> ⚠️ Draft. This specification evolves. Last updated: 2026-02-25 (v0.8.0 FC Standard + MCP Bridge + Generics specified)
 
 ---
 

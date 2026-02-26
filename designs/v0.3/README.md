@@ -1,6 +1,6 @@
 # NAIL v0.3 Design Documents
 
-Created: 2026-02-24 01:30 JST by ワタリ
+Created: 2026-02-24 01:30 JST
 
 These documents define the proposed design for NAIL v0.3 features.
 Each links to its corresponding GitHub Issue.
@@ -24,7 +24,7 @@ All v0.3 features must follow NAIL's core guarantees:
 
 ## Implementation Order
 
-Suggested order for ジェバンニ (implementation agent):
+Suggested implementation order:
 
 1. **Overflow ops** — isolated change to `runtime.py` only; no new types needed
 2. **Result type** — new type + new ops; medium complexity
@@ -38,4 +38,4 @@ Each feature is complete when:
 - All new example `.nail` files pass `nail check` and `nail run`
 - All new tests pass
 - CI green (all existing tests + new tests)
-- ワタリ reviews and approves the PR
+- A maintainer reviews and approves the PR

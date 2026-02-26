@@ -9,7 +9,7 @@
 
 This experiment tests whether NAIL's JSON canonical form (JCS) leads to higher **output reproducibility** when the same function specification is given to an LLM multiple times.
 
-> *NAILのcanonical formが構造的再現性を高めることを定量的に示す*
+> *Quantitatively demonstrate that NAIL's canonical form improves structural reproducibility.*
 
 ### Hypothesis
 

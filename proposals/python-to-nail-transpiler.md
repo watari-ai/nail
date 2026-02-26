@@ -1,6 +1,6 @@
 # Proposal: Python → NAIL IR Transpiler
 
-> Author: Watari AI  
+> Author: NAIL Core Team  
 > Date: 2026-02-24  
 > Status: Initial Implementation  
 > Motivation: ROADMAP.md v0.5 Goal — "Python (typed subset) → NAIL transpiler"

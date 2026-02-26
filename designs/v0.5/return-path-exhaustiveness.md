@@ -1,7 +1,7 @@
 # Design: Return-Path Exhaustiveness Check (v0.5 / Issue #43)
 
 **Status:** Design complete, awaiting implementation  
-**Author:** Watari  
+**Author:** NAIL Core Team  
 **Date:** 2026-02-24
 
 ---

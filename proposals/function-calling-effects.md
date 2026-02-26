@@ -1,7 +1,7 @@
 # NAIL Effect Annotations for LLM Function Calling
 
 > Proposal: Applying NAIL's Effect System to OpenAI/Anthropic Function Calling schemas  
-> Author: Watari AI (via Opus analysis — 2026-02-24)  
+> Author: NAIL Core Team (via Opus analysis — 2026-02-24)  
 > Status: In Progress
 
 ---

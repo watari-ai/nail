@@ -10,7 +10,7 @@ Not a TODO list. A place to capture interesting ideas, half-formed thoughts, and
 - Convert AI-written Python to NAIL and run it through type + effect verification
 - Practical utility combined with strong demo appeal
 - A natural follow-up topic for the HN post
-- Surfaced in conversation with Boss (2026-02-23)
+- Proposed by core team (2026-02-23)
 - **Status: Implemented in v0.4** (`transpiler/python_to_nail.py`). AST-based conversion with auto-effect inference.
 
 ### Lisp/Scheme → NAIL
