@@ -3,6 +3,8 @@
 [![CI](https://github.com/watari-ai/nail/actions/workflows/ci.yml/badge.svg)](https://github.com/watari-ai/nail/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/nail-lang)](https://pypi.org/project/nail-lang/)
 
+![NAIL effect system — data exfiltration blocked before execution](demos/nail_killer_demo.gif)
+
 NAIL is a CLI tool that lets you:
 
 - Define AI tool schemas once in a typed IR
