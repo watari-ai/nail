@@ -91,7 +91,7 @@ NAIL is a programming language designed for AI agents to write, verify, and exch
 
 Modern AI systems generate code and call tools at scale. NAIL gives that scale a formal foundation.
 
-## Why NAIL? Three Core Guarantees
+## Core Guarantees
 
 | | Guarantee | Example |
 |---|---|---|
@@ -260,7 +260,7 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 
 ## Status
 
-🧪 **Experimental — v0.8.2** on PyPI — `pip install nail-lang`
+🧪 **Experimental — v0.9.0** on PyPI — `pip install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -367,10 +367,6 @@ cd nail
 pip install -r requirements.txt
 ./nail run examples/hello.nail
 ```
-
-## Why NAIL?
-
-See [PHILOSOPHY.md](./PHILOSOPHY.md) for the full reasoning.
 
 ---
 
