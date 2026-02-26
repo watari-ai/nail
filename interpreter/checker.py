@@ -95,6 +95,8 @@ class Checker:
         self._current_type_params: frozenset[str] = frozenset()
         # L3.1: Track which recursive functions had their call-site measures verified
         self._call_site_verified: set[str] = set()
+        # L3.1: Store call-site args for each (caller, callee) edge for mutual recursion checks
+        self._call_edges: dict[tuple[str, str], list] = {}
 
     # -----------------------------------------------------------------------
     # L0: Schema validation
@@ -618,7 +620,21 @@ class Checker:
                                     f"[{fn_id_in_cycle}] L3: termination measure '{measure}' is not a parameter. "
                                     f"Available: {param_ids}"
                                 )
-                            # Record proof — upgraded to "verified" when call-site was checked (L3.1)
+
+                        # L3.1: Verify call-site measures for ALL edges in the cycle
+                        # (covers both direct self-recursion and mutual recursion)
+                        cycle_members = set(cycle[:-1])
+                        for edge_src, edge_dst in zip(cycle[:-1], cycle[1:]):
+                            if edge_src not in self._call_site_verified and edge_dst in cycle_members:
+                                edge_args = self._call_edges.get((edge_src, edge_dst))
+                                if edge_args is not None:
+                                    callee_fn = self.fn_registry.get(edge_dst, {})
+                                    self._verify_call_site_measure(edge_src, edge_dst, callee_fn, edge_args)
+
+                        # Record proofs for each cycle member
+                        for fn_id_in_cycle in cycle[:-1]:
+                            fn = self.fn_registry.get(fn_id_in_cycle, {})
+                            measure = fn.get("termination", {}).get("measure")
                             proof_kind = (
                                 "decreasing_measure_verified"
                                 if fn_id_in_cycle in self._call_site_verified
@@ -1777,9 +1793,11 @@ class Checker:
                     f"[{fn_id}] Arg {i} to '{callee_id}' type mismatch: expected {param_type}, got {arg_type}"
                 )
 
-        # L3.1: Call-site measure verification for direct self-recursion
-        if self.level >= 3 and callee_id == fn_id:
-            self._verify_call_site_measure(fn_id, callee_id, callee, args)
+        # L3.1: Call-site measure verification for recursive calls
+        if self.level >= 3 and callee.get("termination", {}).get("measure"):
+            self._call_edges[(fn_id, callee_id)] = args
+            if callee_id == fn_id:
+                self._verify_call_site_measure(fn_id, callee_id, callee, args)
 
         return self._parse_type(callee["returns"])
 

@@ -422,5 +422,81 @@ class TestIsDecreasingMeasureExpr(unittest.TestCase):
         self.assertFalse(self._ok({"op": "-", "l": {"ref": "n"}, "r": {"lit": True}}, "n"))
 
 
+class TestMutualRecursionCallSiteMeasure(unittest.TestCase):
+    """L3.1: Mutual recursion call-site measure verification (issue #98)."""
+
+    def _mutual_recursion_module(self, a_calls_b_arg, b_calls_a_arg):
+        """Build a module with two mutually recursive functions a and b.
+
+        a(n) → if n==0 return 0 else call b(a_calls_b_arg)
+        b(n) → if n==0 return 0 else call a(b_calls_a_arg)
+        """
+        def make_body(callee, arg_expr):
+            return [
+                {"op": "if",
+                 "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+                 "then": [{"op": "return", "val": {"lit": 0}}],
+                 "else": [{"op": "return", "val": {"op": "call", "fn": callee, "args": [arg_expr]}}]}
+            ]
+
+        fn_a = fn_spec("a",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=make_body("b", a_calls_b_arg),
+            termination={"measure": "n"},
+        )
+        fn_b = fn_spec("b",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=make_body("a", b_calls_a_arg),
+            termination={"measure": "n"},
+        )
+        return module_spec("mutual_rec", [fn_a, fn_b], exports=["a", "b"])
+
+    def test_mutual_recursion_non_decreasing_rejected(self):
+        """a(n) calls b(n) and b(n) calls a(n) — both non-decreasing → REJECT."""
+        spec = self._mutual_recursion_module(
+            a_calls_b_arg={"ref": "n"},
+            b_calls_a_arg={"ref": "n"},
+        )
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def test_mutual_recursion_one_non_decreasing_rejected(self):
+        """a(n) calls b(n-1) but b(n) calls a(n) — one non-decreasing → REJECT."""
+        spec = self._mutual_recursion_module(
+            a_calls_b_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            b_calls_a_arg={"ref": "n"},
+        )
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def test_mutual_recursion_both_decreasing_accepted(self):
+        """a(n) calls b(n-1) and b(n) calls a(n-1) — both decreasing → ACCEPT."""
+        spec = self._mutual_recursion_module(
+            a_calls_b_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            b_calls_a_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+        )
+        # Should pass without error
+        check_l3(spec)
+
+    def test_mutual_recursion_certificate_shows_verified(self):
+        """When both edges decrease, certificate should show 'decreasing_measure_verified'."""
+        spec = self._mutual_recursion_module(
+            a_calls_b_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+            b_calls_a_arg={"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}},
+        )
+        checker = Checker(spec, modules={}, level=3)
+        checker.check()
+        cert = checker.get_termination_certificate()
+        for fn_id in ("a", "b"):
+            proofs = cert["proofs"].get(fn_id, [])
+            rec_proofs = [p for p in proofs if p["kind"] == "recursion"]
+            self.assertTrue(len(rec_proofs) > 0, f"No recursion proof for {fn_id}")
+            self.assertEqual(rec_proofs[0]["proof"], "decreasing_measure_verified")
+
+
 if __name__ == "__main__":
     unittest.main()
