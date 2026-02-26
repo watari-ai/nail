@@ -2,6 +2,17 @@
 
 All notable changes to NAIL are documented here.
 
+## [Unreleased] — toward v1.0.0
+
+### Added
+
+- **spec_version validation** (`#101`) — `meta.spec_version` field validated at L0. Supports `"0.9.x"` and `"1.0.0"`. Missing spec_version → `legacy_mode=True` (warning only, backward-compatible). Invalid format → `CheckError(code="UNSUPPORTED_SPEC_VERSION")`. `CheckError` gains `severity="error"|"warning"` field. All 32 example files updated to include `"spec_version": "0.9.0"`. (commit `0b50805`)
+- **Nail-Lens CLI** (`#102`) — `nail-lens` command-line tool for human-readable spec inspection. Subcommands: `inspect`, `diff`, `validate`, `effects`. Enables Human-in-the-Loop review of LLM-generated specs. Entry point: `nail-lens = "nail_lens.cli:main"`. (commit `cc76341`)
+- **Multi-LLM Verify-Fix Loop benchmark** (`#103`) — `benchmarks/` directory with framework for running NAIL validation across multiple LLM providers (Anthropic/OpenAI/Gemini), feeding errors back for fix loops, and recording agreement rates. Mock adapter available for API-free testing.
+- **v1.0 Strategic Evaluation** (`#15`) — `docs/strategy-v1.0.md`: full analysis of v1.0 roadmap, community strategy (Reddit focus post HN), and EchoPR integration pathway.
+
+---
+
 ## [v0.9.0] — 2026-02-26
 
 ### Added

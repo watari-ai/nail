@@ -1,0 +1,62 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "user_auth",
+  "meta": {"spec_version": "0.9.0", "doc": "User authentication: login, logout, check_session"},
+  "exports": ["login", "logout", "check_session"],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "login",
+      "effects": ["NET", "IO"],
+      "params": [
+        {"id": "username", "type": {"type": "string", "encoding": "utf8"}},
+        {"id": "password", "type": {"type": "string", "encoding": "utf8"}}
+      ],
+      "returns": {
+        "type": "result",
+        "ok":  {"type": "string", "encoding": "utf8"},
+        "err": {"type": "string", "encoding": "utf8"}
+      },
+      "body": [
+        {
+          "op": "return",
+          "val": {"op": "ok", "val": {"lit": "session_token_placeholder"}}
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "logout",
+      "effects": ["NET", "IO"],
+      "params": [
+        {"id": "session_token", "type": {"type": "string", "encoding": "utf8"}}
+      ],
+      "returns": {"type": "unit"},
+      "body": [
+        {
+          "op": "return",
+          "val": {"lit": null, "type": {"type": "unit"}}
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "check_session",
+      "effects": ["NET"],
+      "params": [
+        {"id": "session_token", "type": {"type": "string", "encoding": "utf8"}}
+      ],
+      "returns": {"type": "bool"},
+      "body": [
+        {
+          "op": "return",
+          "val": {"lit": true, "type": {"type": "bool"}}
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "data_pipeline",
+  "meta": {
+    "spec_version": "0.9.0",
+    "doc": "Data pipeline: fetch (NET), transform (loop, L3.1 termination), save (FS)"
+  },
+  "exports": ["fetch", "transform", "save"],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "fetch",
+      "effects": ["NET"],
+      "params": [
+        {"id": "url", "type": {"type": "string", "encoding": "utf8"}}
+      ],
+      "returns": {"type": "string", "encoding": "utf8"},
+      "body": [
+        {
+          "op": "return",
+          "val": {"lit": "", "type": {"type": "string", "encoding": "utf8"}}
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "transform",
+      "effects": [],
+      "params": [
+        {"id": "count", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+      ],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "body": [
+        {
+          "op": "loop",
+          "bind": "i",
+          "from": {"lit": 0},
+          "to":   {"ref": "count"},
+          "step": {"lit": 1},
+          "body": []
+        },
+        {
+          "op": "return",
+          "val": {"ref": "count"}
+        }
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "save",
+      "effects": ["FS"],
+      "params": [
+        {"id": "path", "type": {"type": "string", "encoding": "utf8"}},
+        {"id": "data", "type": {"type": "string", "encoding": "utf8"}}
+      ],
+      "returns": {"type": "unit"},
+      "body": [
+        {
+          "op": "return",
+          "val": {"lit": null, "type": {"type": "unit"}}
+        }
+      ]
+    }
+  ]
+}

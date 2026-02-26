@@ -1,0 +1,51 @@
+{
+  "nail": "0.1.0",
+  "kind": "module",
+  "id": "simple_calculator",
+  "meta": {"spec_version": "0.9.0", "doc": "Basic arithmetic: add, sub, mul"},
+  "exports": ["add", "sub", "mul"],
+  "defs": [
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "add",
+      "effects": [],
+      "params": [
+        {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+        {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+      ],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "body": [
+        {"op": "return", "val": {"l": {"ref": "a"}, "op": "+", "r": {"ref": "b"}}}
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "sub",
+      "effects": [],
+      "params": [
+        {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+        {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+      ],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "body": [
+        {"op": "return", "val": {"l": {"ref": "a"}, "op": "-", "r": {"ref": "b"}}}
+      ]
+    },
+    {
+      "nail": "0.1.0",
+      "kind": "fn",
+      "id": "mul",
+      "effects": [],
+      "params": [
+        {"id": "a", "type": {"type": "int", "bits": 64, "overflow": "panic"}},
+        {"id": "b", "type": {"type": "int", "bits": 64, "overflow": "panic"}}
+      ],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "body": [
+        {"op": "return", "val": {"l": {"ref": "a"}, "op": "*", "r": {"ref": "b"}}}
+      ]
+    }
+  ]
+}
