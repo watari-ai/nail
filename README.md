@@ -321,7 +321,7 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 
 ## Status
 
-🧪 **Experimental — v0.9.0** on PyPI — `pip install nail-lang`
+🧪 **Experimental — v0.9.0** on PyPI — `pipx install nail-lang`
 
 | Feature | Status |
 |---|---|
@@ -417,7 +417,7 @@ See [`playground/README.md`](./playground/README.md) for details.
 **Browser — no install:**
 → [https://naillang.com](https://naillang.com)
 
-**CLI:** `pip install nail-lang`
+**CLI:** `pipx install nail-lang`
 
 **Requirements:** Python 3.10+
 
