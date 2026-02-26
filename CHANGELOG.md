@@ -2,6 +2,19 @@
 
 All notable changes to NAIL are documented here.
 
+## [v0.9.0] — 2026-02-26
+
+### Added
+
+- **Spec Versioning Policy** — Formal definition of breaking vs non-breaking changes, deprecation period rules, and compatibility guarantees for alternative implementations. (`designs/v0.9/spec-versioning-policy.md`)
+- **Conformance Test Suite** — Canonical, implementation-agnostic test set for validating spec compliance of alternative NAIL checkers. 45 tests covering L0/L1/L2/L3/FC layers. (`conformance/`, commit 37ca91c)
+
+### Docs
+
+- `docs/fc-ir-v1.md` — fc_ir_v1 specification translated to English and updated to v0.9.0 freeze-candidate status.
+
+---
+
 ## [v0.8.2] — 2026-02-25
 
 ### Fixed
