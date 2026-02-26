@@ -82,23 +82,36 @@ class TestL0Schema(unittest.TestCase):
 
     def test_missing_nail_version(self):
         spec = {"kind": "fn", "id": "f", "effects": [], "params": [], "returns": UNIT_T, "body": []}
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("nail", err.message)
 
     def test_missing_kind(self):
         spec = {"nail": "0.1.0", "id": "f", "effects": [], "params": [], "returns": UNIT_T, "body": []}
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        # Message may be from jsonschema ("L0 schema violation") or hand-rolled check ("Missing 'kind'")
+        self.assertTrue("kind" in err.message or "L0 schema" in err.message)
 
     def test_unknown_kind(self):
         spec = {"nail": "0.1.0", "kind": "class", "id": "f", "effects": [], "params": [], "returns": UNIT_T, "body": []}
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("class", err.message)
 
     def test_unknown_effect(self):
         spec = fn_spec("f", [], UNIT_T, [], effects=["MAGIC"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("MAGIC", err.message)
 
     def test_valid_fn(self):
         spec = fn_spec("f", [], UNIT_T,
@@ -121,8 +134,10 @@ class TestL0Schema(unittest.TestCase):
             "imports": [{"module": "math_utils"}],
             "defs": [],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertIn("math_utils", err.message)
 
 
 # ──────────────────────────────────────────────
@@ -133,30 +148,42 @@ class TestL1Types(unittest.TestCase):
 
     def test_return_type_mismatch(self):
         spec = fn_spec("f", [], INT64, [{"op": "return", "val": {"lit": True}}])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("mismatch", err.message)
 
     def test_arithmetic_type_mismatch(self):
         spec = fn_spec("f", [], BOOL_T, [
             {"op": "return", "val": {"op": "+", "l": {"lit": 1}, "r": {"lit": True}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("+", err.message)
 
     def test_undefined_variable(self):
         spec = fn_spec("f", [], INT64, [
             {"op": "return", "val": {"ref": "undefined_var"}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("undefined_var", err.message)
 
     def test_let_type_annotation_mismatch(self):
         spec = fn_spec("f", [], UNIT_T, [
             {"op": "let", "id": "x", "type": INT64, "val": {"lit": True}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("x", err.message)
 
     def test_int_to_str_type(self):
         spec = fn_spec("f", [], STR_T, [
@@ -174,8 +201,11 @@ class TestL1Types(unittest.TestCase):
         spec = fn_spec("f", [], STR_T, [
             {"op": "return", "val": {"op": "concat", "l": {"lit": "hello "}, "r": {"lit": 42}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("concat", err.message)
 
 
 class TestTypeAliasesV04(unittest.TestCase):
@@ -208,8 +238,11 @@ class TestTypeAliasesV04(unittest.TestCase):
                 "B": {"type": "alias", "name": "A"},
             },
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Circular", err.message)
 
 
 # ──────────────────────────────────────────────
@@ -238,8 +271,11 @@ class TestL2Effects(unittest.TestCase):
             {"op": "print", "val": {"lit": "hi"}},  # missing "effect" field
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["IO"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("print", err.message)
 
 
 class TestEffectfulOpContract(unittest.TestCase):
@@ -263,32 +299,44 @@ class TestEffectfulOpContract(unittest.TestCase):
             {"op": "read_file", "path": {"lit": "/tmp/demo.txt"}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["FS"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("read_file", err.message)
 
     def test_http_get_without_effect_field_fails(self):
         spec = fn_spec("f", [], UNIT_T, [
             {"op": "http_get", "url": {"lit": "https://example.com"}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["NET"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("http_get", err.message)
 
     def test_read_file_operand_type_validation(self):
         spec = fn_spec("f", [], UNIT_T, [
             {"op": "read_file", "path": {"lit": 123}, "effect": "FS"},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["FS"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("string", err.message)
 
     def test_http_get_operand_type_validation(self):
         spec = fn_spec("f", [], UNIT_T, [
             {"op": "http_get", "url": {"lit": True}, "effect": "NET"},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=["NET"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("string", err.message)
 
     def test_http_get_file_scheme_blocked_by_checker(self):
         """file:// URL must be rejected at check time (issue #37 regression)."""
@@ -296,8 +344,11 @@ class TestEffectfulOpContract(unittest.TestCase):
             {"op": "http_get", "url": {"lit": "file:///etc/passwd"}, "effect": "NET", "into": "body"},
             {"op": "return", "val": {"ref": "body"}},
         ], effects=["NET"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("file", err.message)
 
     def test_http_get_ftp_scheme_blocked_by_checker(self):
         """ftp:// URL must be rejected at check time (issue #37 regression)."""
@@ -305,8 +356,11 @@ class TestEffectfulOpContract(unittest.TestCase):
             {"op": "http_get", "url": {"lit": "ftp://example.com/file"}, "effect": "NET", "into": "body"},
             {"op": "return", "val": {"ref": "body"}},
         ], effects=["NET"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("ftp", err.message)
 
     def test_http_get_file_scheme_blocked_by_runtime(self):
         """file:// URL must be rejected at runtime (issue #37 regression)."""
@@ -343,8 +397,11 @@ class TestEffectfulOpContract(unittest.TestCase):
                 {"op": "read_file", "path": {"lit": str(denied_file)}, "effect": "FS"},
                 {"op": "return", "val": {"lit": None, "type": UNIT_T}},
             ], effects=[{"kind": "FS", "allow": [str(allowed_root)], "ops": ["read"]}])
-            with self.assertRaises(CheckError):
+            with self.assertRaises(CheckError) as cm:
                 Checker(spec).check()
+            err = cm.exception
+            self.assertEqual(err.code, "CHECK_ERROR")
+            self.assertIn("not allowed", err.message)
 
     def test_granular_net_effect_allowed_domain_happy_path(self):
         class _FakeResponse:
@@ -416,8 +473,11 @@ class TestFunctionCalls(unittest.TestCase):
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ], effects=[])
         spec = module_spec("m", [pure_main, io_fn], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "EFFECT_VIOLATION")
+        self.assertIn("IO", err.message)
 
     def test_call_arg_type_mismatch_fails(self):
         callee = fn_spec("id_int", [{"id": "x", "type": INT64}], INT64, [
@@ -427,8 +487,12 @@ class TestFunctionCalls(unittest.TestCase):
             {"op": "return", "val": {"op": "call", "fn": "id_int", "args": [{"lit": "oops"}]}}
         ])
         spec = module_spec("m", [caller, callee], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("id_int", err.message)
+        self.assertIn("type mismatch", err.message)
 
     def test_call_arg_count_mismatch_fails(self):
         callee = fn_spec("one_arg", [{"id": "x", "type": INT64}], INT64, [
@@ -438,24 +502,33 @@ class TestFunctionCalls(unittest.TestCase):
             {"op": "return", "val": {"op": "call", "fn": "one_arg", "args": [{"lit": 1}, {"lit": 2}]}}
         ])
         spec = module_spec("m", [caller, callee], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("one_arg", err.message)
 
     def test_call_unknown_function_fails(self):
         main = fn_spec("main", [], INT64, [
             {"op": "return", "val": {"op": "call", "fn": "missing", "args": []}}
         ])
         spec = module_spec("m", [main], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("missing", err.message)
 
     def test_direct_recursion_fails(self):
         loop_fn = fn_spec("a", [], INT64, [
             {"op": "return", "val": {"op": "call", "fn": "a", "args": []}}
         ])
         spec = module_spec("m", [loop_fn], exports=["a"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Recursive", err.message)
 
     def test_mutual_recursion_fails(self):
         fn_a = fn_spec("a", [], INT64, [
@@ -465,15 +538,21 @@ class TestFunctionCalls(unittest.TestCase):
             {"op": "return", "val": {"op": "call", "fn": "a", "args": []}}
         ])
         spec = module_spec("m", [fn_a, fn_b], exports=["a"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Recursive", err.message)
 
     def test_call_in_fn_kind_fails(self):
         spec = fn_spec("main", [], INT64, [
             {"op": "return", "val": {"op": "call", "fn": "main", "args": []}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("module", err.message)
 
 
 class TestCallOpV024(unittest.TestCase):
@@ -486,8 +565,11 @@ class TestCallOpV024(unittest.TestCase):
         path = Path(__file__).parent.parent / "examples" / "bad_effect_call.nail"
         with open(path) as f:
             spec = json.load(f)
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "EFFECT_VIOLATION")
+        self.assertIn("IO", err.message)
 
     def test_unknown_function_call_raises(self):
         helper = fn_spec("helper", [], INT64, [{"op": "return", "val": {"lit": 1}}])
@@ -495,8 +577,11 @@ class TestCallOpV024(unittest.TestCase):
             {"op": "return", "val": {"op": "call", "fn": "does_not_exist", "args": []}}
         ])
         spec = module_spec("m", [main, helper], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("does_not_exist", err.message)
 
     def test_call_arg_type_mismatch_raises(self):
         helper = fn_spec("helper", [{"id": "n", "type": INT64}], INT64, [
@@ -506,8 +591,12 @@ class TestCallOpV024(unittest.TestCase):
             {"op": "return", "val": {"op": "call", "fn": "helper", "args": [{"lit": "bad"}]}}
         ])
         spec = module_spec("m", [main, helper], exports=["main"])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("helper", err.message)
+        self.assertIn("type mismatch", err.message)
 
 
 # ──────────────────────────────────────────────
@@ -754,15 +843,21 @@ class TestCollectionOpsV04(unittest.TestCase):
             {"op": "list_push", "list": {"ref": "xs"}, "value": {"lit": "bad"}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("list_push", err.message)
 
     def test_map_get_key_type_mismatch_checker_raises(self):
         spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], INT64, [
             {"op": "return", "val": {"op": "map_get", "map": {"ref": "m"}, "key": {"lit": 1}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("map_get", err.message)
 
     def test_list_len_runtime_type_mismatch_raises_nail_type_error(self):
         spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], INT64, [
@@ -814,8 +909,11 @@ class TestStdlibStringOpsV05(unittest.TestCase):
         spec = fn_spec("f", [], BOOL_T, [
             {"op": "return", "val": {"op": "str_contains", "val": {"lit": "abc"}, "sub": {"lit": 1}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("str_contains", err.message)
 
 
 class TestStdlibMathOpsV05(unittest.TestCase):
@@ -842,8 +940,11 @@ class TestStdlibMathOpsV05(unittest.TestCase):
         spec = fn_spec("f", [], INT64, [
             {"op": "return", "val": {"op": "min2", "l": {"lit": 1}, "r": {"lit": 2.0}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("min2", err.message)
 
 
 class TestStdlibListOpsV05(unittest.TestCase):
@@ -870,8 +971,11 @@ class TestStdlibListOpsV05(unittest.TestCase):
         spec = fn_spec("f", [{"id": "xs", "type": LIST_INT}], LIST_INT, [
             {"op": "return", "val": {"op": "list_slice", "list": {"ref": "xs"}, "from": {"lit": True}, "to": {"lit": 2}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("list_slice", err.message)
 
 
 class TestStdlibMapOpsV05(unittest.TestCase):
@@ -899,8 +1003,11 @@ class TestStdlibMapOpsV05(unittest.TestCase):
         spec = fn_spec("f", [{"id": "m", "type": MAP_STR_INT}], BOOL_T, [
             {"op": "return", "val": {"op": "map_has", "map": {"ref": "m"}, "key": {"lit": 1}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("map_has", err.message)
 
 
 # ──────────────────────────────────────────────
@@ -918,8 +1025,11 @@ class TestMutValidation(unittest.TestCase):
             {"op": "assign", "id": "x", "val": {"lit": 10}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("immutable", err.message)
 
     def test_assign_to_mutable_ok(self):
         """assign to a mut: true variable must succeed."""
@@ -962,8 +1072,11 @@ class TestMutValidation(unittest.TestCase):
             },
             {"op": "return", "val": {"ref": "total"}},
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("immutable", err.message)
 
 
 class TestUnknownOp(unittest.TestCase):
@@ -974,15 +1087,21 @@ class TestUnknownOp(unittest.TestCase):
             {"op": "frobnicate", "val": {"lit": 42}},
             {"op": "return", "val": {"lit": None, "type": UNIT_T}},
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "UNKNOWN_OP")
+        self.assertIn("frobnicate", err.message)
 
     def test_unknown_expr_op_raises(self):
         spec = fn_spec("f", [], INT64, [
             {"op": "return", "val": {"op": "quantum_add", "l": {"lit": 1}, "r": {"lit": 2}}}
         ])
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "UNKNOWN_OP")
+        self.assertIn("quantum_add", err.message)
 
 
 class TestCanonicalForm(unittest.TestCase):
@@ -1010,8 +1129,11 @@ class TestCanonicalForm(unittest.TestCase):
         # pretty-printed is NOT canonical
         pretty_text = json.dumps(spec, indent=2)
         checker = Checker(spec, raw_text=pretty_text, strict=True)
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             checker.check()
+        err = cm.exception
+        self.assertEqual(err.code, "NOT_CANONICAL")
+        self.assertIn("canonical", err.message)
 
     def test_non_strict_non_canonical_ok(self):
         spec = self._canonical_spec()
@@ -1039,8 +1161,11 @@ class TestCanonicalForm(unittest.TestCase):
                 {"op": "let", "id": "x", "type": {"type": "int", "bits": 64, "overflow": "panic"}, "val": {"lit": 1}},
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("no_return", err.message)
 
     def test_partial_return_in_if_raises(self):
         """If only one branch returns, checker must raise."""
@@ -1056,8 +1181,11 @@ class TestCanonicalForm(unittest.TestCase):
                  "else": []},  # else doesn't return
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("partial", err.message)
 
     def test_both_branches_return_ok(self):
         """If both then and else return, checker must pass."""
@@ -1146,8 +1274,11 @@ class TestCanonicalForm(unittest.TestCase):
                 }},
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("truncate", err.message)
 
     def test_overflow_on_float_raises(self):
         """overflow mode on float arithmetic should raise CheckError."""
@@ -1162,8 +1293,11 @@ class TestCanonicalForm(unittest.TestCase):
                 }},
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("float", err.message)
 
     # ------------------------------------------------------------------
     # Result type (v0.3 feature, Issue #3)
@@ -1220,8 +1354,11 @@ class TestCanonicalForm(unittest.TestCase):
                 {"op": "return", "val": {"op": "ok", "val": {"lit": True}}},
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("ok()", err.message)
 
     # ------------------------------------------------------------------
     # Cross-module imports (v0.3 feature, Issue #4)
@@ -1257,6 +1394,7 @@ class TestCanonicalForm(unittest.TestCase):
                      {"op": "let", "id": "sq_b", "type": INT64,
                       "val": {"op": "call", "module": "math_utils", "fn": "square", "args": [{"ref": "b"}]}},
                      {"op": "return", "val": {"op": "call", "module": "math_utils", "fn": "add",
+
                                               "args": [{"ref": "sq_a"}, {"ref": "sq_b"}]}},
                  ]},
             ],
@@ -1275,8 +1413,10 @@ class TestCanonicalForm(unittest.TestCase):
 
     def test_cross_module_missing_module_raises(self):
         """Calling without providing the module should raise CheckError."""
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(self._main_spec()).check()  # no modules provided
+        err = cm.exception
+        self.assertIn("math_utils", err.message)
 
     def test_cross_module_missing_fn_raises(self):
         """Importing a function that doesn't exist in the module must raise."""
@@ -1287,8 +1427,11 @@ class TestCanonicalForm(unittest.TestCase):
             "defs": [],
         }
         modules = {"math_utils": self._math_utils_spec()}
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(main, modules=modules).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("nonexistent_fn", err.message)
 
     def test_cross_module_effect_propagation_raises(self):
         """Cross-module call to IO fn from pure fn must raise CheckError."""
@@ -1313,8 +1456,11 @@ class TestCanonicalForm(unittest.TestCase):
                  ]},
             ],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(main, modules={"io_utils": io_mod}).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("IO", err.message)
 
     def test_cross_module_circular_import_raises(self):
         """Circular imports must raise CheckError."""
@@ -1328,8 +1474,11 @@ class TestCanonicalForm(unittest.TestCase):
             "imports": [{"module": "a", "from": "a.nail", "fns": []}],
             "defs": [],
         }
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(a_mod, modules={"a": a_mod, "b": b_mod}).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Circular", err.message)
 
     def test_match_result_both_branches_required(self):
         """match_result guarantees return if both branches return."""
@@ -1448,8 +1597,11 @@ class TestV05EnumADT(unittest.TestCase):
             ],
             types={"Color": self._color_type()},
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Blue", err.message)
 
     def test_enum_make_wrong_tag_raises(self):
         spec = module_spec(
@@ -1467,8 +1619,11 @@ class TestV05EnumADT(unittest.TestCase):
             ],
             types={"Color": self._color_type()},
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("Purple", err.message)
 
     def test_enum_make_field_type_mismatch_raises(self):
         spec = module_spec(
@@ -1486,8 +1641,11 @@ class TestV05EnumADT(unittest.TestCase):
             ],
             types={"Shape": self._shape_type()},
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("radius", err.message)
 
     def test_match_enum_binds_introduce_typed_vars(self):
         int_enum = {
@@ -1561,8 +1719,11 @@ class TestV05EnumADT(unittest.TestCase):
             ],
             types={"Color": self._color_type()},
         )
-        with self.assertRaises(CheckError):
+        with self.assertRaises(CheckError) as cm:
             Checker(spec).check()
+        err = cm.exception
+        self.assertEqual(err.code, "CHECK_ERROR")
+        self.assertIn("radius", err.message)
 
 
 if __name__ == "__main__":
