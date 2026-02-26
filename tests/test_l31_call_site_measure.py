@@ -587,5 +587,77 @@ class TestMultipleCallSitesSameCallee(unittest.TestCase):
         check_l3(spec)
 
 
+class TestBug100MultiCycleEdgeVerification(unittest.TestCase):
+    """Regression tests for bug #100: per-edge verification instead of per-function.
+
+    a(n) calls b(n-1) AND c(n)  (two outgoing edges from a)
+    b(n) calls a(n-1)           (decreasing)
+    c(n) calls a(n-1)           (decreasing)
+
+    Cycle a->b->a: both edges decrease → OK
+    Cycle a->c->a: edge a->c uses n (non-decreasing) → must REJECT
+
+    Before the fix, a->b->a was verified first, marking 'a' as verified,
+    so a->c was skipped in the a->c->a cycle.
+    """
+
+    def _three_fn_module(self, a_calls_c_arg):
+        """Build module: a→b(n-1), a→c(a_calls_c_arg), b→a(n-1), c→a(n-1)."""
+        dec = {"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}
+
+        fn_a = fn_spec("a",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=[
+                {"op": "if",
+                 "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+                 "then": [{"op": "return", "val": {"lit": 0}}],
+                 "else": [
+                     {"op": "let", "id": "x", "type": INT64,
+                      "val": {"op": "call", "fn": "b", "args": [dec]}},
+                     {"op": "return",
+                      "val": {"op": "call", "fn": "c", "args": [a_calls_c_arg]}},
+                 ]}
+            ],
+            termination={"measure": "n"},
+        )
+        fn_b = fn_spec("b",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=[
+                {"op": "if",
+                 "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+                 "then": [{"op": "return", "val": {"lit": 0}}],
+                 "else": [{"op": "return", "val": {"op": "call", "fn": "a", "args": [dec]}}]}
+            ],
+            termination={"measure": "n"},
+        )
+        fn_c = fn_spec("c",
+            params=[{"id": "n", "type": INT64}],
+            returns=INT64,
+            body=[
+                {"op": "if",
+                 "cond": {"op": "eq", "l": {"ref": "n"}, "r": {"lit": 0}},
+                 "then": [{"op": "return", "val": {"lit": 0}}],
+                 "else": [{"op": "return", "val": {"op": "call", "fn": "a", "args": [dec]}}]}
+            ],
+            termination={"measure": "n"},
+        )
+        return module_spec("multi_cycle", [fn_a, fn_b, fn_c], exports=["a", "b", "c"])
+
+    def test_multi_cycle_non_decreasing_edge_rejected(self):
+        """a→c passes n (not n-k) → MEASURE_NOT_DECREASING even though a→b decreases."""
+        spec = self._three_fn_module(a_calls_c_arg={"ref": "n"})
+        with self.assertRaises(CheckError) as ctx:
+            check_l3(spec)
+        self.assertEqual(ctx.exception.code, "MEASURE_NOT_DECREASING")
+
+    def test_multi_cycle_all_decreasing_accepted(self):
+        """All edges decrease → should pass."""
+        dec = {"op": "-", "l": {"ref": "n"}, "r": {"lit": 1}}
+        spec = self._three_fn_module(a_calls_c_arg=dec)
+        check_l3(spec)
+
+
 if __name__ == "__main__":
     unittest.main()

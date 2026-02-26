@@ -94,8 +94,8 @@ class Checker:
         self._module_source_paths: dict[str, "Path | None"] = {}
         # Current function's in-scope type parameters (for generics support, v0.7)
         self._current_type_params: frozenset[str] = frozenset()
-        # L3.1: Track which recursive functions had their call-site measures verified
-        self._call_site_verified: set[str] = set()
+        # L3.1: Track which recursive edges had their call-site measures verified
+        self._call_site_verified: set[tuple[str, str]] = set()
         # L3.1: Store call-site args for each (caller, callee) edge for mutual recursion checks
         self._call_edges: dict[tuple[str, str], list[list]] = {}
         # Shared type-alias resolver (Issue #95 DRY refactor)
@@ -488,7 +488,7 @@ class Checker:
                         # (covers both direct self-recursion and mutual recursion)
                         cycle_members = set(cycle[:-1])
                         for edge_src, edge_dst in zip(cycle[:-1], cycle[1:]):
-                            if edge_src not in self._call_site_verified and edge_dst in cycle_members:
+                            if (edge_src, edge_dst) not in self._call_site_verified and edge_dst in cycle_members:
                                 all_edge_args = self._call_edges.get((edge_src, edge_dst))
                                 if all_edge_args is not None:
                                     callee_fn = self.fn_registry.get(edge_dst, {})
@@ -501,7 +501,7 @@ class Checker:
                             measure = fn.get("termination", {}).get("measure")
                             proof_kind = (
                                 "decreasing_measure_verified"
-                                if fn_id_in_cycle in self._call_site_verified
+                                if any((fn_id_in_cycle, dst) in self._call_site_verified for dst in cycle_members)
                                 else "decreasing_measure_annotation"
                             )
                             self._termination_proofs.setdefault(fn_id_in_cycle, []).append({
@@ -634,8 +634,8 @@ class Checker:
                 measure_idx=measure_idx,
             )
 
-        # Mark this function as having a verified call-site
-        self._call_site_verified.add(fn_id)
+        # Mark this edge as having a verified call-site
+        self._call_site_verified.add((fn_id, callee_id))
 
     def get_termination_certificate(self) -> dict:
         """L3: Return the termination proof certificate after a successful check()."""
