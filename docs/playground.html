@@ -801,9 +801,9 @@ const EXAMPLES = {
         "Shape": {
           "type": "enum",
           "variants": [
-            { "tag": "Circle",    "fields": [{ "name": "radius", "type": { "type": "float", "bits": 64 } }] },
-            { "tag": "Rectangle", "fields": [{ "name": "w", "type": { "type": "float", "bits": 64 } },
-                                              { "name": "h", "type": { "type": "float", "bits": 64 } }] }
+            { "tag": "Circle",    "fields": [{ "name": "radius", "type": { "type": "int", "bits": 64, "overflow": "panic" } }] },
+            { "tag": "Rectangle", "fields": [{ "name": "w", "type": { "type": "int", "bits": 64, "overflow": "panic" } },
+                                              { "name": "h", "type": { "type": "int", "bits": 64, "overflow": "panic" } }] }
           ]
         }
       },
@@ -816,7 +816,7 @@ const EXAMPLES = {
           "params": [],
           "returns": { "type": "unit" },
           "body": [
-            { "op": "enum_make", "tag": "Circle", "fields": { "radius": { "lit": 3.0 } }, "into": "shape" },
+            { "op": "enum_make", "tag": "Circle", "fields": { "radius": { "lit": 3 } }, "into": "shape" },
             {
               "op": "match_enum",
               "val": { "ref": "shape" },
@@ -1010,20 +1010,16 @@ const EXAMPLES = {
     args: {},
     program: {
       "nail": "0.7.0",
-      "kind": "module",
-      "id": "mcp_bridge_demo",
-      "fns": {
-        "demo": {
-          "params": [],
-          "returns": { "type": "unit" },
-          "effects": ["IO"],
-          "body": [
-            { "op": "print", "val": { "lit": "MCP Bridge: from_mcp() converts MCP tools to NAIL effect-annotated format" }, "effect": "IO" },
-            { "op": "print", "val": { "lit": "to_mcp() strips NAIL extensions back to MCP format" }, "effect": "IO" },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      }
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "print", "val": { "lit": "MCP Bridge: from_mcp() converts MCP tools to NAIL effect-annotated format" }, "effect": "IO" },
+        { "op": "print", "val": { "lit": "to_mcp() strips NAIL extensions back to MCP format" }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
     }
   },
 
@@ -1035,21 +1031,17 @@ const EXAMPLES = {
     description: "FC Standard (v0.8). convert_tools() converts tool definitions between OpenAI, Anthropic, and Gemini formats. Effects are preserved as NAIL annotations across all providers — enabling portable, verifiable AI tool calls.",
     args: {},
     program: {
-      "nail": "0.9.0",
-      "kind": "module",
-      "id": "fc_standard_demo",
-      "fns": {
-        "demo": {
-          "params": [],
-          "returns": { "type": "unit" },
-          "effects": ["IO"],
-          "body": [
-            { "op": "print", "val": { "lit": "FC Standard: convert_tools() converts between OpenAI/Anthropic/Gemini formats" }, "effect": "IO" },
-            { "op": "print", "val": { "lit": "Effects are preserved as NAIL annotations across all providers" }, "effect": "IO" },
-            { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
-          ]
-        }
-      }
+      "nail": "0.8.0",
+      "kind": "fn",
+      "id": "main",
+      "effects": ["IO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        { "op": "print", "val": { "lit": "FC Standard: convert_tools() converts between OpenAI/Anthropic/Gemini formats" }, "effect": "IO" },
+        { "op": "print", "val": { "lit": "Effects are preserved as NAIL annotations across all providers" }, "effect": "IO" },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
     }
   },
 
