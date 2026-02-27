@@ -122,6 +122,23 @@ All side effects must be declared in the function signature. Any undeclared side
 
 Multiple effects are listed as an array: `["IO", "NET"]`, etc.
 
+### REPO — Git Repository Access
+
+Declares that a function may execute git operations against a repository.
+
+- Coarse form: `"REPO"` — declares git access without restriction
+- Fine-grained: `{"kind": "REPO", "allow": ["owner/repo", ...]}` — restricts which repos may be accessed
+
+```json
+"effects": ["REPO"]
+// or with granular control:
+"effects": [{"kind": "REPO", "allow": ["watari-ai/nail", "zyom45/moldium"]}]
+```
+
+Allow-list items must be `"owner/repo"` format. Path traversal (e.g. `"../evil"`) and special characters are rejected at check time.
+
+Used with `exec_cmd` (effect: `"REPO"`). The checker validates allow-list format at check time; the runtime enforces repository access policy at execution time.
+
 Structured effect capabilities are also valid in `effects` (v0.4):
 
 ```json
@@ -361,6 +378,7 @@ Rules:
 { "op": "print", "val": <string_expr>, "effect": "IO" }
 { "op": "read_file", "path": <string_expr>, "effect": "FS" }
 { "op": "http_get", "url": <string_expr>, "effect": "NET" }
+{ "op": "exec_cmd", "cmd": <string_expr>, "effect": "IO"|"REPO", "repo": <string_expr>, "cwd": <string_expr>, "into": <var_name> }
 ```
 
 Effectful operations are a compile error if the corresponding effect is not declared in the function's `effects` list.
@@ -368,11 +386,20 @@ Each effectful operation must include an explicit `effect` field with the canoni
 - `print` must declare `"effect": "IO"`
 - `read_file` must declare `"effect": "FS"`
 - `http_get` must declare `"effect": "NET"`
+- `exec_cmd` must declare `"effect": "IO"` or `"effect": "REPO"` (git operations require `"REPO"`)
 `print` expects a `String` argument.
+
+`exec_cmd` fields:
+- `cmd`: shell command string (required)
+- `effect`: `"IO"` (general commands) or `"REPO"` (git/repo operations) (required)
+- `repo`: `"owner/repo"` string — required when `effect="REPO"`
+- `cwd`: working directory string (optional)
+- `into`: variable to bind result map `{"exit_code": int, "stdout": string, "stderr": string}` (optional)
 
 Capability enforcement:
 - `read_file` path must be inside an allowed FS path when FS capability objects are declared.
 - `http_get` URL host must match an allowed domain when NET capability objects are declared.
+- `exec_cmd` (REPO) repo must be in the declared REPO allow list when fine-grained REPO capabilities are declared.
 
 ---
 

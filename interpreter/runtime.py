@@ -332,6 +332,38 @@ class Runtime:
         elif op == "return_void":
             return UNIT
 
+        elif op == "exec_cmd":
+            import subprocess
+            effect = self._normalize_effect_kind(stmt.get("effect", "IO"))
+            cmd_val = self._eval(stmt["cmd"], env)
+            if not isinstance(cmd_val, str):
+                raise NailRuntimeError("exec_cmd 'cmd' must evaluate to string")
+            cwd_val = None
+            if "cwd" in stmt:
+                cwd_val = self._eval(stmt["cwd"], env)
+                if not isinstance(cwd_val, str):
+                    raise NailRuntimeError("exec_cmd 'cwd' must evaluate to string")
+            if effect == "REPO":
+                self._require_effect("REPO", "exec_cmd uses REPO effect but function does not declare it")
+                repo_val = self._eval(stmt["repo"], env)
+                if not isinstance(repo_val, str):
+                    raise NailRuntimeError("exec_cmd 'repo' must evaluate to string")
+                self._check_repo_cap(repo_val)
+            else:  # IO
+                self._require_effect("IO", "exec_cmd uses IO effect but function does not declare it")
+            proc = subprocess.run(
+                cmd_val, shell=True, capture_output=True, text=True,
+                cwd=cwd_val
+            )
+            result = {
+                "exit_code": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            }
+            if "into" in stmt:
+                env[stmt["into"]] = result
+            return _CONTINUE
+
         else:
             raise NailRuntimeError(f"Unknown statement op: {op}")
 
@@ -904,6 +936,20 @@ class Runtime:
         kinds, _ = self._current_effect_policy()
         if effect_kind not in kinds:
             raise NailRuntimeError(message, code="EFFECT_VIOLATION", required=[effect_kind])
+
+    def _check_repo_cap(self, repo_val: str) -> None:
+        _, caps = self._current_effect_policy()
+        repo_caps = caps.get("REPO", [])
+        if not repo_caps:
+            return  # Coarse-grained REPO — no runtime restriction
+        for cap in repo_caps:
+            if repo_val in cap.get("allow", []):
+                return
+        raise NailRuntimeError(
+            f"exec_cmd blocked by REPO capability policy: {repo_val!r}",
+            code="REPO_VIOLATION",
+            required=["REPO"],
+        )
 
     def _enforce_fs_boundary(self, path: str) -> None:
         _, caps = self._current_effect_policy()

@@ -15,7 +15,7 @@ from typing import Optional, Any
 
 
 VALID_OVERFLOWS = {"panic"}  # Type-level default. Expression-level overrides (wrap/sat) are in checker/runtime.
-VALID_EFFECTS = {"IO", "FS", "NET", "TIME", "RAND", "MUT"}
+VALID_EFFECTS = {"IO", "FS", "NET", "TIME", "RAND", "MUT", "REPO"}
 
 
 class NailTypeError(Exception):

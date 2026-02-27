@@ -1066,6 +1066,33 @@ class Checker:
                     proof = self._check_loop_termination(fn_id, stmt)
                     self._termination_proofs.setdefault(fn_id, []).append(proof)
 
+            elif op == "exec_cmd":
+                effect = self._normalize_effect_kind(stmt.get("effect", "IO"))
+                if effect not in ("IO", "REPO"):
+                    raise CheckError(
+                        f"[{fn_id}] exec_cmd effect must be 'IO' or 'REPO', got {effect!r}"
+                    )
+                if effect == "REPO":
+                    if "repo" not in stmt:
+                        raise CheckError(
+                            f"[{fn_id}] exec_cmd with effect='REPO' requires 'repo' field"
+                        )
+                    if effect not in self.declared_effects:
+                        raise CheckError(
+                            f"[{fn_id}] exec_cmd uses REPO effect but function does not declare it"
+                        )
+                    self._check_repo_constraints(fn_id, stmt["repo"])
+                elif effect == "IO":
+                    if effect not in self.declared_effects:
+                        raise CheckError(
+                            f"[{fn_id}] exec_cmd uses IO effect but function does not declare it"
+                        )
+                if "into" in stmt:
+                    local_env[stmt["into"]] = MapType(
+                        key=StringType(),
+                        value=StringType(),
+                    )
+
             else:
                 raise CheckError(
                     f"[{fn_id}] Unknown op: '{op}'",
@@ -1809,6 +1836,21 @@ class Checker:
             raise CheckError(f"[{fn_id}] Structured effect '{kind}' requires non-empty 'allow' list")
         if any(not isinstance(item, str) for item in allow):
             raise CheckError(f"[{fn_id}] Structured effect '{kind}'.allow must be list[string]")
+        if kind == "REPO":
+            for item in allow:
+                if "/" not in item or item.count("/") != 1:
+                    raise CheckError(
+                        f"[{fn_id}] REPO allow item must be 'owner/repo' format: {item!r}"
+                    )
+                parts = item.split("/")
+                if not all(re.match(r'^[a-zA-Z0-9_.\-]+$', p) for p in parts):
+                    raise CheckError(
+                        f"[{fn_id}] REPO allow item contains invalid characters: {item!r}"
+                    )
+                if any(p.startswith(".") for p in parts):
+                    raise CheckError(
+                        f"[{fn_id}] REPO allow item must be 'owner/repo' format: {item!r}"
+                    )
         ops = cap.get("ops")
         if ops is not None:
             if not isinstance(ops, list) or any(not isinstance(op, str) for op in ops):
@@ -1842,6 +1884,22 @@ class Checker:
         if isinstance(expr, dict) and isinstance(expr.get("lit"), str):
             return expr["lit"]
         return None
+
+    def _check_repo_constraints(self, fn_id: str, repo_expr: Any) -> None:
+        caps = self.declared_effect_caps.get("REPO", [])
+        if not caps:
+            return  # Coarse-grained REPO declaration — no literal check required
+        repo_value = self._string_literal(repo_expr)
+        if repo_value is None:
+            raise CheckError(
+                f"[{fn_id}] exec_cmd 'repo' must be a string literal when granular REPO constraints are declared"
+            )
+        for cap in caps:
+            if repo_value in cap.get("allow", []):
+                return
+        raise CheckError(
+            f"[{fn_id}] exec_cmd repo not in declared REPO allow list: {repo_value!r}"
+        )
 
     def _check_fs_constraints(self, fn_id: str, path_expr: Any) -> None:
         caps = self.declared_effect_caps.get("FS", [])
