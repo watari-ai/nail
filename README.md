@@ -481,6 +481,8 @@ pip install -r requirements.txt
 
 ---
 
+See [CONTRIBUTING.md](./CONTRIBUTING.md) to contribute.
+
 *NAIL is built by AI, for AI. Humans define the intent. AI builds the machine.*
 
 </details>
