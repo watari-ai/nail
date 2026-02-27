@@ -132,7 +132,7 @@ Declares that a function may execute git operations against a repository.
 ```json
 "effects": ["REPO"]
 // or with granular control:
-"effects": [{"kind": "REPO", "allow": ["watari-ai/nail", "zyom45/moldium"]}]
+"effects": [{"kind": "REPO", "allow": ["watari-ai/nail", "acme/my-project"]}]
 ```
 
 Allow-list items must be `"owner/repo"` format. Path traversal (e.g. `"../evil"`) and special characters are rejected at check time.

@@ -84,7 +84,7 @@ class TestRepoEffectDeclaration(unittest.TestCase):
         spec = fn_spec(
             "f", [], UNIT_T,
             [{"op": "return_void"}],
-            effects=[{"kind": "REPO", "allow": ["watari-ai/nail", "zyom45/moldium"]}],
+            effects=[{"kind": "REPO", "allow": ["watari-ai/nail", "acme/my-project"]}],
         )
         c = check(spec)
         self.assertIn("REPO", c.declared_effects)
@@ -472,9 +472,9 @@ class TestRepoCapabilityEnforcement(unittest.TestCase):
     def test_multiple_repos_in_allow_list(self, mock_run):
         """Fine-grained REPO with multiple repos in allow list allows any declared repo."""
         mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        effects = [{"kind": "REPO", "allow": ["watari-ai/nail", "zyom45/moldium"]}]
+        effects = [{"kind": "REPO", "allow": ["watari-ai/nail", "acme/my-project"]}]
 
-        for repo in ["watari-ai/nail", "zyom45/moldium"]:
+        for repo in ["watari-ai/nail", "acme/my-project"]:
             mock_run.reset_mock()
             spec = fn_spec(
                 "f", [], UNIT_T,
