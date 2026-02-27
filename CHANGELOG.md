@@ -2,7 +2,11 @@
 
 All notable changes to NAIL are documented here.
 
-## [Unreleased] — toward v1.0.0
+## [Unreleased]
+
+---
+
+## [v0.9.1] — 2026-02-27
 
 ### Added
 
