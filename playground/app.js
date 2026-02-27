@@ -715,6 +715,60 @@ const EXAMPLES = {
     }
   },
 
+  // ── v0.9 examples ────────────────────────────────────────────────────────────
+
+  spec_version_hello: {
+    label: "Spec Version (v0.9)",
+    group: "v0.9",
+    description: "v0.9 spec_version field. NAIL v0.9 adds meta.spec_version for forward compatibility. Try changing '0.9.0' to '2.0.0' to see UNSUPPORTED_SPEC_VERSION error.",
+    args: { name: "NAIL" },
+    program: {
+      "nail": "0.9.0",
+      "kind": "fn",
+      "id": "greet",
+      "meta": { "spec_version": "0.9.0" },
+      "effects": ["IO"],
+      "params": [
+        { "id": "name", "type": { "type": "string" } }
+      ],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "print",
+          "val": { "op": "concat", "l": { "lit": "Hello, " }, "r": { "ref": "name" } },
+          "effect": "IO"
+        },
+        { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
+      ]
+    }
+  },
+
+  repo_effect: {
+    label: "REPO Effect (v0.9)",
+    group: "v0.9",
+    description: "v0.9 REPO effect type. Marks functions that execute external commands (git, shell, etc.). The checker enforces that callers also declare REPO effect — preventing accidental side effects.",
+    args: {},
+    program: {
+      "nail": "0.9.0",
+      "kind": "fn",
+      "id": "git_version",
+      "meta": { "spec_version": "0.9.0" },
+      "effects": ["REPO"],
+      "params": [],
+      "returns": { "type": "unit" },
+      "body": [
+        {
+          "op": "exec_cmd",
+          "cmd": { "lit": "git --version" },
+          "effect": "REPO",
+          "repo": { "lit": "watari-ai/nail" },
+          "into": "result"
+        },
+        { "op": "return_void" }
+      ]
+    }
+  },
+
   // ── Demo Suite examples ─────────────────────────────────────────────────
 
   ai_review_effect_leak: {
