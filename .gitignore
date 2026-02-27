@@ -8,3 +8,5 @@ experiments/reproducibility/results.json
 dist/
 build/
 *.egg-info/
+benchmarks/results/*.csv
+benchmarks/results/*.json
