@@ -4,6 +4,20 @@ All notable changes to NAIL are documented here.
 
 ## [Unreleased]
 
+### Added
+
+- **Demo Suite** (`#104`, `#105`, `#106`) — Three self-contained, API-key-free demos under `examples/demos/`:
+  - **API Routing** (`#104`) — Convert a single NAIL tool spec into OpenAI / Anthropic / Gemini function-calling formats. Key API: `convert_tools()`. (commit `901908b`)
+  - **Agent Handoff** (`#105`) — Slice a shared tool registry into per-agent subsets using `filter_by_effects()`. Demonstrates Planner / Executor / Reporter capability boundaries. (commit `8fad3e1`)
+  - **Verify-Fix Loop** (`#106`) — Simulate LLM generate → Checker error → LLM fix → re-verify loop. Shows how machine-readable NAIL errors enable automated self-correction. (commit `72a7d7d`)
+- **`examples/demos/README.md`** — Index of all three demos with usage, key APIs, and effect-tag reference. (commit `3ffb685`)
+- **Playground "Demos" group** — Three new interactive examples on [naillang.com](https://naillang.com): Broken Spec, Fixed Spec, Agent Handoff. (commit `628e3eb`)
+
+### Docs
+
+- README: Added "Examples & Demos" section with demo table and test invocation. (commit `2067fda`)
+- ROADMAP: Marked Phase 3 experimental demos complete. (commit `32e6aee`)
+
 ---
 
 ## [v0.9.1] — 2026-02-27
