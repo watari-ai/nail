@@ -9,7 +9,7 @@
 
 ## 1. What "Frozen" Means
 
-The NAIL v1.0 spec freeze declares that all elements listed in §3 are **immutable** going forward:
+The NAIL v1.0 spec freeze declares that all elements listed in §2 are **immutable** going forward:
 
 - No field removals, renames, or type changes without a `NAIL-2.0` major bump.
 - Any document valid under NAIL-1.0 is **guaranteed to remain valid** in all NAIL-1.x implementations.
@@ -50,9 +50,9 @@ The following opcodes and their field contracts are frozen:
 | Logical | `and`, `or`, `not` |
 | Function call | `call` |
 | Effectful ops | `print`, `read_file`, `http_get`, `exec_cmd` |
-| Collections | `list_get`, `list_push`, `list_len`, `list_map`, `list_filter`, `list_fold`, `map_get`, `map_set`, `map_has`, `map_keys`, `map_values` |
+| Collections | `list_get`, `list_push`, `list_len`, `list_map`, `list_filter`, `list_fold`, `list_slice`, `list_contains`, `map_get`, `map_set`, `map_has`, `map_keys`, `map_values` |
 | ADT | `enum_make`, `match_enum` |
-| Result | `match_result` |
+| Result | `match_result`, `unwrap_ok`, `unwrap_err` |
 
 ### 2.3 Type System
 
@@ -65,7 +65,11 @@ Overflow modes `panic` / `wrap` / `sat` (expression-level) are frozen.
 
 ### 2.4 Effect Annotations
 
-The effect system — both string form (`"FS"`, `"NET"`, `"IO"`, `"TIME"`, `"RAND"`, `"MUT"`, `"REPO"`) and structured capability form (`{"kind": "FS", "allow": [...], "ops": [...]}`) — is frozen. Effect propagation rules (callee effects ⊆ caller effects) are frozen.
+The effect system is frozen in both forms:
+- **String form**: `"FS"`, `"NET"`, `"IO"`, `"TIME"`, `"RAND"`, `"MUT"`, `"REPO"` — declarative, no runtime value restriction
+- **Structured capability form**: `{"kind": "FS"|"NET", "allow": [...], "ops": [...]}` — runtime-enforced allowlist (only `"FS"` and `"NET"` support structured form; other kinds are a compile error)
+
+Effect propagation rules (callee effects ⊆ caller effects) are frozen. MCP Bridge ops (`from_mcp`, `to_mcp`, `infer_effects`) are **not frozen** (see §3).
 
 ### 2.5 FC Standard Format
 
@@ -78,7 +82,7 @@ The `nail_lang.fc_standard` API and the `tool_spec` JSON format with an `effects
 | L0 | JSON schema + canonical form | Frozen |
 | L1 | Type checking | Frozen |
 | L2 | Effect checking (static + runtime) | Frozen |
-| L3 | Termination proof | Frozen |
+| L3 | Termination proof (minimum guarantee only; `measure` annotation semantics frozen; L3.1 extended requirements TBD for v1.1) | Partially frozen |
 
 Canonical form (JCS-inspired, `sort_keys=True`, compact separators) is frozen.
 
@@ -98,7 +102,9 @@ The following are explicitly **out of scope** for v1.0 and may change freely:
 - **NATP** — NAIL-format AI Agent Protocol for inter-agent task delegation
 - **Dialect extensions** — `nail-finance`, `nail-embedded`, `nail-web`, and other domain-specific layers
 - **L4: Memory safety** — buffer overflow proofs (deferred)
+- **L3.1 extended requirements** — extended termination proof requirements beyond `measure` annotations (TBD for v1.1)
 - **Effect Security Audit Log** — formal FS/NET permission boundary spec (deferred)
+- **MCP Bridge ops** — `from_mcp`, `to_mcp`, `infer_effects` (dependent on external MCP spec; may evolve independently)
 
 ---
 
@@ -131,8 +137,15 @@ Alternative NAIL implementations must pass the conformance test suite located at
 Conformance declaration format (for implementation READMEs):
 
 ```
-Conformance: NAIL-1.0 (L0–L3)
+Conformance: NAIL-1.0 (L0–L3 + FC)
 Test suite: PASS 45/45
+```
+
+Partial conformance (e.g., L0–L2 without L3) is valid and must be declared explicitly:
+
+```
+Conformance: NAIL-1.0 (L0–L2)
+Test suite: PASS 38/45 (L3 not implemented)
 ```
 
 See `designs/v0.9/spec-versioning-policy.md §5` for the full implementer checklist.
