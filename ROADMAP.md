@@ -77,5 +77,7 @@ NAIL's long-term goal (Phase 4) is to become the substrate for AI-to-AI collabor
 
 ### Phase 3 Experimental Work (Active)
 - [ ] Reproducibility demo — same task across multiple LLMs, measure agreement rate
-- [ ] Verify-fix loop demo — AI generates → checker rejects → AI revises → passes
+- [x] **Verify-fix loop demo** — AI generates → checker rejects → AI revises → passes (commit `72a7d7d`, `examples/demos/verify_fix_loop/`)
+- [x] **API Routing demo** — single NAIL spec → OpenAI / Anthropic / Gemini conversion (commit `901908b`, `examples/demos/api_routing/`)
+- [x] **Agent Handoff demo** — filter_by_effects() for per-agent capability boundaries (commit `8fad3e1`, `examples/demos/agent_handoff/`)
 - [ ] Encoding optimization experiment — can AI design a more token-efficient NAIL encoding?
