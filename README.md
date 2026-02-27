@@ -415,6 +415,7 @@ nail/
 ├── CLI.md           — CLI command reference
 ├── demos/           — Demo scripts (including e2e_agent_demo.py)
 ├── examples/        — Sample NAIL programs
+│   └── demos/       — Self-contained demos: API routing, agent handoff, verify-fix loop
 ├── interpreter/     — Python interpreter (Checker + Runtime)
 ├── playground/      — Local FastAPI playground (server-based)
 ├── docs/            — GitHub Pages static playground (Pyodide/WASM)
@@ -441,6 +442,21 @@ python server.py
 
 Features: live JSON editor, 20+ built-in examples, argument passing, dark theme.
 See [`playground/README.md`](./playground/README.md) for details.
+
+## Examples & Demos
+
+Three self-contained demos showing NAIL solving real AI engineering problems — no API keys required:
+
+| Demo | What it shows | Key API |
+|------|--------------|---------|
+| [API Routing](./examples/demos/api_routing/) | Convert one spec → OpenAI / Anthropic / Gemini | `convert_tools()` |
+| [Agent Handoff](./examples/demos/agent_handoff/) | Slice tool registry by effect for each agent role | `filter_by_effects()` |
+| [Verify-Fix Loop](./examples/demos/verify_fix_loop/) | LLM generate → Checker error → auto-fix → retry | `Checker.check()` |
+
+```bash
+# Run all demo tests
+python3 -m pytest examples/demos/ -v   # 23 tests, all pass
+```
 
 ## Quick Start
 
