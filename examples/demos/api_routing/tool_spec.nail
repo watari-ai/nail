@@ -1,0 +1,31 @@
+{
+  "nail": "0.9.0",
+  "meta": { "spec_version": "0.9.0" },
+  "kind": "tool",
+  "doc": "Web search tool — single source of truth for multi-provider API routing demo (#104).",
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "web_search",
+        "description": "Search the web and return a list of result URLs or snippets.",
+        "effects": ["NET"],
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search query string."
+            },
+            "max_results": {
+              "type": "integer",
+              "description": "Maximum number of results to return.",
+              "default": 5
+            }
+          },
+          "required": ["query"]
+        }
+      }
+    }
+  ]
+}
