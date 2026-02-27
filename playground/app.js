@@ -852,6 +852,84 @@ const EXAMPLES = {
         { "op": "return", "val": { "lit": null, "type": { "type": "unit" } } }
       ]
     }
+  },
+
+  // ── Demo Suite v0.9 ──────────────────────────────────────────────────────
+
+  demo_verify_fix_broken: {
+    label: "Demo #106: Broken Spec",
+    group: "Demos",
+    description: "From the Verify-Fix Loop demo (#106). This module is missing the 'effects' key on the function — a required field in NAIL. The Checker catches this before execution. Try adding '\"effects\": []' to fix it.",
+    args: {},
+    program: {
+      "nail": "0.9",
+      "kind": "module",
+      "id": "demo",
+      "defs": [
+        {
+          "kind": "fn",
+          "id": "process",
+          "params": [
+            { "id": "x", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+          ],
+          "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+          "body": [
+            { "op": "return", "val": { "ref": "x" } }
+          ]
+        }
+      ],
+      "exports": ["process"]
+    }
+  },
+
+  demo_verify_fix_fixed: {
+    label: "Demo #106: Fixed Spec",
+    group: "Demos",
+    description: "The corrected version of the Broken Spec above. The 'effects': [] field has been added — exactly the kind of fix an LLM would apply after receiving the NAIL Checker's structured error message. This is what the Verify-Fix Loop automates.",
+    args: {},
+    program: {
+      "nail": "0.9",
+      "kind": "module",
+      "id": "demo",
+      "defs": [
+        {
+          "kind": "fn",
+          "id": "process",
+          "params": [
+            { "id": "x", "type": { "type": "int", "bits": 64, "overflow": "panic" } }
+          ],
+          "returns": { "type": "int", "bits": 64, "overflow": "panic" },
+          "effects": [],
+          "body": [
+            { "op": "return", "val": { "ref": "x" } }
+          ]
+        }
+      ],
+      "exports": ["process"]
+    }
+  },
+
+  demo_agent_handoff: {
+    label: "Demo #105: Agent Handoff",
+    group: "Demos",
+    description: "From the Agent Handoff demo (#105). An Executor agent function: it reads a file (FS) AND fetches from the network (NET). An Planner agent would only receive the read_file tool (FS only). The effect declarations make each agent's capability boundary machine-auditable.",
+    args: { "path": "/data/report.txt", "url": "https://api.example.com/results" },
+    program: {
+      "nail": "0.9",
+      "kind": "fn",
+      "id": "executor_fetch_and_read",
+      "effects": ["FS", "NET"],
+      "params": [
+        { "id": "path", "type": { "type": "string", "encoding": "utf8" } },
+        { "id": "url",  "type": { "type": "string", "encoding": "utf8" } }
+      ],
+      "returns": { "type": "string", "encoding": "utf8" },
+      "body": [
+        { "op": "read_file", "path": { "ref": "path" }, "effect": "FS", "into": "local_data" },
+        { "op": "http_get",  "url":  { "ref": "url" },  "effect": "NET", "into": "remote_data" },
+        { "op": "return", "val": { "ref": "local_data" } }
+      ]
+    }
   }
 };
 
