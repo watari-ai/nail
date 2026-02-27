@@ -1,0 +1,23 @@
+{
+  "nail": "0.9",
+  "kind": "module",
+  "id": "demo",
+  "defs": [
+    {
+      "kind": "fn",
+      "id": "process",
+      "params": [
+        {
+          "id": "x",
+          "type": {"type": "int", "bits": 64, "overflow": "panic"}
+        }
+      ],
+      "returns": {"type": "int", "bits": 64, "overflow": "panic"},
+      "effects": [],
+      "body": [
+        {"op": "return", "val": {"ref": "x"}}
+      ]
+    }
+  ],
+  "exports": ["process"]
+}
