@@ -6,6 +6,14 @@ All notable changes to NAIL are documented here.
 
 ### Added
 
+- **Delegation-Aware Effect Qualifiers** (`#107`) — `nail_lang/fc_ir_v2` module adds Phase 1 of NAIL's delegation type system, inspired by the *Zone of Indifference* concept from DeepMind's "Intelligent AI Delegation" (arXiv:2602.11865). (commit `c1da840`, PR `#109`)
+  - `EffectQualifier` — extends `effects.allow` elements to accept **string OR object** (fully backward-compatible)
+  - `delegation: "explicit"` — marks a capability that must be explicitly re-authorized at each delegation step; prevents silent propagation through A→B→C→D chains
+  - `grants` field — caller must list the exact op string; missing grant raises **FC-E010 `ExplicitDelegationViolation`** at type-check time
+  - `reversible: false` — metadata annotation for audit/UI (no effect on type rules in Phase 1)
+  - 52 new tests (`tests/test_delegation_qualifiers.py`); total test count: 921
+  - `designs/v1.0/spec-freeze.md` — Amendment A added, documenting Phase 1 rules and Phase 2 scope (Issue `#108`)
+
 - **Demo Suite** (`#104`, `#105`, `#106`) — Three self-contained, API-key-free demos under `examples/demos/`:
   - **API Routing** (`#104`) — Convert a single NAIL tool spec into OpenAI / Anthropic / Gemini function-calling formats. Key API: `convert_tools()`. (commit `901908b`)
   - **Agent Handoff** (`#105`) — Slice a shared tool registry into per-agent subsets using `filter_by_effects()`. Demonstrates Planner / Executor / Reporter capability boundaries. (commit `8fad3e1`)
