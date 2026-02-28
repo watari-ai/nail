@@ -162,3 +162,84 @@ Once the effective date is stamped:
 2. `meta.spec_version` becomes a required field (checkers emit `FC013 ERROR` if absent).
 3. This document moves from Draft to **Ratified**.
 4. A `NAIL-1.0.0` git tag is created.
+
+---
+
+## 7. Amendment A — Delegation-Aware Effect Qualifiers (Phase 1)
+
+> **Status: DRAFT — Pending Boss review. Linked to PR #109 (`feat/delegation-effect-qualifiers`).**
+> This section documents Phase 1 of the delegation-aware type system, implemented in response to the *Zone of Indifference* concept from DeepMind's "Intelligent AI Delegation" (arXiv:2602.11865).
+
+### 7.1 Motivation
+
+As delegation chains grow (A→B→C→D), each agent tends to pass through irreversible actions without explicit verification — a phenomenon the paper calls the **Zone of Indifference**. NAIL addresses this at the type level by introducing *explicit delegation qualifiers*.
+
+### 7.2 Effect Qualifier Object (Extension to §2.4)
+
+`effects.allow` elements now accept **string OR object** (fully backward compatible):
+
+```json
+// Legacy string form (still valid)
+{ "allow": ["FS:write_file"] }
+
+// New object form
+{
+  "allow": [
+    {
+      "op": "FS:write_file",
+      "delegation": "explicit",
+      "reversible": false
+    }
+  ]
+}
+```
+
+| Field | Type | Required | Default | Description |
+|-------|------|----------|---------|-------------|
+| `op` | string | yes | — | Effect op (same as legacy string form) |
+| `delegation` | `"implicit"` \| `"explicit"` | no | `"implicit"` | Delegation propagation rule |
+| `reversible` | boolean | no | `true` | Metadata only (no effect on type rules in Phase 1) |
+
+### 7.3 `grants` Field
+
+Add optional `grants` field to function definitions:
+
+```json
+{
+  "op": "def",
+  "name": "save_report",
+  "effects": {
+    "allow": [{ "op": "FS:write_file", "delegation": "explicit" }]
+  },
+  "grants": ["FS:write_file"],
+  "body": [ ... ]
+}
+```
+
+### 7.4 Type Rules (Phase 1)
+
+1. **`allow` is the prerequisite. `grants` is the additional friction.** Both must be present for an explicit-delegation call to type-check.
+2. **`grants` matching is by exact op string only.** Wildcards and prefix matching are out of scope for Phase 1.
+3. **`reversible` is metadata only** — it does not affect type rules in Phase 1.
+4. When `delegation: "implicit"` (or unspecified), callee effects propagate freely through the delegation chain (existing behaviour, unchanged).
+
+### 7.5 Error Code
+
+| Code | Name | Trigger |
+|------|------|---------|
+| `FC-E010` | `ExplicitDelegationViolation` | Callee has `delegation: "explicit"` effect, but caller's `grants` does not contain the exact op string |
+
+### 7.6 Phase 2 Scope (Out of Scope for v1.0)
+
+The following are reserved for Phase 2 (see Issue #108):
+- `max_delegation_depth` — runtime depth tracking for delegation chains
+- Dynamic authority gradient enforcement
+- `origin` tracking across multi-hop delegation
+- mcp-fw consumer integration
+
+### 7.7 Conformance
+
+A v1.0-conforming checker **MAY** implement this amendment. A checker that implements Amendment A MUST:
+- Accept both string and object forms in `effects.allow`
+- Raise `FC-E010` for any call site where the callee has a `delegation: "explicit"` effect and the caller's `grants` does not include that op
+- Treat `reversible` as metadata only (no type-rule effect)
