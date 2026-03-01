@@ -102,7 +102,23 @@ from nail_lang._fc_standard import (
     convert_tools,
 )
 
-__version__ = "0.9.1"
+# ── fc_ir_v2: Delegation-aware Effect Qualifiers (Issue #107, Phase 1) ──────
+from nail_lang.fc_ir_v2 import (
+    EffectQualifier,
+    FcDef,
+    DelegationError,
+    parse_effect_qualifier,
+    parse_effects,
+    parse_def as parse_fc_def,
+    check_call as check_delegation_call,
+    check_program as check_delegation_program,
+)
+
+try:
+    from importlib.metadata import version as _pkg_version
+    __version__ = _pkg_version("nail-lang")
+except Exception:
+    __version__ = "0.9.1"  # fallback
 
 __all__ = [
     # Core
@@ -146,6 +162,15 @@ __all__ = [
     "from_anthropic_tool",
     "from_gemini_tool",
     "convert_tools",
+    # fc_ir_v2: Delegation-aware Effect Qualifiers (Issue #107, Phase 1)
+    "EffectQualifier",
+    "FcDef",
+    "DelegationError",
+    "parse_effect_qualifier",
+    "parse_effects",
+    "parse_fc_def",
+    "check_delegation_call",
+    "check_delegation_program",
     # Meta
     "__version__",
 ]
