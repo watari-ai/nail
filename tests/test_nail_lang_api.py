@@ -265,7 +265,9 @@ class TestPackageImports:
 
     def test_version_string(self):
         from nail_lang import __version__
-        assert __version__ == "0.9.1"
+        import importlib.metadata
+        expected = importlib.metadata.version("nail-lang")
+        assert __version__ == expected
 
 
 # ── Integration: filter then pass to LiteLLM-style call ──────────────────────
