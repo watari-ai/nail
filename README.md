@@ -81,6 +81,25 @@ $ nail fc check tools.nail --provider openai
   ERROR: Tool 'exfil_data': declared as PURE but has side-effect labels: ['NET']
 ```
 
+**Effect Qualifiers** (v0.9.2, FC-E010) add fine-grained annotations alongside raw effect labels:
+
+```json
+{
+  "nail": "0.1.0", "kind": "fn", "id": "http_get",
+  "effects": ["NET"],
+  "effect_qualifiers": {
+    "NET": { "scope": "external", "trust": "untrusted" }
+  }
+}
+```
+
+| Qualifier | Values | Meaning |
+|-----------|--------|---------|
+| `scope`   | `internal` / `external` / `local` | Where the effect reaches |
+| `trust`   | `trusted` / `untrusted` / `sandboxed` | Trust level of the target |
+
+Qualifiers are validated at L2. Unknown keys or invalid values raise `CheckError(code="FC-E010-INVALID-QUALIFIER")`. They are preserved in all provider conversions and accessible via `get_tool_effects()`.
+
 ### Spec versioning with `meta.spec_version`
 
 Every NAIL spec file can declare its specification version via the `meta.spec_version` field:
