@@ -214,6 +214,45 @@ result = filter_by_effects(tools, allowed=["FS", "IO"])
 # Excluded: http_get (NET not allowed), download (NET not allowed), unknown_tool (unrestricted)
 ```
 
+---
+
+## Effect Qualifiers (v0.9.2)
+
+Effect Qualifiers (`effect_qualifiers`) add fine-grained policy annotations alongside raw effect labels. They are preserved through all NAIL provider conversions and are accessible at routing time.
+
+```python
+tool = {
+    "type": "function",
+    "function": {
+        "name": "http_get",
+        "effects": ["NET"],
+        "effect_qualifiers": {
+            "NET": {"scope": "external", "trust": "untrusted"}
+        }
+    }
+}
+
+# Inspect qualifiers before routing
+from nail_lang import get_tool_effects
+effects = get_tool_effects(tool)
+# → {"effects": ["NET"], "qualifiers": {"NET": {"scope": "external", "trust": "untrusted"}}}
+
+# Use qualifier metadata to build custom routing logic
+if effects["qualifiers"].get("NET", {}).get("trust") == "untrusted":
+    # Route to a sandboxed executor or require additional approval
+    pass
+```
+
+**Qualifier fields:**
+
+| Field   | Values                                   | Use case |
+|---------|------------------------------------------|----------|
+| `scope` | `internal` / `external` / `local`        | Restrict network calls to internal services only |
+| `trust` | `trusted` / `untrusted` / `sandboxed`    | Flag untrusted targets for extra review |
+
+Qualifiers are validated at L2 by `Checker`. Unknown keys or invalid values raise `CheckError(code="FC-E010-INVALID-QUALIFIER")`.
+
+
 ## See Also
 
 - [fc-standard-proposal.md](../docs/fc-standard-proposal.md) — NAIL effect system formal specification
