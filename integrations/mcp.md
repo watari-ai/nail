@@ -188,6 +188,31 @@ response = litellm.completion(
 )
 ```
 
+## Effect Qualifiers with MCP (v0.9.2)
+
+When converting MCP tools with `from_mcp()`, you can attach Effect Qualifiers to fine-tune policy at the tool level:
+
+```python
+from nail_lang import from_mcp, annotate_tool_effects
+
+fc_tools = from_mcp(mcp_tools)
+
+# Add qualifiers to specific tools after conversion
+for tool in fc_tools:
+    name = tool["function"]["name"]
+    if name == "http_fetch":
+        tool["function"]["effect_qualifiers"] = {
+            "NET": {"scope": "external", "trust": "untrusted"}
+        }
+    elif name == "db_query":
+        tool["function"]["effect_qualifiers"] = {
+            "FS": {"scope": "internal", "trust": "trusted"}
+        }
+```
+
+Qualifiers are preserved through `filter_by_effects()` and all provider conversions. Use them to implement fine-grained routing logic — for example, routing `untrusted` external tools through a stricter sandbox.
+
+
 ## See Also
 
 - [filter_by_effects documentation](litellm.md)
