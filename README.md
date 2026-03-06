@@ -502,6 +502,23 @@ pip install -r requirements.txt
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md) to contribute.
 
+---
+
+## What's Next — v1.1 Roadmap
+
+v1.0 freezes the core (L0–L3, FC Standard, Effect System). v1.1 extends it:
+
+| Feature | Description | Design Doc |
+|---------|-------------|------------|
+| **Delegation depth tracking** | `max_delegation_depth` runtime enforcement — prevents silent privilege escalation across agent chains | [designs/v1.1/delegation-depth.md](./designs/v1.1/delegation-depth.md) |
+| **Multi-layer LLM contracts** | Declare interface contracts between orchestrator and worker LLMs; static privilege gradient checks | [designs/v1.1/multi-layer-contracts.md](./designs/v1.1/multi-layer-contracts.md) |
+| **RAG Context Kind** | First-class `kind: context` for RAG pipelines — machine-unambiguous knowledge chunks with provenance and validity | [designs/v1.1/rag-context-kind.md](./designs/v1.1/rag-context-kind.md) |
+| **Routing hints** | Declarative `complexity_tier` / `privacy_tier` qualifiers for local vs. cloud LLM routing decisions | [designs/v1.1/routing-hints.md](./designs/v1.1/routing-hints.md) |
+
+All v1.1 design specs are in [`designs/v1.1/`](./designs/v1.1/). Contributions welcome.
+
+---
+
 *NAIL is built by AI, for AI. Humans define the intent. AI builds the machine.*
 
 </details>
