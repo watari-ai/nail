@@ -1,273 +1,158 @@
-# NAIL v1.1 — Draft GitHub Issues
+# NAIL v1.1 — GitHub Issue Drafts
 
-> **Status**: Draft. Pending Boss review before creation.  
-> **Context**: v1.0 RC targets after PR #109 merge. These issues define v1.1 scope.  
-> **Rule**: All issues in English per Boss instruction (2/28).
-
----
-
-## Issue #110 (Umbrella): [meta] NAIL v1.1 planning
-
-**Title**: `[meta] NAIL v1.1 planning`
-
-**Body**:
-```
-This tracking issue covers the v1.1 milestone, which begins after v1.0 RC ships.
-
-## Design principle
-"Extend the periphery, not the frozen core."
-
-L0–L3 / FC Standard / Effect System core are frozen in v1.0 and will not change in v1.1.
-v1.1 adds depth within existing extension points (qualifier syntax, effect label namespace).
-
-## Issues in scope for v1.1
-- [ ] #111 Delegation Phase 2: `max_delegation_depth` constraint
-- [ ] #112 `reversible: false` → type-checked delegation depth limit
-- [ ] #113 Effect System: AUDIT and DELEG label additions
-- [ ] #114 NATP v1.0 specification (NAIL Agent Transfer Protocol)
-
-## Out of scope for v1.1 (deferred to later)
-- WASM compilation target
-- Async / Concurrency model
-- L4 Memory safety layer
-
-## Timeline
-- v1.0 RC: after #107 (PR #109) merges
-- v1.1 design sprint: begins after v1.0 RC ships
-- v1.1 RC: TBD based on community feedback
-```
-
-**Labels**: `meta`, `v1.1`
+> Status: Ready to create. Pending Boss GO.
+> Rule: All issues in English per Boss instruction.
+> Design docs: designs/v1.1/{delegation-depth,multi-layer-contracts,rag-context-kind,routing-hints}.md
 
 ---
 
-## Issue #111: Delegation Phase 2: `max_delegation_depth`
+## #108: feat: Delegation depth tracking — max_delegation_depth (Phase 2)
 
-**Title**: `feat: Delegation Phase 2 — max_delegation_depth qualifier`
+**Labels**: enhancement, v1.1, delegation
 
 **Body**:
-```
-## Background
 
-Phase 1 (PR #109 / Issue #107) introduced `can_delegate` as a qualifier field.
-Phase 2 adds `max_delegation_depth` to bound how many re-delegation hops are allowed.
+Following up on the delegation feature discussion, I've drafted a full design spec for runtime-enforced delegation depth tracking.
 
-## Design decision: dynamic over static
+### Summary
 
-After analysis (see #108 comment), we adopt **dynamic runtime enforcement** rather than static analysis.
+NAIL v1.0 introduced `can_delegate` as a binary qualifier. This is insufficient for real-world agent hierarchies where the concern is not delegation itself but **unbounded** delegation. `max_delegation_depth` allows authors to declare, in the spec language itself, the maximum number of additional hops a task may undergo after first invocation.
 
-Rationale:
-- Static call-graph analysis fails under open-world assumption (external agents unknown at lint time)
-- Dynamic dispatch (tool names in variables) cannot be statically resolved
-- Runtime hop counter is simple, predictable, and easy to test
+### Motivation
 
-Rejected alternative: static corollary graph walk (too fragile across module boundaries).
+Without depth bounds:
+- Sensitive effects (`FS_WRITE`, `STATE`) can propagate arbitrarily deep.
+- Irreversible actions (file deletion, data mutation) can reach agents never audited for those responsibilities.
+- Authority provenance becomes opaque.
 
-## Proposed syntax
+### Minimal Spec
 
 ```nail
-task write_sensitive {
-  effects: [FS]
-  can_delegate: {
-    max_delegation_depth: 1   # only one re-delegation hop allowed
-    reversible: false
-  }
-}
+can_delegate:
+  allowed: true
+  max_delegation_depth: 2
 ```
 
-## Runtime semantics
+The runtime maintains a `delegation_depth` counter per invocation. When a delegated call would exceed the declared maximum, the runtime raises `DelegationDepthExceeded` before the call is dispatched. Dynamic enforcement was chosen over static analysis due to NAIL's open-world assumption (remote registries, dynamic dispatch).
 
-- Each NAIL runtime context carries a `delegation_depth: int` field (default: 0)
-- When task A delegates to task B, depth increments by 1
-- If `depth > max_delegation_depth` → raise `DelegationDepthError`
-- Depth resets when a new top-level invocation begins
+### Design Doc
 
-## Authority gradient (stretch goal for Phase 2)
-
-Track `origin_id` through the chain: A → B → C → D preserves A's identity
-as the root authority. Allows `grants` to be scoped to origin, not just caller.
-
-## Acceptance criteria
-- [ ] `fc_ir_v2.py`: `max_delegation_depth` field on `EffectQualifier`
-- [ ] Runtime context: `delegation_depth` counter
-- [ ] `check_call`: enforce depth limit, raise `DelegationDepthError`
-- [ ] Tests: depth enforcement, chain propagation, reset behavior (≥ 30 new tests)
-- [ ] Spec: update `designs/v1.0/spec-freeze.md` Amendment B
-- [ ] CHANGELOG entry
-
-Related: #107 (Phase 1), #108 (Draft design)
-```
-
-**Labels**: `enhancement`, `v1.1`, `delegation`
+See [`designs/v1.1/delegation-depth.md`](designs/v1.1/delegation-depth.md) for the full specification including runtime semantics, inheritance rules, and the Phase B static analysis plan.
 
 ---
 
-## Issue #112: `reversible: false` → typed constraint on delegation depth
+## #110: feat: Multi-layer LLM interface contracts
 
-**Title**: `feat: reversible: false implies max_delegation_depth: 0 default`
+**Labels**: language-design, v1.1
 
 **Body**:
-```
-## Background
 
-In Phase 1 (PR #109), `reversible: false` is metadata-only — it doesn't affect type rules.
+Following up on the architectural layering discussion, I've drafted a design spec for multi-layer LLM interface contracts.
 
-Phase 2 should give `reversible: false` a semantic consequence:
-**an irreversible task may not be delegated further unless `max_delegation_depth` is explicitly set.**
+### Summary
 
-## Proposed rule
+Modern AI systems chain multiple LLM backends hierarchically (L1: frontier orchestrator → L2: mid-tier specialist → L3: local model). Today, boundaries between layers are enforced only by convention. This spec adds a `layer` qualifier block that allows developers to declare each layer's identity, locality, allowed inputs/outputs, and permitted effects — all in the NAIL file itself.
 
-```
-if task.reversible == false and task.can_delegate is set:
-    if max_delegation_depth is not explicitly specified:
-        default max_delegation_depth = 0  # no re-delegation
-```
+### Motivation
 
-Explicit override is allowed:
+NAIL v1.0 effect qualifiers and delegation depth operate at the function level. There is no native way to describe **architectural-layer contracts** that every agent at a given layer must honour. Without this, an L1 can inadvertently delegate a privileged action to an L3 never designed to handle it.
+
+### Minimal Spec
+
 ```nail
-task delete_user {
-  effects: [STATE, NET]
-  can_delegate: {
-    reversible: false
-    max_delegation_depth: 1   # explicit: allows exactly 1 hop
-  }
-}
+layer:
+  id: "l1_orchestrator"
+  level: 1
+  locality: "cloud"
+  model_hint: "claude-3-5"
+  delegates_to:
+    - "l2_specialist"
 ```
 
-## Rationale
+`nail fc check` enforces that delegation chains never escalate privileges from lower to higher layers, and never leak retained fields across layer boundaries. Combined with routing hints (#112), the runtime can verify not just *what* is delegated but *where* it executes.
 
-Irreversible actions carry the highest risk of uncorrectable errors.
-Constraining their delegation depth by default adds a safety margin
-without removing flexibility (explicit override is always available).
+### Design Doc
 
-## Acceptance criteria
-- [ ] Checker: apply default depth=0 when `reversible: false` and depth unspecified
-- [ ] Tests: default enforcement, explicit override, interaction with Phase 2 depth checker
-- [ ] Spec: Amendment B updated to include this rule
-
-Depends on: #111
-```
-
-**Labels**: `enhancement`, `v1.1`, `delegation`, `safety`
+See [`designs/v1.1/multi-layer-contracts.md`](designs/v1.1/multi-layer-contracts.md) for the full specification including layer declaration schema, input/output contracts, linting rules, and interaction with effect qualifiers.
 
 ---
 
-## Issue #113: Effect System — AUDIT and DELEG label additions
+## #111: feat: RAG Context Kind — NAIL as intermediate format for RAG
 
-**Title**: `feat: new effect labels AUDIT and DELEG`
+**Labels**: language-design, v1.1
 
 **Body**:
-```
-## Background
 
-v1.0 freezes five effect labels: FS, NET, EXEC, UI, STATE.
-Two additional labels were identified during Phase 2 design as natural extensions.
+Following up on the RAG integration discussion, I've drafted a design spec for a new `kind: context` — RAG-retrieved knowledge as a first-class NAIL construct.
 
-## Proposed additions
+### Summary
 
-### AUDIT
-Signals that the task writes to an audit log or observability sink.
+Current NAIL kinds (`skill`, `persona`, `effect`) describe agent capability and behavior. There is no native way to represent *retrieved world knowledge*. `kind: context` gives RAG-produced facts a proper home in the NAIL ecosystem: typed, provenance-annotated, confidence-scored, and expiry-aware chunks that AI agents can consume with full structural awareness.
 
-```nail
-task log_access {
-  effects: [AUDIT]
-}
-```
+### Motivation
 
-Semantic intent: AUDIT is write-only, append-only. 
-A task with only AUDIT effect cannot read existing state or affect control flow.
-This allows runtime systems to safely permit AUDIT in otherwise restricted contexts.
+Without this, developers inject raw text into system prompts (no structure, no confidence, no expiry), pass JSON blobs outside the NAIL contract, or embed knowledge into `persona`/`skill` at the wrong abstraction layer. A dedicated `context` kind enables native integration with LlamaIndex, LangChain, and custom retrieval stacks.
 
-### DELEG
-Signals that the task performs agent-to-agent delegation.
+### Minimal Spec
 
 ```nail
-task orchestrate {
-  effects: [DELEG]
-  can_delegate: { max_delegation_depth: 2 }
-}
+kind: context
+id: auth_flow_ctx_001
+source:
+  document_id: "docs/auth/oauth2-flow.md"
+  retrieval_score: 0.91
+valid_until: "2026-12-31"
+facts:
+  - key: "oauth2.pkce_required"
+    value: true
+    type: bool
+    fact_confidence: 0.95
 ```
 
-Semantic intent: any task that spawns sub-agents or calls external agent APIs
-should declare DELEG. This makes delegation visible at the effect level,
-not just at the qualifier level.
+The pipeline becomes: RAG database → NAIL context chunks → AI agent runtime.
 
-## Implementation notes
-- Add AUDIT and DELEG to the effect label enum in `fc_ir_v2.py`
-- Update `check_program` to validate AUDIT (no read-state operations)
-- Update spec: extend effect label table
-- Add to naillang.com playground dropdown
+### Design Doc
 
-## Acceptance criteria
-- [ ] `fc_ir_v2.py`: AUDIT and DELEG labels
-- [ ] AUDIT semantic check (write-only)
-- [ ] Tests: AUDIT allowed/disallowed contexts, DELEG with delegation qualifier (≥ 20 tests)
-- [ ] Spec updated
-- [ ] Playground updated
-
-Related: #107 (Phase 1 effects), #111 (DELEG + max_delegation_depth interaction)
-```
-
-**Labels**: `enhancement`, `v1.1`, `effects`
+See [`designs/v1.1/rag-context-kind.md`](designs/v1.1/rag-context-kind.md) for the full specification including JSON Schema, fact typing, provenance fields, cross-chunk relations, and runtime consumption semantics.
 
 ---
 
-## Issue #114: NATP v1.0 Specification (NAIL Agent Transfer Protocol)
+## #112: feat: Routing hints as declarative qualifiers
 
-**Title**: `spec: NATP v1.0 — NAIL Agent Transfer Protocol`
+**Labels**: enhancement, v1.1
 
 **Body**:
-```
-## Background
 
-`zyom45/nail-a2a` (v0.1.0) demonstrated NAIL as an adapter layer over Google A2A protocol.
-NATP v1.0 generalizes this: NAIL as a **protocol-agnostic envelope** for agent-to-agent communication.
+Following up on the multi-backend routing discussion, I've drafted a design spec for routing hint qualifiers.
 
-## Concept
+### Summary
 
-Instead of inventing a new wire protocol, NATP uses NAIL spec files as the message format:
+As NAIL-powered systems coordinate multiple LLM backends (local Ollama/mlx-lm alongside cloud APIs), the decision of *where* to route an inference call is currently made entirely outside the NAIL contract in ad-hoc application code. Routing hint qualifiers make this intent a first-class NAIL declaration, auditable by `nail fc check`.
 
-```
-Agent A ──[NAIL spec]──► Agent B
-         tasks: [...]
-         effects: [...]
-         grants: [...]
-```
+### Motivation
 
-Any transport can carry a NAIL spec. The spec is the contract.
+Without routing hints, developers cannot express routing intent in the skill/effect definition, the checker has no surface to validate routing mismatches, and privacy constraints (data residency, PII) are enforced only by convention.
 
-## NATP v1.0 requirements
+### New Qualifiers (on `kind: effect`)
 
-1. **Envelope format**: NAIL task+effect+grants section as the standard message
-2. **Discovery**: how agents advertise their NAIL-compatible surface (minimal; URI-based)
-3. **Error model**: how `DelegationError` and effect violations are communicated back
-4. **Versioning**: `spec_version` field (already in NAIL spec) as the compatibility signal
-
-## nail-a2a v0.2 as PoC
-
-- Implement NATP draft in `zyom45/nail-a2a` v0.2
-- Collect feedback from implementation
-- Reflect in NATP v1.0 final spec
-- Include NATP v1.0 in NAIL v1.1 spec (or as companion document)
-
-## Acceptance criteria
-- [ ] `designs/natp/v1.0-draft.md`: envelope format, discovery, error model, versioning
-- [ ] nail-a2a v0.2 PoC implementing the draft
-- [ ] At least one end-to-end example (two NAIL agents communicating over NATP)
-- [ ] NAIL v1.1 spec references NATP v1.0
-
-Related: zyom45/nail-a2a
+```nail
+complexity_tier: "light" | "heavy"    # local vs cloud preference
+persona_required: true | false         # requires user-specific context
+privacy_tier: "public" | "internal" | "restricted"  # data sensitivity
+token_budget: 500                      # expected max tokens (load planning)
+routing: "soft" | "strict"            # hint vs hard constraint
 ```
 
-**Labels**: `spec`, `v1.1`, `natp`
+`complexity_tier: "light"` routes to local LLMs by preference; `"heavy"` routes to cloud. `privacy_tier: "restricted"` prohibits cloud routing. These qualifiers interact with #110 (multi-layer contracts): the runtime can verify not just what is delegated but where it will execute.
+
+### Design Doc
+
+See [`designs/v1.1/routing-hints.md`](designs/v1.1/routing-hints.md) for the full specification including all qualifier definitions, soft vs hard constraint semantics, linting rules, and interaction with multi-layer contracts.
 
 ---
 
-## Next steps (after Boss review)
-
-1. Merge PR #109 (Issue #107 — Phase 1)
-2. Create issues #110–#114 on watari-ai/nail
-3. Begin v1.1 design sprint with #111 (Phase 2) as first implementation target
-4. nail-a2a v0.2 can proceed in parallel with #114
-
-> Note: issues #104, #105, #106 (demos) can be closed after PR #109 merges.
+## Creation order
+1. #111 (independent, lowest complexity)
+2. #108 (Phase 2 delegation)
+3. #110 (multi-layer)
+4. #112 (routing, depends on #110 conceptually)
