@@ -33,7 +33,7 @@ https://news.ycombinator.com/submit
 
 **タイトル** (`nail/tmp/hn-post-v14.md` の1行目):
 ```
-Show HN: NAIL – A JSON-native language where AI effects are declared, not sandboxed
+Show HN: NAIL – JSON-native language for AI agents (v0.9.2, 954 tests)
 ```
 
 **URL:**
