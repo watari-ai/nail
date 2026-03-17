@@ -1,4 +1,5 @@
 # NAIL v1.1: Routing Hints as Declarative Qualifiers
+> ⚠️ SUPERSEDED: この文書は routing-hints.md に統合されました。参照のみ。
 
 > **Status**: Draft — pending Boss review (2026-03-05)
 > **Issue**: #112

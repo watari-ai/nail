@@ -102,7 +102,7 @@ layer:
     - name: "context_chunks"
       type: list
       required: false
-    - name: "retain:user_id"
+    - name: "retain:user_id"   # deprecated style; use visibility: retain as canonical
       type: string
       required: true
       visibility: retain    # never passed to sub-layers
@@ -126,10 +126,13 @@ layer:
 
 | Sub-field | Type | Description |
 |-----------|------|-------------|
-| `name` | string | Field name. Prefix `retain:` marks it as a retained field |
+| `name` | string | Field name. `retain:` prefix is legacy and deprecated; use `visibility` instead |
 | `type` | enum | One of: `string`, `int`, `float`, `bool`, `list`, `object` |
 | `required` | bool | Whether this field must be present in the invocation |
 | `visibility` | enum | `"pass"` (default) or `"retain"` — controls delegation behaviour |
+
+`retain:prefix` is retained for backward compatibility only. Canonical form in v1.1 is:
+use plain `name` + explicit `visibility: retain`.
 
 **`visibility: retain` semantics:**
 
@@ -143,6 +146,9 @@ payload passed to a sub-layer during delegation. The checker emits `DELEGATION_L
 forbidden, regardless of what the invoked function might request. If `deny` is absent,
 only the `allow` list applies. If both are absent, no effect restrictions are imposed (not
 recommended).
+
+If the same effect appears in both `effects.allow` and `effects.deny`, `deny` takes
+precedence.
 
 ---
 

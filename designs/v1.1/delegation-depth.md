@@ -122,7 +122,7 @@ task write_sensitive {
 
 - `0` — the task may not delegate to any further task.
 - `1` — the task may delegate once; the delegated task may not delegate further.
-- `N` — exactly N additional hops are permitted beyond the initial invocation.
+- `N` — at most N additional hops are permitted beyond the initial invocation.
 - Absent — no depth constraint is applied (equivalent to v1.0 behaviour when `can_delegate` is truthy).
 
 **Validation:**
@@ -155,16 +155,20 @@ RuntimeContext {
 2. **Propagation**: When task A delegates to task B, the runtime passes B a context
    where `delegation_depth = A.context.delegation_depth + 1`.
 
-3. **Enforcement**: Before executing task B, the runtime checks:
+3. **Enforcement**: At each hop, the runtime checks against the **caller's** declared
+   upper bound and derives `effective_remaining_depth`:
    ```
    if A.max_delegation_depth is set:
-       if B.context.delegation_depth > A.max_delegation_depth:
+       effective_remaining_depth = A.max_delegation_depth - A.context.delegation_depth
+       if effective_remaining_depth <= 0:
            raise DelegationDepthError(
                task=B.id,
                depth=B.context.delegation_depth,
                max=A.max_delegation_depth
            )
    ```
+   This rule is evaluated independently on every delegation edge. The next hop always
+   decrements remaining budget by 1 because `delegation_depth` increases by 1.
 
 4. **Reset**: When a new top-level invocation begins, `delegation_depth` is reset to `0`.
    Concurrent invocations each maintain their own independent counter.
@@ -209,7 +213,7 @@ is responsible for handling or logging it.
 |---------|---------|----------|
 | `INVALID_DEPTH_VALUE` | `max_delegation_depth` is negative | Error |
 | `DEPTH_WITHOUT_DELEGATE` | `max_delegation_depth` set without `can_delegate` | Warning |
-| `DEPTH_ALWAYS_ZERO` | `max_delegation_depth: 0` with `can_delegate: true` | Warning (contradictory) |
+| `DEPTH_ZERO_CONFIRMATION` | `max_delegation_depth: 0` with `can_delegate: true` | Info (`no delegation intended?`) |
 
 ---
 
@@ -268,7 +272,7 @@ Deliverables:
 - [ ] **`reversible: false` default** — apply depth-0 default in checker/runtime when
   `reversible: false` and depth unspecified
 - [ ] **Static checker rules** — `INVALID_DEPTH_VALUE`, `DEPTH_WITHOUT_DELEGATE`,
-  `DEPTH_ALWAYS_ZERO`
+  `DEPTH_ZERO_CONFIRMATION`
 - [ ] **Tests** — depth enforcement, chain propagation, reset behaviour, `reversible`
   interaction (≥ 30 new tests)
 - [ ] **CHANGELOG entry**
