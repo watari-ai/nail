@@ -98,6 +98,21 @@ external APIs. `nail fc check` will emit a `ROUTING_PRIVACY_VIOLATION` error if 
 
 ---
 
+#### `data_visibility`
+
+```nail
+data_visibility: "pass" | "retain"
+```
+
+| Value | Meaning |
+|-------|---------|
+| `"pass"` | Input data may be forwarded to delegated sub-layers. |
+| `"retain"` | Input data is consumed only at the current layer and must not be forwarded. |
+
+`data_visibility` controls **cross-layer data forwarding only**.
+
+---
+
 #### `estimated_tokens` *(optional)*
 
 ```nail
@@ -129,10 +144,13 @@ routing: "strict"
 
 When `routing: "strict"` is present:
 
-- `complexity_tier: "heavy"` → runtime **must** use a cloud model; local fallback is forbidden.
+- Constraint priority is: `privacy_tier` > `routing` > `complexity_tier`.
+- `complexity_tier: "heavy"` → runtime **must** use a cloud model; local fallback is forbidden unless blocked by a higher-priority privacy rule.
 - `complexity_tier: "light"` → runtime **must** use a local model; cloud escalation is forbidden.
 - `privacy_tier: "confidential"` → runtime **must** refuse any cloud routing; will raise
   a runtime error rather than silently fall back.
+- `complexity_tier: "heavy"` + `privacy_tier: "confidential"` + `routing: "strict"` is
+  **invalid** and must raise `RoutingConstraintError` (no legal route exists).
 
 `routing: "strict"` is a Phase B feature. In Phase A, the field is parsed and stored but
 has no runtime enforcement. `nail fc check` will emit an `UNIMPLEMENTED_STRICT_ROUTING`
@@ -145,13 +163,17 @@ informational note when it encounters `routing: "strict"` during Phase A.
 Routing hint qualifiers are composable with existing effect qualifiers defined in v1.0
 (e.g. `locality`, `max_delegation_depth`).
 
+`locality` describes **execution location only** (`local` / `cloud` / `hybrid`). It does
+not define forwarding permission.
+
 Key interactions:
 
 | Combination | Behavior |
 |-------------|----------|
-| `privacy_tier: "confidential"` + `locality: pass` | Checker emits `ROUTING_PRIVACY_LEAK` warning — confidential data should not be passed across layers to a potentially remote model. |
+| `privacy_tier: "confidential"` + `data_visibility: "pass"` | Checker emits `ROUTING_PRIVACY_LEAK` warning — confidential data should not be passed across layers to a potentially remote model. |
 | `complexity_tier: "heavy"` + `max_delegation_depth: 0` | Contradictory: heavy effects typically need delegation. Checker emits `ROUTING_DEPTH_CONFLICT` informational note. |
 | `persona_required: true` + `privacy_tier: "public"` | Allowed but suspicious — personal context is being used for a public-tier effect. Checker emits `ROUTING_PERSONA_PUBLIC` advisory. |
+| `complexity_tier: "heavy"` + `privacy_tier: "confidential"` + `routing: "strict"` | Invalid declaration. Runtime/checker raises `ROUTING_STRICT_CONFLICT`. |
 
 ---
 
@@ -164,10 +186,11 @@ The following rules are enforced by `nail fc check` in Phase A (warnings) and Ph
 |---------|---------|----------|---------|
 | `ROUTING_PRIVACY_MISSING` | Effect has a `NET` effect type AND `privacy_tier` is not set | Warning | `privacy_tier not set on NET effect; data residency is unspecified` |
 | `ROUTING_PERSONA_NO_PRIVACY` | `persona_required: true` AND `privacy_tier` is absent | Warning | `persona_required is true but privacy_tier is not declared` |
-| `ROUTING_PRIVACY_LEAK` | `privacy_tier: "confidential"` AND `locality: pass` | Warning | `confidential data may transit a remote layer via locality:pass` |
+| `ROUTING_PRIVACY_LEAK` | `privacy_tier: "confidential"` AND `data_visibility: "pass"` | Warning | `confidential data may transit a remote layer via data_visibility:pass` |
 | `ROUTING_DEPTH_CONFLICT` | `complexity_tier: "heavy"` AND `max_delegation_depth: 0` | Info | `heavy complexity tier with zero delegation depth may be unintentional` |
 | `ROUTING_PERSONA_PUBLIC` | `persona_required: true` AND `privacy_tier: "public"` | Advisory | `persona context used in a public-tier effect` |
 | `UNIMPLEMENTED_STRICT_ROUTING` | `routing: "strict"` present in Phase A | Info | `strict routing is declared but not enforced until Phase B` |
+| `ROUTING_STRICT_CONFLICT` | `routing: "strict"` AND `complexity_tier: "heavy"` AND `privacy_tier: "confidential"` | Error | `strict routing constraints are unsatisfiable (heavy+confidential)` |
 | `ROUTING_PRIVACY_VIOLATION` | `privacy_tier: "confidential"` observed routing to cloud endpoint *(Phase B, strict)* | Error | `confidential effect routed to external API` |
 
 **`NET` effect note:** Any effect that performs network I/O (classified as `NET` in the
@@ -185,7 +208,7 @@ Deliverables:
 
 - [x] **Design spec** (this document)
 - [ ] **JSON Schema extension** — add `complexity_tier`, `persona_required`,
-  `privacy_tier`, `estimated_tokens`, `routing` to `schemas/v1.1/qualifiers.json`
+  `privacy_tier`, `data_visibility`, `estimated_tokens`, `routing` to `schemas/v1.1/qualifiers.json`
 - [ ] **`nail fc check` extension** — implement linting rules:
   `ROUTING_PRIVACY_MISSING`, `ROUTING_PERSONA_NO_PRIVACY`, `ROUTING_PRIVACY_LEAK`,
   `ROUTING_DEPTH_CONFLICT`, `ROUTING_PERSONA_PUBLIC`, `UNIMPLEMENTED_STRICT_ROUTING`

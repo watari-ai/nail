@@ -57,6 +57,7 @@ source:
   document_id: "docs/auth/oauth2-flow.md"
   chunk_index: 3
   retrieval_score: 0.91
+  score_scale: "normalized_0_1"
 valid_until: "2026-12-31"
 facts:
   - key: "oauth2.pkce_required"
@@ -94,7 +95,8 @@ relations:
       "properties": {
         "document_id":     { "type": "string" },
         "chunk_index":     { "type": "integer", "minimum": 0 },
-        "retrieval_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+        "retrieval_score": { "type": "number" },
+        "score_scale":     { "type": "string", "enum": ["normalized_0_1", "bm25_raw", "dot_product", "custom"], "default": "normalized_0_1" }
       }
     },
     "fact": {
@@ -130,10 +132,12 @@ confidently it was retrieved.
 |-----------|------|----------|-------------|
 | `document_id` | string | Yes | Stable identifier of the source document (path, URI, or DB key) |
 | `chunk_index` | integer >= 0 | Yes | Zero-based index of this chunk within the source document |
-| `retrieval_score` | float [0, 1] | Yes | Cosine similarity / BM25 score from the retrieval step |
+| `retrieval_score` | number | Yes | Retriever score value interpreted by `score_scale` |
+| `score_scale` | enum | No (default: `normalized_0_1`) | Score scale: `normalized_0_1`, `bm25_raw`, `dot_product`, `custom` |
 
 `retrieval_score` answers: *"How relevant is this chunk to the query?"*
-It is set by the retriever and should not be edited downstream.
+It is set by the retriever and should not be edited downstream. For BM25 and other
+non-normalized retrievers, set `score_scale` accordingly.
 
 ---
 
@@ -144,7 +148,7 @@ review, Watari proposed splitting it into two distinct scores with different sem
 
 | Field | Scope | Set by | Answers |
 |-------|-------|--------|---------|
-| `source.retrieval_score` | Whole chunk | Retriever | "How relevant is this chunk to the query?" |
+| `source.retrieval_score` (+ `source.score_scale`) | Whole chunk | Retriever | "How relevant is this chunk to the query, under which score scale?" |
 | `facts[].fact_confidence` | Individual fact | Knowledge curator / extraction model | "How reliable is this specific fact?" |
 
 **Why the split matters:**
@@ -171,10 +175,11 @@ lightweight, fully-automated pipelines that do not perform per-fact extraction.
 beyond which the facts in this chunk should no longer be trusted.
 
 - Optional. If absent, the facts are considered perpetually valid.
-- The agent runtime **should** compare `valid_until` against the current wall-clock date
-  and downgrade or discard stale contexts.
+- The agent runtime **must** compare `valid_until` using the current **UTC date**.
+- Boundary rule: the chunk is valid for the entire `valid_until` date; it expires only
+  when `current_utc_date > valid_until`.
 - The L0 checker (Phase B) will emit a `CONTEXT_EXPIRED` warning when a context file
-  with a past `valid_until` is loaded.
+  with a past `valid_until` is loaded (evaluated in UTC).
 
 Use cases:
 - Regulatory rules that change on a known date
@@ -245,7 +250,7 @@ manually. No runtime changes are required.
 ### Phase B — After Community Feedback
 
 - [ ] **L0 checker support** — validate `kind: context` documents, emit:
-  - `CONTEXT_EXPIRED` if `valid_until` is in the past
+  - `CONTEXT_EXPIRED` if `current_utc_date > valid_until`
   - `FACT_TYPE_MISMATCH` if `value` does not match `type`
   - `DANGLING_RELATION` if `target_id` is not found in the loaded context set
 - [ ] **`transpiler_sketch.py`** — convert LlamaIndex `NodeWithScore` objects to NAIL context files
@@ -280,6 +285,7 @@ source:
   document_id: "docs/auth/oauth2-flow.md"
   chunk_index: 3
   retrieval_score: 0.91
+  score_scale: "normalized_0_1"
 valid_until: "2026-12-31"
 facts:
   - key: "oauth2.pkce_required"
@@ -307,7 +313,8 @@ id: payments_api_ctx_001
 source:
   document_id: "specs/payments/v3-openapi.yaml"
   chunk_index: 12
-  retrieval_score: 0.87
+  retrieval_score: 17.4
+  score_scale: "bm25_raw"
 valid_until: "2026-06-30"
 facts:
   - key: "payments.max_amount_jpy"

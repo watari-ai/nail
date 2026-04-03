@@ -1,7 +1,5 @@
 # NAIL v0.9.2 – A JSON-native language for AI agents
 
-**Title:** NAIL v0.9.2 – A JSON-native language for AI agents
-
 ---
 
 I've been building NAIL, a programming language where every program is a JSON document. v0.9.2 is out on PyPI with 954 passing tests. I wanted to write up the design and share it here, because the language makes some choices that I think are worth discussing.
