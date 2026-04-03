@@ -100,6 +100,37 @@ $ nail fc check tools.nail --provider openai
 
 Qualifiers are validated at L2. Unknown keys or invalid values raise `CheckError(code="FC-E010-INVALID-QUALIFIER")`. They are preserved in all provider conversions and accessible via `get_tool_effects()`.
 
+#### Delegation Qualifiers — Authorization Chains (v0.9.2)
+
+Multi-agent pipelines have a delegation problem: Agent A tells Agent B to write a file. But did A have permission to delegate that? NAIL v0.9.2 enforces this at type-check time.
+
+```json
+{
+  "kind": "fc",
+  "id": "supervisor",
+  "effects": ["FS.write"],
+  "grants": ["FS.read"],
+  "body": []
+}
+```
+
+```json
+{
+  "kind": "fc",
+  "id": "worker",
+  "required_grants": ["FS.read"],
+  "body": []
+}
+```
+
+```
+$ nail check pipeline.nail
+FC-E010 ExplicitDelegationViolation: worker requires FS.read in caller grants,
+  but supervisor.grants does not include it
+```
+
+An agent cannot grant permissions it doesn't hold. The authorization chain — across all agents — is verified at type-check time, before any agent runs.
+
 ### Spec versioning with `meta.spec_version`
 
 Every NAIL spec file can declare its specification version via the `meta.spec_version` field:
@@ -370,7 +401,8 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 
 ## Status
 
-🧪 **Experimental — v0.9.0** on PyPI — `pipx install nail-lang`
+🧪 **Experimental — v0.9.2** on PyPI — `pip install nail-lang` / `pipx install nail-lang`
+> 921 tests passing + 42 skipped (v1.1 draft) · [PyPI](https://pypi.org/project/nail-lang/) · [Playground](https://naillang.com)
 
 | Feature | Status |
 |---|---|
@@ -406,6 +438,10 @@ See [`nail_lang/fc_standard.py`](nail_lang/fc_standard.py) and the [FC Standard 
 | **Type stubs** (`nail_lang/__init__.pyi`) | ✅ Implemented (v0.8.2) |
 | **L3.1: Call-site measure verification** (recursive `measure - k` proof) | ✅ Implemented (v0.8.2) |
 | `nail demo` exit code propagation | ✅ Fixed (v0.8.2, #82) |
+| **`spec_version: "1.0"`** (schema pinning, `meta` field) | ✅ Implemented (v0.9.0) |
+| **`filter_by_effects()`** runtime tool restriction | ✅ Implemented (v0.9.0) |
+| **`nail-lens` CLI** (`inspect` / `diff` / `validate` / `effects`) | ✅ Implemented (v0.9.1) |
+| **Delegation Qualifiers** (`grants` / `required_grants` / FC-E010) | ✅ Implemented (v0.9.2) |
 | Traits / Interfaces / Higher-kinded types | 🔮 Future |
 | L4: Memory safety (buffer overflow proofs) | 🔮 Future |
 
